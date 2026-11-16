@@ -1,32 +1,46 @@
-# React + TypeScript + Vite
+# Chucao Web
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Aplicación web para organizar conceptos en listas y practicar su explicación
+oral mediante selecciones aleatorias sin repetición por ronda.
 
-Currently, two official plugins are available:
+Evoluciona a partir de [Chucao Desktop](https://github.com/sebastianolmos/chucao),
+incorporando cuentas de usuario, almacenamiento remoto y nuevas herramientas
+de práctica. Se podrá utilizar desde navegadores de PC y teléfonos.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Estado
 
-## React Compiler
+Proyecto en planificación y desarrollo inicial.
+Las funcionalidades descritas a continuación forman parte del alcance previsto.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Funcionalidades previstas
 
-## Expanding the Oxlint configuration
+- Cuentas de usuario y listas privadas.
+- Creación, edición, duplicación y archivo de listas.
+- Conceptos con título y descripción, editables individualmente o por conjuntos.
+- Sorteo sin repetición, progreso persistente y consulta de pendientes y vistos.
+- Temporizador configurable con animación del chucao y sonido al finalizar.
+- Notas de práctica e historial de sesiones y rondas.
+- Interfaz adaptable a móvil y escritorio, en español e inglés.
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+## Tecnologías
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
+- React, TypeScript y Vite.
+- Mantine, CSS Modules y variables CSS.
+- React Hook Form y TanStack Query.
+- Supabase: PostgreSQL, Auth, API y políticas RLS.
+- i18next y react-i18next.
+- Supabase CLI y Docker para desarrollo local.
+- Cloudflare Pages para alojar el frontend.
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Desarrollo
+
+Las instrucciones de instalación, configuración y ejecución se añadirán
+cuando esté preparada la base del proyecto.
+
+## Licencia y créditos
+
+El código se distribuye bajo la licencia MIT.
+
+Los recursos de terceros conservan sus respectivas licencias.
+Los recursos gráficos, tipográficos y de audio incorporados se documentarán
+con su autoría, licencia y modificaciones.
