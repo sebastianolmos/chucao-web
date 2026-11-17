@@ -1,0 +1,155 @@
+.shell {
+  min-height: 100vh;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: clamp(1.25rem, 4vw, 3rem) clamp(1rem, 5vw, 4rem) 3rem;
+  background: var(--chucao-cream);
+}
+
+.accessShell {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 1.5rem;
+}
+
+.accessHero {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  text-align: center;
+}
+
+.bird {
+  width: min(12rem, 45vw);
+  max-height: 12rem;
+  object-fit: contain;
+}
+
+.birdSmall {
+  width: 4.5rem;
+  height: 4.5rem;
+  object-fit: contain;
+}
+
+.brandTitle {
+  margin: 0;
+  color: var(--chucao-brown);
+  font-size: clamp(2.2rem, 6vw, 3.5rem);
+  line-height: 1.1;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--chucao-brown);
+  font-size: clamp(1rem, 2vw, 1.35rem);
+}
+
+.accessPanel {
+  display: grid;
+  gap: 1.25rem;
+  width: min(100%, 28rem);
+  padding: clamp(1.25rem, 4vw, 2rem);
+  border: 2px solid var(--chucao-brown);
+  border-radius: 1rem;
+  background: var(--chucao-panel);
+  box-shadow: 5px 6px 0 var(--chucao-brown);
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.brandMark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: var(--chucao-brown);
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.authenticatedShell {
+  display: block;
+}
+
+.authenticatedContent {
+  width: min(100%, 58rem);
+  margin: 0 auto;
+}
+
+.authenticatedContent > p:first-child {
+  margin: 0 0 1.5rem;
+  color: var(--chucao-brown);
+}
+
+.accountActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: min(100%, 58rem);
+  margin: 2rem auto 0;
+  padding-top: 1.25rem;
+  border-top: 2px solid var(--chucao-brown);
+}
+
+.languageGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.languageGroup button[aria-pressed='true'] {
+  background: var(--chucao-lilac);
+}
+
+.privacy {
+  width: min(100%, 52rem);
+  margin: 0 auto;
+}
+
+.privacy article {
+  display: grid;
+  gap: 0.75rem;
+  padding: clamp(1.25rem, 4vw, 2.5rem);
+  border: 2px solid var(--chucao-brown);
+  border-radius: 1rem;
+  background: var(--chucao-panel);
+  box-shadow: 5px 6px 0 var(--chucao-brown);
+}
+
+.privacy h1,
+.privacy h2 {
+  color: var(--chucao-brown);
+}
+
+.privacy p {
+  max-width: 70ch;
+  line-height: 1.6;
+}
+
+@media (max-width: 36rem) {
+  .topBar {
+    align-items: flex-start;
+  }
+
+  .brandMark {
+    font-size: 1.1rem;
+  }
+
+  .accountActions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .birdSmall {
+    width: 3.25rem;
+    height: 3.25rem;
+  }
+}

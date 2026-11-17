@@ -1,0 +1,79 @@
+.view {
+  display: grid;
+  gap: 1.75rem;
+  width: min(100%, 56rem);
+  margin: 0 auto;
+}
+
+.header {
+  display: grid;
+  gap: 0.55rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border: 2px solid var(--chucao-brown);
+  border-radius: 1rem;
+  background: var(--chucao-panel);
+  box-shadow: 4px 5px 0 var(--chucao-brown);
+}
+
+.listGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 1.25rem;
+}
+
+.listCard {
+  display: grid;
+  gap: 0.55rem;
+  min-height: 7rem;
+  padding: 1.1rem;
+  border: 2px solid var(--chucao-brown);
+  border-radius: 0.9rem;
+  background: var(--chucao-cyan);
+  box-shadow: 4px 5px 0 var(--chucao-brown);
+  cursor: pointer;
+  text-align: left;
+}
+
+.listCard:hover {
+  background: var(--chucao-green);
+}
+
+.cardName {
+  font-weight: 600;
+}
+
+.cardDetail {
+  color: var(--chucao-brown);
+  font-size: var(--mantine-font-size-sm);
+}
+
+.empty {
+  padding: 1.5rem;
+  border: 2px dashed var(--chucao-brown);
+  border-radius: 0.9rem;
+  background: var(--chucao-yellow);
+}
+
+.form {
+  display: grid;
+  gap: 1rem;
+  padding: clamp(1.25rem, 3vw, 1.75rem);
+  border: 2px solid var(--chucao-brown);
+  border-radius: 1rem;
+  background: var(--chucao-lilac);
+  box-shadow: 4px 5px 0 var(--chucao-brown);
+}
+
+.languageNote {
+  margin: 0;
+}
+
+@media (max-width: 36rem) {
+  .view {
+    gap: 1.25rem;
+  }
+
+  .listGrid {
+    grid-template-columns: 1fr;
+  }
+}

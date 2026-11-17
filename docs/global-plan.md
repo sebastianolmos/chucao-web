@@ -31,7 +31,7 @@ Public registration is intended for the portfolio release, but the product is ge
 - A person can create private lists, add concepts, and practice from a PC or Android browser.
 - Random selection uses only pending concepts, gives each eligible concept the same chance, and persists the result and order of appearance.
 - A new round makes existing concepts available again without erasing prior round history.
-- Practice can be timed, paused, resumed, restarted, and recovered after a page reload, with the animation and completion sound synchronized to the logical timer state.
+- Practice can be timed, paused, resumed, and restarted within the current page session, with the animation and completion sound synchronized to the logical timer state. Reloading or leaving the page abandons the active timer without recovery.
 - Descriptions can remain hidden until voluntarily revealed, and practice notes and history remain distinct from concept descriptions.
 - The interface works responsively in Spanish and English, preserves in-progress work when the language changes, and provides understandable loading, empty, success, and failure states.
 - Repeated, concurrent, interrupted, or failed operations do not silently duplicate practices, consume another concept, overwrite changes, or expose another user's data.
@@ -49,7 +49,7 @@ No numeric adoption, latency, retention, or learning targets are invented at thi
 | CAP-04 | Independent list rounds, pending/seen state, uniform random selection, manual marking, appearance order, and new-round history | MVP | Planned |
 | CAP-05 | Timed practice from a selected concept or independently, with a configurable duration from 1 to 59 minutes, pause, resume, restart, and reduced-motion behavior | MVP | Planned |
 | CAP-06 | Chucao forest animation and optional completion sound synchronized with the timer | MVP | Planned |
-| CAP-07 | Practice records, notes, prior rounds, and practice history | MVP | Planned |
+| CAP-07 | Completed practice records, notes, prior rounds, and practice history, including a 0–5 satisfaction rating distinct from Unrated; independent practices are saved only when given a free-text label | MVP | Planned |
 | CAP-08 | Spanish/English interface, translated validation and accessibility text, and locale-aware dates/plurals | MVP | Planned |
 | CAP-09 | Responsive, keyboard-usable, accessible interface for PC and mobile browsers | MVP | Planned |
 | CAP-10 | Cross-device access to the same signed-in user's saved data through the responsive web application | MVP baseline from the first release, not a later feature | Planned |
@@ -92,6 +92,7 @@ The existing plan treats list search/order, duplication, archive/restore, return
 - Notes can be edited or deleted without deleting their associated practice.
 - Deleting an account removes or anonymizes all associated personal and content data, subject to the documented retention and backup process.
 - Abandoning a timer creates no practice record. Practice history contains only practices explicitly completed and saved according to the later practice specification.
+- A completed practice may have a satisfaction rating from 0 to 5; `Unrated` is distinct from a rating of 0. An independent practice is persisted only when the user provides a free-text label, which does not create or modify a list concept.
 - The description is proposed to start hidden during practice and can be revealed voluntarily.
 - Browser locale detection may provide the first language, but the selected language and other preferences are account-level values shared across supported devices, with Spanish as fallback.
 
@@ -149,7 +150,7 @@ The sequence preserves the proposed increment order while making each increment 
 
 | Slice | Observable result | Capabilities | Boundary and dependencies | Activated quality/privacy conditions |
 |---|---|---|---|---|
-| VS-01 Account and first private list | A person can sign in with Google and create and view a private empty list in Spanish or English from supported responsive devices. | CAP-01, CAP-02, CAP-08, CAP-09, CAP-10, CAP-12 | Supabase Auth, Google OAuth, database, RLS, frontend shell, and account-level preferences. Requires account lifecycle and privacy notice decisions before real users. | Q01–Q06, SEC01, SEC04–SEC08, SEC10, WEB02–WEB04; DP01–DP03, DP08–DP13 |
+| **VS-01 Account and first private list** | **Closed for validated local scope; publication conditions remain pending.** A person can sign in with Google and create and view a private empty list in Spanish or English from supported responsive devices. | CAP-01, CAP-02 (partial: create/view), CAP-08, CAP-09, CAP-10, CAP-12 (partial: language/account shell) | Supabase Auth, Google OAuth, database, RLS, frontend shell, and the minimum account linkage needed for private lists. Rename/delete lists, full settings, concepts, and later study behavior remain outside this slice. Requires account lifecycle and privacy notice decisions before real users. | Q01–Q06, SEC01, SEC04–SEC08, SEC10, WEB02–WEB04; DP01–DP03, DP08–DP13 |
 | VS-02 Concept management | A person can add, paste, validate, edit, and delete concepts with descriptions while seeing clear accepted/rejected results. | CAP-03, CAP-09 | Depends on private lists and trusted validation; requires description length and deletion/history policy decisions. | Q01–Q04, SEC01–SEC03, SEC08; DP02, DP03, DP10, DP13, DP14 |
 | VS-03 Persistent round and selection | A person can mark or randomly select a pending concept, see the result and appearance order, and start a new round without losing prior history. | CAP-04, CAP-10 | Depends on concepts and atomic persistence; requires concurrency, retry/idempotency, return-to-pending, and the defined concept/list history rules. | Q01–Q04, SEC01–SEC04, SEC08; DP02, DP10, DP12–DP14, DP16 |
 | VS-04 Timed practice journey | A person can practice from a selected concept or independently for 1–59 minutes, pause/resume/restart, and see the animation reach the end with optional sound. Leaving the view does not preserve an active timer. | CAP-05, CAP-06, CAP-09, CAP-12 | Depends on selected concept context and timer limits; requires platform limitation review for background/locked-device sound. | Q01–Q06, SEC03, SEC08, SEC10, WEB03–WEB04; DP02, DP07 if telemetry/storage is added, DP13 |
@@ -158,6 +159,97 @@ The sequence preserves the proposed increment order while making each increment 
 | VS-07 Publication readiness | The integrated study journey is validated on modern browsers on PC and Android, with accessibility, migration reproducibility, deployment, and documented privacy handling. | CAP-01–CAP-10, CAP-12 | Depends on all release-blocking decisions, provider review, production configuration, migration/recovery evidence, and representative PC/Android checks. | All selected release criteria; unresolved DP items block real-user publication unless explicitly resolved with rationale. |
 
 Cross-cutting conditions apply to every slice: errors must expose the real state or uncertainty, retries must be safe, authorization must hold at the trusted boundary, and affected documentation must be updated.
+
+### Selected slice — VS-01 Account and first private list
+
+**Selection rationale:** VS-01 was selected as the first implementation slice
+and now delivers the smallest useful private product foundation: a person can
+enter Chucao, establish an account through the confirmed Google flow, create a
+private list, and see that same list again. It activates the trust and privacy
+boundaries needed by every later slice without bundling concepts, rounds, or
+practice behavior. Its local implementation and validation are closed; release
+conditions remain separate.
+
+**User outcome:** An individual opens Chucao, signs in with Google, creates a named private list, and sees the list in the responsive application. After reloading or using another supported browser/device with the same account, the list remains available. A different authenticated account cannot read or modify it.
+
+**Capabilities covered:**
+
+- **CAP-01:** Full first-slice scope for Google sign-in, session recognition, and local sign-out.
+- **CAP-02:** Partial scope for creating and viewing a private empty list; rename and delete are deferred.
+- **CAP-08:** Partial scope for the access and list shell in Spanish and English, including translated loading, success, and failure states.
+- **CAP-09:** First responsive and keyboard-usable shell for supported PC and Android browsers.
+- **CAP-10:** Cross-device access to the persisted account-owned list, without active-timer behavior.
+- **CAP-12:** Partial scope for account-level language preference and the shared shell; timer, sound, volume, and reduced-motion preference controls are deferred.
+
+**Included scope:**
+
+- Check the current Supabase session and distinguish loading, unauthenticated, authenticated, and authentication-error states.
+- Continue with Google using the confirmed Supabase Auth/PKCE flow, with duplicate-start prevention and retryable failure.
+- Establish or recognize the authenticated Chucao user by the stable Supabase Auth UUID.
+- Render the first authenticated shell with Spanish/English labels and the account-level language choice needed by this slice.
+- Create a list with the confirmed trimmed name validation, 80-character maximum, and per-user uniqueness rule.
+- Display the authenticated user's private lists, including the empty state and the first created list.
+- Reload the page and read the persisted list again.
+- Enforce ownership at the trusted Supabase/database boundary through the planned RLS and backend validation path.
+- Provide understandable loading, empty, validation, success, unauthorized, session-expired, and recoverable network/error states.
+- Keep the responsive presentation usable on the committed PC and Android browser targets.
+
+**Deferred scope:**
+
+- Concept creation, pasted batches, descriptions, rounds, selection, progress, practice, notes, history, ratings, and timer behavior.
+- List rename, deletion, archive/restore, duplication, search, ordering, and multi-selection.
+- Full Settings and Account views beyond the minimum language/session shell needed here.
+- Chucao timer scenery, flying animation, completion sound, and final identity assets. The owner-created chucao resources remain a visual dependency for the corresponding views, but their absence does not change this functional boundary.
+- Public release, production privacy publication, provider/legal review completion, and production deployment evidence.
+
+**Data and effects:** This slice creates or reads the authenticated user linkage, account-level language preference as needed, and user-owned list records. It must not expose another account's records, infer ownership from email, or create concepts, rounds, or practice data.
+
+**Dependencies and readiness:**
+
+- Existing evidence: Google OAuth configuration, PKCE client, session observation, local sign-in/sign-out proof, Supabase local configuration, React/Vite/Mantine/Comfortaa setup.
+- Implemented work: domain migration for the minimum user/list data, ownership
+  path, RLS policies, trusted validation, frontend shell/list interaction, and
+  Spanish/English resources.
+- The architecture already establishes Supabase PostgreSQL as the source of truth, Auth UUID ownership, deny-by-default authorization intent, versioned migrations, and local Docker development.
+- The repository now contains the VS-01 list schema, domain migration, RLS
+  policy, and list UI; the completed local evidence is the dependency for later
+  slices, not a claim that the broader product is complete.
+- Local development can use synthetic accounts/data. Public registration remains blocked until the privacy notice, provider review, deletion/retention procedure, and release evidence required by the global plan are complete.
+- The requested owner-created chucao assets are not required to specify the private-list behavior, but final identity presentation must wait for the corresponding resources.
+
+**Affected layers and components:** The slice crosses the browser shell and responsive layout, Google/Supabase Auth, session and locale state, list form/display interaction, Supabase API/PostgreSQL persistence, migrations, RLS, and error handling. It reuses the existing `src/lib/supabase.ts`, `src/App.tsx` authentication proof, Mantine provider, Comfortaa setup, and local Supabase configuration. It does not introduce a separate application server or a second client.
+
+**Activated shared criteria and controls:**
+
+- **Q01/Q02:** Loading, empty, success, failure, retry, reload, duplicate-submit, validation, and persistence states must be truthful and must not duplicate lists.
+- **Q03:** Keyboard operation, visible focus, labels, contrast, zoom, touch targets, responsive layouts, and language changes apply to the access and list shell.
+- **Q04:** List reads and writes must remain usable for representative personal-scale data without unbounded client work.
+- **Q05/Q06:** Local setup, migrations, build/lint checks, actionable errors, and documentation alignment are required for slice completion.
+- **SEC01/SEC04:** Client input and direct Supabase requests cannot bypass list limits, ownership, or allowed operations; unauthenticated and cross-user access must be rejected.
+- **SEC05–SEC07:** Google-only registration/session behavior, provider configuration, public-registration exposure, and abuse assumptions must be deliberate before public use.
+- **SEC08/SEC10:** List input/service limits and absence of privileged secrets in the browser must be checked.
+- **WEB02–WEB04:** Direct/deep route behavior, meaningful page language/title/heading metadata, favicon handling, and accessible image identity must be considered; the final chucao asset remains pending.
+- **DP01–DP03 and DP08–DP13:** Account, provider, purpose, notice, privacy, ownership, retention, and deletion boundaries must be represented before real user data or public registration. Local testing uses synthetic data.
+
+**Demonstration scenario:**
+
+1. Start local Vite and Supabase services with a development Google OAuth account configured for the documented callback.
+2. Open Chucao without a session and verify the loading-to-access transition, language selection, privacy link, and retryable Google error state.
+3. Sign in as user A, create a list named `Anatomía`, and verify a confirmed success state followed by the list in the authenticated list view.
+4. Reload the page and verify that user A still sees `Anatomía`; open the app from a second supported browser/device with the same account and verify the same result.
+5. Sign in as user B and verify that user A's list is neither returned nor accessible through a direct request or guessed identifier.
+6. Attempt an empty, over-limit, duplicate, unauthenticated, and repeated submission case and verify understandable rejection without a duplicate or unauthorized record.
+
+The scenario demonstrates persistence and ownership, not only visual rendering. Production provider/legal and full browser-matrix evidence remain publication checks rather than local-slice evidence.
+
+**Closure state and follow-ups:** VS-01 is closed for its validated local
+scope. The complete requirements, task states, validation matrix, and closure
+evidence are recorded in
+`specs/001-account-and-first-private-list/spec.md`,
+`specs/001-account-and-first-private-list/tasks.md`, and
+`temp/evidence/vs-01/evidence.md`. Production configuration, provider/legal
+publication, and real-user activation remain release work and are not implied
+by this closure.
 
 ## 9. Proposals and open questions
 
@@ -177,4 +269,5 @@ The following remain proposals rather than approvals: hidden-by-default descript
 | 2026-11-16 | Confirmed field limits, ordering, multi-selection actions, timer boundaries, and concept/note history rules. | Converts the corresponding planning proposals into product constraints for later specifications. |
 | 2026-11-16 | Confirmed anonymized list history after permanent deletion, no record when abandoning a timer, and modern PC/Android browser support. | Closes the remaining behavior and compatibility questions from the prior planning draft. |
 | 2026-11-16 | Closed the controller, jurisdiction, privacy notice, rights, retention, backup, provider, and incident-responsibility planning item. | Establishes an initial Chilean-law review scope and a proportionate privacy operation for public registration; implementation and legal verification remain release prerequisites. |
+| 2026-11-16 | Selected VS-01, Account and first private list, as the first implementation slice. | Delivers the smallest demonstrable private product foundation while activating identity, ownership, persistence, responsive access, and required controls for later slices. |
 
