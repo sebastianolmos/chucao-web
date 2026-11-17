@@ -5,6 +5,15 @@ export type DomainErrorCode =
   | 'duplicate_name'
   | 'list_limit'
   | 'profile_not_initialized'
+  | 'concept_title_invalid'
+  | 'concept_description_invalid'
+  | 'concept_duplicate'
+  | 'batch_limit_exceeded'
+  | 'concept_batch_invalid'
+  | 'concept_batch_empty'
+  | 'concept_conflict'
+  | 'concept_not_found'
+  | 'unresolved'
   | 'unavailable'
   | 'unknown';
 
@@ -41,6 +50,28 @@ function messageCode(message: string): DomainErrorCode | null {
       return 'duplicate_name';
     case 'list_limit_reached':
       return 'list_limit';
+    case 'concept_not_authenticated':
+      return 'unauthenticated';
+    case 'concept_unauthorized':
+      return 'unauthorized';
+    case 'concept_title_invalid':
+      return 'concept_title_invalid';
+    case 'concept_description_invalid':
+      return 'concept_description_invalid';
+    case 'concept_duplicate':
+      return 'concept_duplicate';
+    case 'batch_limit_exceeded':
+      return 'batch_limit_exceeded';
+    case 'concept_batch_invalid':
+      return 'concept_batch_invalid';
+    case 'concept_batch_empty':
+      return 'concept_batch_empty';
+    case 'concept_conflict':
+      return 'concept_conflict';
+    case 'concept_not_found':
+      return 'concept_not_found';
+    case 'unresolved':
+      return 'unresolved';
     default:
       return null;
   }
@@ -67,6 +98,10 @@ export function mapSupabaseError(
 
   if (code === '23505') {
     return new DomainServiceError('duplicate_name', 'duplicate_name', error);
+  }
+
+  if (code === '40001') {
+    return new DomainServiceError('concept_conflict', 'concept_conflict', error);
   }
 
   if (code === '28000') {

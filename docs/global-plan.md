@@ -251,6 +251,162 @@ evidence are recorded in
 publication, and real-user activation remain release work and are not implied
 by this closure.
 
+### Selected slice — VS-02 Concept management
+
+**Selection status and rationale:** **Selected** as the next implementation
+slice after the locally validated VS-01 foundation. It extends the existing
+private-list journey with the smallest useful content-management result:
+authenticated people can create and maintain concepts before round selection or
+practice behavior is introduced. This preserves the provisional order and
+reduces uncertainty around concept validation, pasted input, ownership, and
+deletion semantics without bundling the independent round state machine.
+
+**Specification:** Draft at
+`specs/002-concept-management/spec.md`; the initial behavioral clarification
+is resolved and the draft is ready for technical planning.
+
+**User outcome:** An authenticated person opens one of their private lists,
+adds a concept individually or pastes a batch, reviews which entries are
+accepted or rejected, and then sees, edits, or deletes the persisted concepts.
+The list remains usable after reload, and another account cannot read or
+change those concepts.
+
+**Capabilities covered:**
+
+- **CAP-03:** Full concept-management scope for stable concept identity,
+  required title, optional description, individual entry, pasted batch entry,
+  edit, and delete. Round appearance, selection, and practice records remain
+  outside this slice.
+- **CAP-09:** The next responsive and keyboard-usable content-management
+  experience in the supported PC and Android browser targets.
+- **CAP-10:** Partial persistence scope for account-owned concepts across
+  reloads and supported devices; round and practice history are deferred.
+
+**Included scope:**
+
+- Enter List Detail from an owned list and distinguish an empty list from a
+  list containing concepts.
+- Add one concept with a required trimmed title of 1–50 characters and an
+  optional trimmed description of up to 2,000 characters.
+- Paste a bounded batch of lines beginning with `-`; support the optional
+  `- Title : Description` form, preserve input order, and show accepted and
+  omitted lines with understandable reasons before confirmation.
+- Reject empty, malformed, over-limit, and exact case-sensitive duplicate
+  titles within the same list, including duplicates already stored and
+  duplicates within the current paste.
+- Confirm accepted entries atomically enough that a failed save does not report
+  success or silently duplicate concepts; preserve entered content for retry.
+- Display persisted concepts, open a concept for its title and description,
+  edit either field without changing identity, and delete after an explicit
+  explanation/confirmation.
+- Make active concepts begin in the pending state required by VS-03, while
+  keeping the state transition itself outside this slice.
+- Provide truthful loading, empty, processing, success, validation, failure,
+  retry, discard-unsaved-work, and expired-session states in Spanish and
+  English. User-authored titles and descriptions remain unchanged.
+- Enforce title/description limits, ownership, allowed fields, and deletion
+  behavior at the trusted Supabase/database boundary, not only in the browser.
+
+**Deferred scope:** Random or manual selection, appearance order, rounds,
+progress, return-to-pending, bulk mark-as-seen actions, practice, notes,
+history views, ratings, timer behavior, and advanced list organization
+(rename/delete/archive/restore/duplicate/search/order). File import/export,
+HTML rendering, sharing, public content, analytics, and any new service are
+also excluded. The technical mechanism for preserving deleted-concept
+references is deferred to the specification and later history slices; the
+product rule that deleted concepts cannot be practiced and appear as
+“Deleted concept” in historical views remains preserved.
+
+**Data and effects:** The slice creates, reads, updates, and deletes
+account-owned concept records linked to an existing list. New records contain
+the user-authored title and optional description plus the initial pending
+state. No round, appearance, practice, note, telemetry, or cross-user data is
+created. Deletion must follow the established retention/history boundary and
+must not expose deleted content through errors, URLs, logs, or client caches.
+
+**Dependencies and readiness:**
+
+- VS-01 is the required dependency and is closed for its validated local
+  scope: authenticated Supabase session, owned lists, local migration flow,
+  RLS boundary, React/Mantine shell, localization, and responsive patterns
+  are available as evidence.
+- The conceptual architecture establishes PostgreSQL as the source of truth,
+  Auth UUID ownership, deny-by-default RLS, trusted validation, and versioned
+  migrations. A concept migration, policies, and service/UI behavior do not
+  yet exist in the repository and are the work of this slice.
+- Product constraints already confirmed in the global plan and FLOW-03 are
+  sufficient to select the slice: title 1–50, description 2,000, exact
+  case-sensitive duplicate detection, initial pending state, and pasted-line
+  syntax. The maximum batch size/processing budget and the precise
+  delete-versus-tombstone mechanism remain specification-level decisions.
+- Local demonstration can use synthetic authenticated accounts and local
+  Supabase/Docker. Public registration, privacy publication, provider/legal
+  review, and production deployment remain release prerequisites rather than
+  blockers for local specification.
+
+**Affected layers and components:** The vertical path is List Detail →
+Add Concepts/Concept Detail interaction → localized form and batch-review
+states → concept service and typed database model → Supabase PostgreSQL
+migration, constraints, RLS, and trusted write operations → persisted reload
+and ownership/error handling. It reuses the authenticated shell, locale
+provider, Mantine/CSS Modules patterns, `ListDetailView`, `listService`,
+`src/lib/supabase.ts`, and the VS-01 migration/RLS conventions. No separate
+application server or client-side authorization shortcut is introduced.
+
+**Activated shared criteria and controls:**
+
+- **Q01/Q02:** Loading, empty, validation, accepted/omitted, processing,
+  success, retry, reload, duplicate-submit, duplicate-paste, interruption,
+  edit-conflict, and delete-confirmation states must be truthful and must not
+  duplicate or corrupt concepts.
+- **Q03:** Persistent labels, associated errors, keyboard/focus behavior,
+  accessible batch summaries, contrast, zoom, touch targets, responsive
+  layouts, reduced-motion-safe feedback, and Spanish/English expansion apply
+  to the concept views.
+- **Q04/SEC08:** Pasted input, concept counts, field lengths, and service
+  work require explicit bounded limits suitable for realistic personal-scale
+  data; the exact batch budget must be resolved in the specification.
+- **SEC01–SEC03:** Direct requests cannot bypass allowed fields, lengths,
+  ownership, state initialization, or deletion rules; hostile punctuation and
+  HTML-like user text remain plain stored/rendered text.
+- **DP02/DP03/DP10/DP13/DP14:** The specification must inventory concept
+  content and lifecycle, keep it private to the Auth UUID, prevent auxiliary
+  disclosure, and define active deletion/retention behavior before enabling
+  real user content. Local evidence uses synthetic data.
+
+**Demonstration scenario:**
+
+1. Start local Vite and Supabase services and sign in as synthetic user A.
+2. Open an empty owned list and verify the add-concepts action. Add
+   `Anatomía : órganos y sistemas` individually, reload, and verify the
+   title/description and pending initial state persist.
+3. Paste a batch containing valid lines, a blank/malformed line, an overlong
+   title, an exact duplicate of `Anatomía`, and two duplicate lines in the
+   same block. Verify the review identifies accepted entries and every
+   omission reason before confirmation.
+4. Confirm the batch, verify input order and a success summary, edit one
+   persisted concept, reload, and verify the changed description without a
+   new identity.
+5. Attempt deletion, cancel once, then confirm and verify the concept is no
+   longer active. Trigger a failed/retried save or delete and verify no false
+   success or duplicate record is shown.
+6. Sign in as synthetic user B and verify user A's concepts are absent from
+   list reads and rejected through direct requests or guessed identifiers.
+
+The scenario verifies persisted content and trusted ownership, not only
+rendering. Cross-device and full browser-matrix checks remain publication
+evidence; future history verification must confirm the established deleted
+concept representation once VS-03/VS-05 exist.
+
+**Open decisions and readiness for specification:** The behavioral decisions
+needed before technical planning are resolved in the VS-02 draft: the batch
+is limited to 100 lines and 20,000 characters including line breaks, stale
+edits are rejected with a reload-current-version path, and deletion uses a
+logical deleted/tombstone state that preserves only the minimum future-history
+reference. Exact atomicity, retry/idempotency mechanics, and physical schema
+remain technical-plan decisions. No product-level decision is currently
+blocking the next stage.
+
 ## 9. Proposals and open questions
 
 | Decision needed | Consequence | Owner / stage |
@@ -270,4 +426,5 @@ The following remain proposals rather than approvals: hidden-by-default descript
 | 2026-11-16 | Confirmed anonymized list history after permanent deletion, no record when abandoning a timer, and modern PC/Android browser support. | Closes the remaining behavior and compatibility questions from the prior planning draft. |
 | 2026-11-16 | Closed the controller, jurisdiction, privacy notice, rights, retention, backup, provider, and incident-responsibility planning item. | Establishes an initial Chilean-law review scope and a proportionate privacy operation for public registration; implementation and legal verification remain release prerequisites. |
 | 2026-11-16 | Selected VS-01, Account and first private list, as the first implementation slice. | Delivers the smallest demonstrable private product foundation while activating identity, ownership, persistence, responsive access, and required controls for later slices. |
+| 2026-11-17 | Selected VS-02 Concept management as the next implementation slice. | Extends the validated private-list foundation to a complete persisted concept-management journey while keeping rounds, selection, practice, and history separate. |
 
