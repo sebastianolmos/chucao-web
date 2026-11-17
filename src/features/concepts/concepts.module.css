@@ -1,0 +1,19 @@
+.view { display: grid; gap: 1.25rem; width: min(100%, 56rem); min-width: 0; margin: 0 auto; }
+.panel, .conceptCard { display: grid; gap: 1rem; min-width: 0; padding: clamp(1rem, 3vw, 1.5rem); border: 2px solid var(--chucao-brown); border-radius: 1rem; background: var(--chucao-panel); box-shadow: 4px 5px 0 var(--chucao-brown); }
+.empty { padding: 1.5rem; border: 2px dashed var(--chucao-brown); border-radius: .9rem; background: var(--chucao-yellow); }
+.reviewList { display: grid; gap: .75rem; padding-inline-start: 1.5rem; }
+.reviewList li { padding-inline-start: .25rem; overflow-wrap: anywhere; }
+.conceptCard { background: var(--chucao-cyan); }
+.conceptRow { min-width: 0; gap: 0.5rem; }
+.conceptOpen { flex: 1 1 0; min-width: 0; min-height: 2.75rem; padding-inline: 0.25rem; font-size: 1rem; font-weight: 700; color: var(--chucao-brown); text-align: start; white-space: normal; overflow-wrap: anywhere; }
+.conceptOpen :global(.mantine-Button-label) { white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
+.listHeader { min-width: 0; gap: 0.5rem; }
+.listTitle { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
+.detail { display: grid; gap: 1.25rem; min-width: 0; padding: clamp(1rem, 3vw, 1.5rem); border: 2px solid var(--chucao-brown); border-radius: 1rem; background: var(--chucao-panel); box-shadow: 4px 5px 0 var(--chucao-brown); }
+.detailHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; min-width: 0; }
+.detailHeading { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.detailTitle { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
+.detailBackButton { flex: 0 0 auto; }
+.detailText { display: grid; gap: 0.5rem; min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
+.detailText :global(.mantine-Text-root) { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
+.dangerPanel { display: grid; gap: 0.75rem; padding: 1rem; border: 2px solid var(--chucao-brown); border-radius: 0.85rem; background: var(--chucao-pink); }

@@ -1,0 +1,131 @@
+import { Alert, Badge, Button, Group, Stack, Text, Title } from '@mantine/core';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { ListRow } from '../../lib/database.types';
+import { queryClient } from '../../lib/queryClient';
+import { listQueryKey } from '../lists/listService';
+import { DomainServiceError } from '../shared/supabaseErrors';
+import { createConcept, createConceptBatch, conceptQueryKey, getOwnedConcepts } from './conceptService';
+import { parseConceptBatch, type BatchReview } from './conceptParser';
+import { ConceptEntryForm, type EntryMode } from './ConceptEntryForm';
+import { ConceptBatchReview } from './ConceptBatchReview';
+import { ConceptDetailView } from './ConceptDetailView';
+import styles from './concepts.module.css';
+
+type Props = { userId: string; list: ListRow; onBack: () => void };
+
+function errorKey(error: unknown): string {
+  if (!(error instanceof DomainServiceError)) return 'concepts.unavailable';
+  switch (error.code) {
+    case 'concept_title_invalid': return 'concepts.titleInvalid';
+    case 'concept_description_invalid': return 'concepts.descriptionInvalid';
+    case 'concept_duplicate': return 'concepts.duplicate';
+    case 'batch_limit_exceeded': return 'concepts.batchTooLarge';
+    case 'unauthenticated': return 'concepts.sessionExpired';
+    case 'unauthorized': return 'concepts.unauthorized';
+    case 'unresolved': return 'concepts.unresolved';
+    default: return 'concepts.unavailable';
+  }
+}
+
+export function ConceptManagementView({ userId, list, onBack }: Props) {
+  const { t } = useTranslation();
+  const [mode, setMode] = useState<EntryMode>('individual');
+  const [review, setReview] = useState<BatchReview | null>(null);
+  const [rawInput, setRawInput] = useState('');
+  const [batchError, setBatchError] = useState<string | null>(null);
+  const [summary, setSummary] = useState<number | null>(null);
+  const [selectedConceptId, setSelectedConceptId] = useState<string | null>(null);
+  const [successFeedback, setSuccessFeedback] = useState<{ key: string; count?: number } | null>(null);
+  const key = conceptQueryKey(userId, list.id);
+  const conceptsQuery = useQuery({ queryKey: key, queryFn: () => getOwnedConcepts(userId, list.id) });
+  const createMutation = useMutation({
+    mutationFn: createConcept,
+    onSuccess: async (result) => {
+      if (result.status === 'created' || result.status === 'reconciled') {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: key }),
+          queryClient.invalidateQueries({ queryKey: listQueryKey(userId) }),
+        ]);
+      }
+    },
+  });
+  const batchMutation = useMutation({
+    mutationFn: () => createConceptBatch(userId, list.id, review!),
+    onSuccess: async (result) => {
+      if (result.status === 'created' || result.status === 'reconciled') {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: key }),
+          queryClient.invalidateQueries({ queryKey: listQueryKey(userId) }),
+        ]);
+        setSummary(result.concepts.length); setBatchError(null); setRawInput('');
+        setSuccessFeedback({ key: 'concepts.batchSaved', count: result.concepts.length });
+      } else if (result.status === 'rejected' || result.status === 'unresolved') { setBatchError(errorKey(result.error)); }
+    },
+    onError: (error) => setBatchError(errorKey(error)),
+  });
+  useEffect(() => {
+    if (!successFeedback) return;
+    const timeout = window.setTimeout(() => setSuccessFeedback(null), 4000);
+    return () => window.clearTimeout(timeout);
+  }, [successFeedback]);
+  const busy = createMutation.isPending || batchMutation.isPending;
+
+  async function saveIndividual(title: string, description: string): Promise<boolean> {
+    setSummary(null);
+    setSuccessFeedback(null);
+    const result = await createMutation.mutateAsync({ userId, listId: list.id, title, description });
+    if (result.status === 'created' || result.status === 'reconciled') {
+      setSuccessFeedback({ key: 'concepts.saved' });
+      return true;
+    }
+    if (result.status === 'rejected' || result.status === 'unresolved') setBatchError(errorKey(result.error));
+    return false;
+  }
+
+  function startReview(rawInput: string) {
+    setBatchError(null); setSummary(null); setSuccessFeedback(null);
+    const existing = new Set((conceptsQuery.data ?? []).map((concept) => concept.title));
+    setReview(parseConceptBatch(rawInput, existing));
+  }
+
+  if (conceptsQuery.isPending) return <section aria-busy="true" className={styles.view}><Text role="status">{t('concepts.loading')}</Text></section>;
+  if (conceptsQuery.isError) return <section className={styles.view}><Alert color="red" role="alert">{t(errorKey(conceptsQuery.error))}</Alert><Button onClick={() => void conceptsQuery.refetch()}>{t('concepts.retry')}</Button></section>;
+
+  const selectedConcept = conceptsQuery.data.find((concept) => concept.id === selectedConceptId) ?? null;
+  async function reloadSelectedConcept() {
+    const result = await conceptsQuery.refetch();
+    return result.isError ? null : result.data?.find((concept) => concept.id === selectedConceptId) ?? null;
+  }
+
+  return (
+    <section aria-labelledby="concept-list-title" aria-busy={busy} className={styles.view}>
+      <Group className={styles.listHeader} justify="space-between"><Button variant="subtle" onClick={onBack}>{t('detail.back')}</Button><Title className={styles.listTitle} order={1} id="concept-list-title">{list.name}</Title><span /></Group>
+      {successFeedback && <Alert color="green" role="status">{successFeedback.count === undefined ? t(successFeedback.key) : t(successFeedback.key, { count: successFeedback.count })}</Alert>}
+      {createMutation.data && (createMutation.data.status === 'rejected' || createMutation.data.status === 'unresolved') && <Alert color="red" role="alert">{t(errorKey(createMutation.data.error))}</Alert>}
+      {selectedConcept ? (
+        <ConceptDetailView userId={userId} listId={list.id} concept={selectedConcept}
+          onClose={() => setSelectedConceptId(null)} onReload={reloadSelectedConcept}
+          onDeleted={() => { setSelectedConceptId(null); setSuccessFeedback({ key: 'conceptDetail.deleteSuccess' }); }} />
+      ) : (
+        <>
+          {conceptsQuery.data.length === 0 ? <div className={styles.empty}><Text>{t('concepts.empty')}</Text></div> : (
+            <Stack gap="sm" aria-label={t('concepts.list')}>
+              {conceptsQuery.data.map((concept) => <article className={styles.conceptCard} key={concept.id}>
+                <Group className={styles.conceptRow} justify="space-between"><Button className={styles.conceptOpen} variant="subtle" onClick={() => { setSuccessFeedback(null); setSelectedConceptId(concept.id); }} aria-label={t('conceptDetail.viewConcept', { title: concept.title })}>{concept.title}</Button><Badge color="yellow">{t(`conceptDetail.state.${concept.state}`)}</Badge></Group>
+                {concept.description && <Text>{concept.description}</Text>}
+              </article>)}
+            </Stack>
+          )}
+          {review ? <ConceptBatchReview review={review} busy={batchMutation.isPending} error={batchError} summary={summary}
+            onConfirm={() => { if (summary === null) { setBatchError(null); batchMutation.mutate(); } }} onCancel={() => { if (!busy) { setReview(null); setBatchError(null); } }} /> : (
+            <ConceptEntryForm busy={busy} mode={mode} onModeChange={setMode} onIndividualSubmit={saveIndividual}
+              onBatchReview={startReview} rawInput={rawInput} onRawInputChange={setRawInput} onCancel={() => { setReview(null); setSummary(null); }} />
+          )}
+        </>
+      )}
+      {busy && <Text role="status">{t('concepts.processing')}</Text>}
+    </section>
+  );
+}

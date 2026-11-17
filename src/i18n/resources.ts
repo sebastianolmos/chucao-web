@@ -28,6 +28,16 @@ export const resources = {
         retry: 'Reintentar',
         signOut: 'Cerrar sesión',
       },
+      navigation: {
+        label: 'Navegación principal',
+        goToLists: 'Ir a Mis listas',
+        changeLanguage: 'Cambiar idioma',
+      },
+      preferences: {
+        title: 'Preferencias',
+        open: 'Abrir preferencias',
+        privacy: 'Privacidad',
+      },
       lists: {
         title: 'Mis listas',
         loading: 'Cargando tus listas…',
@@ -35,7 +45,8 @@ export const resources = {
         create: 'Crear lista',
         created: 'Lista creada correctamente.',
         count: '{{count}} lista(s)',
-        emptyDetail: 'Lista privada vacía.',
+        emptyDetail: 'Lista vacía',
+        practiceProgress: 'Conceptos practicados {{practiced}}/{{total}}',
         privateContext: 'Tus listas son privadas y solo pertenecen a tu cuenta.',
         name: 'Nombre de la lista',
         retry: 'Reintentar',
@@ -52,6 +63,27 @@ export const resources = {
         empty: 'Los conceptos todavía no están disponibles en esta versión.',
         back: 'Volver a Mis listas',
       },
+      concepts: {
+        list: 'Conceptos de la lista', loading: 'Cargando conceptos…', empty: 'Esta lista todavía no tiene conceptos. Agrega uno o pega varios para comenzar.',
+        addTitle: 'Agregar conceptos', entryMode: 'Modo de ingreso', individualMode: 'Individual', batchMode: 'Por lote',
+        titleLabel: 'Título del concepto', descriptionLabel: 'Descripción (opcional)', titleGuidance: '{{count}} de 50 caracteres', descriptionGuidance: '{{count}} de 2.000 caracteres',
+        batchInputLabel: 'Pega conceptos, uno por línea', batchGuidance: 'Cada línea debe comenzar con un guion. Usa “- Título : Descripción” para agregar una descripción.', batchCounter: '{{lines}} líneas · {{characters}} caracteres',
+        batchLineLimit: 'El lote no puede superar 100 líneas.', batchCharacterLimit: 'El lote no puede superar 20.000 caracteres.', batchTooLarge: 'El lote supera el límite permitido. Corrige el contenido y revísalo de nuevo.',
+        review: 'Revisar lote', reviewTitle: 'Revisión del lote', accepted: 'Aceptados ({{count}})', omitted: 'Omitidos ({{count}})', noneAccepted: 'No hay conceptos aceptados.', noneOmitted: 'No hay líneas omitidas.',
+        sourceLine: 'Línea {{line}}', emptyLine: '(línea vacía)', reason: { empty: 'La línea está vacía.', malformed: 'La línea debe comenzar con un guion.', title_invalid: 'El título debe tener entre 1 y 50 caracteres.', description_invalid: 'La descripción supera 2.000 caracteres.', duplicate: 'El título ya existe en esta lista o en el lote.' },
+        save: 'Guardar concepto', confirmBatch: 'Confirmar y guardar lote', batchConfirmed: 'Lote guardado', editBatch: 'Volver y corregir', done: 'Listo', cancel: 'Cancelar', discardConfirm: '¿Descartar el contenido sin guardar?',
+        processing: 'Guardando conceptos…', saved: 'Concepto guardado.', batchSaved: 'Se guardaron {{count}} conceptos. Están en la lista en el orden ingresado.', pending: 'Pendiente',
+        titleInvalid: 'El título debe tener entre 1 y 50 caracteres.', descriptionInvalid: 'La descripción no puede superar 2.000 caracteres.', duplicate: 'Ya existe un concepto con ese título.',
+        unavailable: 'No se pudieron cargar o guardar los conceptos. Conservamos el contenido para que puedas reintentar.', unauthorized: 'Tu sesión no puede acceder a esta lista.', sessionExpired: 'Tu sesión expiró. Inicia sesión de nuevo para continuar.', unresolved: 'No se pudo confirmar el resultado. Revisa la lista antes de volver a intentar.', retry: 'Reintentar',
+      },
+      conceptDetail: {
+        viewConcept: 'Ver {{title}}', backToList: 'Volver a conceptos', state: { pending: 'Pendiente', seen: 'Visto' },
+        descriptionLabel: 'Descripción del concepto', noDescription: 'Sin descripción.', editConcept: 'Editar concepto', saveChanges: 'Guardar cambios', cancelEdit: 'Cancelar cambios', editSaved: 'Cambios guardados.',
+        conflict: 'Este concepto cambió en otra sesión.', reloadCurrentVersion: 'Recargar versión actual', reloadFailed: 'No se pudo recargar el concepto. Inténtalo de nuevo.', notFound: 'Este concepto ya no está disponible.',
+        deleteSectionTitle: 'Eliminar concepto', deleteSectionDescription: 'Al eliminarlo, dejará de aparecer en esta lista y no podrá practicarse. Las referencias históricas futuras lo identificarán como concepto eliminado.',
+        deleteConcept: 'Eliminar concepto', deleteConfirmTitle: 'Confirmar eliminación', deleteConfirmDescription: 'El concepto dejará de estar activo en esta lista. Las referencias históricas futuras se conservarán como “Concepto eliminado”; su título y descripción se quitarán del concepto.',
+        cancelDelete: 'Cancelar eliminación', confirmDelete: 'Confirmar eliminación', processingDelete: 'Eliminando concepto…', deleteSuccess: 'Concepto eliminado de la lista.', deleteUnresolved: 'No se pudo confirmar la eliminación. El concepto sigue visible mientras se verifica.',
+      },
       validation: {
         required: 'Escribe un nombre para la lista.',
         tooLong: 'El nombre no puede superar los 80 caracteres.',
@@ -65,21 +97,21 @@ export const resources = {
       },
       privacy: {
         title: 'Privacidad',
-        version: 'Versión local VS-01 · 17 de noviembre de 2026',
+        version: 'Versión local VS-02 · 17 de noviembre de 2026',
         intro:
-          'Este aviso describe el procesamiento activado por el primer slice de Chucao Web. Es contenido local de revisión y no reemplaza la publicación legal final.',
+          'Este aviso describe el procesamiento activado por el slice local VS-02 de Chucao Web, incluida la gestión de conceptos. Es contenido de revisión local y no reemplaza la publicación legal definitiva antes de habilitar usuarios reales.',
         dataTitle: 'Datos que se utilizan',
         data:
-          'Google y Supabase Auth gestionan la identidad y la sesión. Chucao utiliza el identificador estable de la cuenta, el correo mostrado por Auth para el contexto de sesión, la preferencia de idioma y los nombres de tus listas privadas.',
+          'Google y Supabase Auth gestionan la identidad y la sesión. Chucao utiliza el identificador estable de la cuenta, el correo mostrado por Auth para el contexto de sesión, la preferencia de idioma, los nombres de tus listas privadas y los títulos y descripciones de los conceptos que escribes en ellas.',
         purposesTitle: 'Para qué se utilizan',
         purposes:
-          'Estos datos permiten iniciar sesión, preparar tu perfil, recordar el idioma elegido, guardar tus listas y aplicar la separación de datos entre cuentas. No se activan analítica, publicidad ni contenido público en este slice.',
+          'Estos datos permiten iniciar sesión, preparar tu perfil, recordar el idioma elegido y organizar tus conceptos en listas privadas para practicar explicaciones orales. La base de datos aplica la separación de datos entre cuentas. No se activan analítica, publicidad ni contenido público en este slice.',
         providersTitle: 'Proveedores y transferencias',
         providers:
           'Google participa en la autenticación delegada. Supabase proporciona Auth, la base de datos y las políticas de acceso. La revisión de roles, ubicaciones, transferencias y condiciones de proveedores para publicación queda pendiente.',
         retentionTitle: 'Conservación y eliminación',
         retention:
-          'Las listas y preferencias permanecen asociadas a tu cuenta mientras el servicio las necesite. El slice no incluye todavía una automatización de eliminación de cuenta o datos; la política de conservación y borrado para producción debe publicarse antes de activar usuarios reales.',
+          'Las listas, sus conceptos y las preferencias se asocian a tu cuenta. Al eliminar un concepto, se quitan su título y la descripción del contenido activo y se conserva un marcador mínimo para futuras referencias históricas. La eliminación automatizada de cuenta y la política completa de conservación, copias de seguridad y borrado deben revisarse y publicarse antes de activar usuarios reales.',
         rightsTitle: 'Derechos y contacto',
         rights:
           'La información sobre acceso, rectificación, eliminación, oposición y otros derechos dependerá de la ley aplicable. La identificación final del responsable y el canal de contacto deben confirmarse y publicarse antes del lanzamiento.',
@@ -121,6 +153,16 @@ export const resources = {
         retry: 'Retry',
         signOut: 'Sign out',
       },
+      navigation: {
+        label: 'Main navigation',
+        goToLists: 'Go to My Lists',
+        changeLanguage: 'Change language',
+      },
+      preferences: {
+        title: 'Preferences',
+        open: 'Open preferences',
+        privacy: 'Privacy',
+      },
       lists: {
         title: 'My Lists',
         loading: 'Loading your lists…',
@@ -128,7 +170,8 @@ export const resources = {
         create: 'Create list',
         created: 'List created successfully.',
         count: '{{count}} list(s)',
-        emptyDetail: 'Private empty list.',
+        emptyDetail: 'Empty list',
+        practiceProgress: 'Concepts practiced {{practiced}}/{{total}}',
         privateContext: 'Your lists are private and belong only to your account.',
         name: 'List name',
         retry: 'Retry',
@@ -145,6 +188,27 @@ export const resources = {
         empty: 'Concepts are not available in this version yet.',
         back: 'Back to My Lists',
       },
+      concepts: {
+        list: 'List concepts', loading: 'Loading concepts…', empty: 'This list has no concepts yet. Add one or paste several to get started.',
+        addTitle: 'Add concepts', entryMode: 'Entry mode', individualMode: 'Individual', batchMode: 'By batch',
+        titleLabel: 'Concept title', descriptionLabel: 'Description (optional)', titleGuidance: '{{count}} of 50 characters', descriptionGuidance: '{{count}} of 2,000 characters',
+        batchInputLabel: 'Paste concepts, one per line', batchGuidance: 'Each line must begin with a hyphen. Use “- Title : Description” to add a description.', batchCounter: '{{lines}} lines · {{characters}} characters',
+        batchLineLimit: 'A batch cannot exceed 100 lines.', batchCharacterLimit: 'A batch cannot exceed 20,000 characters.', batchTooLarge: 'The batch exceeds the allowed limit. Correct the content and review it again.',
+        review: 'Review batch', reviewTitle: 'Batch review', accepted: 'Accepted ({{count}})', omitted: 'Omitted ({{count}})', noneAccepted: 'There are no accepted concepts.', noneOmitted: 'There are no omitted lines.',
+        sourceLine: 'Line {{line}}', emptyLine: '(empty line)', reason: { empty: 'The line is empty.', malformed: 'The line must begin with a hyphen.', title_invalid: 'The title must contain 1 to 50 characters.', description_invalid: 'The description exceeds 2,000 characters.', duplicate: 'The title already exists in this list or batch.' },
+        save: 'Save concept', confirmBatch: 'Confirm and save batch', batchConfirmed: 'Batch saved', editBatch: 'Return to edit', done: 'Done', cancel: 'Cancel', discardConfirm: 'Discard the unsaved content?',
+        processing: 'Saving concepts…', saved: 'Concept saved.', batchSaved: '{{count}} concepts were saved. They appear in the list in the entered order.', pending: 'Pending',
+        titleInvalid: 'The title must contain 1 to 50 characters.', descriptionInvalid: 'The description cannot exceed 2,000 characters.', duplicate: 'A concept with this title already exists.',
+        unavailable: 'Concepts could not be loaded or saved. Your content is preserved so you can retry.', unauthorized: 'Your session cannot access this list.', sessionExpired: 'Your session expired. Sign in again to continue.', unresolved: 'The result could not be confirmed. Check the list before trying again.', retry: 'Retry',
+      },
+      conceptDetail: {
+        viewConcept: 'View {{title}}', backToList: 'Back to concepts', state: { pending: 'Pending', seen: 'Seen' },
+        descriptionLabel: 'Concept description', noDescription: 'No description.', editConcept: 'Edit concept', saveChanges: 'Save changes', cancelEdit: 'Cancel changes', editSaved: 'Changes saved.',
+        conflict: 'This concept changed in another session.', reloadCurrentVersion: 'Reload current version', reloadFailed: 'The concept could not be reloaded. Try again.', notFound: 'This concept is no longer available.',
+        deleteSectionTitle: 'Delete concept', deleteSectionDescription: 'Deleting it removes it from this list and makes it unavailable for practice. Future history references will identify it as a deleted concept.',
+        deleteConcept: 'Delete concept', deleteConfirmTitle: 'Confirm deletion', deleteConfirmDescription: 'The concept will no longer be active in this list. Future history references will remain as “Deleted concept”; its title and description will be removed from the concept.',
+        cancelDelete: 'Cancel deletion', confirmDelete: 'Confirm deletion', processingDelete: 'Deleting concept…', deleteSuccess: 'Concept deleted from the list.', deleteUnresolved: 'Deletion could not be confirmed. The concept remains visible while the result is checked.',
+      },
       validation: {
         required: 'Enter a list name.',
         tooLong: 'The name cannot exceed 80 characters.',
@@ -158,21 +222,21 @@ export const resources = {
       },
       privacy: {
         title: 'Privacy',
-        version: 'Local VS-01 version · 17 November 2026',
+        version: 'Local VS-02 version · 17 November 2026',
         intro:
-          'This notice describes the processing activated by the first Chucao Web slice. It is local review content and does not replace the final legal publication.',
+          'This notice describes the processing activated by the local Chucao Web VS-02 slice, including concept management. It is local review content and does not replace the final legal publication required before real users are enabled.',
         dataTitle: 'Data used',
         data:
-          'Google and Supabase Auth manage identity and session data. Chucao uses the stable account identifier, the email displayed by Auth for session context, the language preference, and the names of your private lists.',
+          'Google and Supabase Auth manage identity and session data. Chucao uses the stable account identifier, the email displayed by Auth for session context, the language preference, the names of your private lists, and the titles and descriptions of concepts you write in those lists.',
         purposesTitle: 'Purposes',
         purposes:
-          'These data support sign-in, profile initialization, language preference, list persistence, and account-level data isolation. Analytics, advertising, and public content are not activated in this slice.',
+          'These data support sign-in, profile initialization, language preference, and organizing concepts in your private lists for oral explanation practice. The database applies account-level data isolation. Analytics, advertising, and public content are not activated in this slice.',
         providersTitle: 'Providers and transfers',
         providers:
           'Google participates in delegated authentication. Supabase provides Auth, the database, and access policies. Review of provider roles, locations, transfers, and terms for publication remains pending.',
         retentionTitle: 'Retention and deletion',
         retention:
-          'Lists and preferences remain associated with your account while the service needs them. This slice does not yet include automated account or data deletion; the production retention and deletion policy must be published before real users are activated.',
+          'Lists, their concepts, and preferences are associated with your account. When you delete a concept, its title and description are removed from active content while a minimal deletion marker is retained for future history references. Automated account deletion and the full retention, backup, and erasure policy require review and publication before real users are enabled.',
         rightsTitle: 'Rights and contact',
         rights:
           'Information about access, correction, deletion, objection, and other rights depends on applicable law. The final controller identification and contact channel must be confirmed and published before launch.',

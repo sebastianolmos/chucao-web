@@ -35,15 +35,15 @@ Entry conditions:
 | ID | Interaction point | Purpose and main actions | State |
 |---|---|---|---|
 | VIEW-01 | Access | Explain Chucao, continue with Google, change language, open privacy information | Planned; minimal Google proof exists |
-| VIEW-02 | My Lists | View active/archived lists, search, order, create a list, open the independent timer, open History, Settings, or Account | Planned |
-| VIEW-03 | List Detail | View round progress, pending/seen concepts, search/order, draw, add concepts, manage the list, start a new round | Planned |
-| VIEW-04 | Add Concepts | Add one concept or paste a batch, review accepted/omitted lines, confirm or cancel | Planned |
-| VIEW-05 | Concept Detail | View and edit title/description, current round state, and access practices | Planned |
+| VIEW-02 | My Lists | Shared authenticated navbar; view current lists, create/open a list; concept cards show a static `0/active concept count` practiced indicator | VS-02 implemented locally; advanced list actions remain planned |
+| VIEW-03 | List Detail | Shared authenticated navbar; view/add/open concepts and return to My Lists; no round controls | VS-02 implemented locally; draw and round behavior remain planned |
+| VIEW-04 | Add Concepts | Add one concept or paste a batch, review accepted/omitted lines, confirm or cancel | VS-02 implemented and locally validated |
+| VIEW-05 | Concept Detail | View, edit, or delete a concept with confirmation and conflict handling | VS-02 implemented and locally validated |
 | VIEW-06 | Draw Result | Show the saved selected concept, practice it, or return to the list | Planned |
 | VIEW-07 | Practice | Practice with a selected or independent timer, reveal description, pause/resume/restart, adjust pre-start duration, and finish | Planned |
 | VIEW-08 | Practice Closure | Save a completed practice, optional note, and 0–5 satisfaction rating; return, repeat, or draw another | Planned |
 | VIEW-09 | History | Browse practices and rounds, filter, and inspect read-only details | Planned |
-| VIEW-10 | Settings | Change language, default duration, sound, volume, and reduced motion; view credits/licenses | Planned |
+| VIEW-10 | Settings | Change language, default duration, sound, volume, and reduced motion; view credits/licenses | Planned; VS-02 adds a Preferences dialog for identity, sign-out, and Privacy |
 | VIEW-11 | Account | View Google identity, sign out, or delete the Chucao account | Planned |
 
 Dialogs, confirmations, batch summaries, and expanded notes are interaction states within these views, not separate destinations.
@@ -68,9 +68,10 @@ flowchart TD
     PRACTICE -->|Finish| CLOSE[VIEW-08 Practice Closure]
     CLOSE -->|Save and return| DETAIL
     LISTS -->|History| HISTORY[VIEW-09 History]
-    LISTS -->|Settings| SETTINGS[VIEW-10 Settings]
+    LISTS -->|Preferences| SETTINGS[VS-02 Preferences dialog]
+    SETTINGS -->|Privacy| PRIVACY[Authenticated Privacy]
     LISTS -->|Account/sign out| ACCOUNT[VIEW-11 Account]
-    ACCOUNT -->|Sign out| ACCESS
+    SETTINGS -->|Sign out| ACCESS
 ```
 
 Navigation changes destination; saving, drawing, marking, deleting, and changing preferences are separate data-changing actions. A successful transition must not be shown before the corresponding operation is confirmed.
@@ -112,7 +113,7 @@ Navigation changes destination; saving, drawing, marking, deleting, and changing
 
 **Entry:** An authenticated person is in My Lists.
 
-1. My Lists displays active lists, search, the selected predefined ordering, Create List, and Independent Timer.
+1. My Lists displays lists and Create List. Non-empty cards show `Conceptos practicados 0/<active concept count>` (localized in English); this is a static count, not practice progress. Search, ordering, and Independent Timer remain planned.
 2. Create List opens a form/dialog for a required name.
 3. The person submits the name.
 4. The application validates the length and uniqueness rules and persists the new list.

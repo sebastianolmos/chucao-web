@@ -4,7 +4,7 @@
 
 - **Spec ID:** VS-02
 - **Title:** Concept Management
-- **Status:** Draft; clarified, ready for technical planning
+- **Status:** Base scope closed; extraordinary authenticated-shell extension T10 in progress
 - **Slice:** VS-02, selected after the locally validated VS-01 foundation
 - **Global source:** `docs/global-plan.md`, sections 4, 5, 7, and 8; selected-slice record for VS-02
 - **Flow source:** `docs/app-flow.md`, `VIEW-03`, `VIEW-04`, `VIEW-05`, and `FLOW-03`
@@ -52,13 +52,18 @@ to later slices.
 - The target list exists and is owned by the authenticated identity.
 - The application can reach the configured Supabase service and database.
 - Local development and acceptance use synthetic accounts and authored test
-  content; this draft does not authorize public production use.
+  content; this local slice does not authorize public production use.
 
 ## Scope and exclusions
 
 ### Included
 
+- An authenticated navbar on My Lists, List Detail, and authenticated Privacy, with Chucao identity linking to My Lists, one locale-toggle action, and Preferences entry.
+- A Preferences dialog showing the signed-in email, local sign-out, and access to the Privacy view; remove those account/privacy controls from the authenticated page body.
+- Preserve Access as a separate unauthenticated screen without the navbar and retain its existing language and privacy entry points.
 - Opening an owned List Detail view and showing its concept collection.
+- Showing `0/<active concept count>` as a static practiced-count indicator on
+  non-empty My Lists cards; the empty-list state remains distinct.
 - An empty-list state with a concrete add-concepts action.
 - Individual concept entry with a required title and optional description.
 - Pasted batch entry with accepted/omitted review before confirmation.
@@ -78,7 +83,7 @@ to later slices.
 
 ### Excluded
 
-- Random or manual selection, appearances, rounds, progress, and
+- Random or manual selection, appearances, rounds, and progress tracking, and
   pending/seen transitions beyond the initial pending state.
 - Practice, notes, ratings, history views, and deleted-concept historical
   presentation.
@@ -284,6 +289,39 @@ rendered as plain text. They shall not be translated, interpreted as markup,
 inserted into SQL, or exposed through diagnostics beyond what is necessary for
 the operation.
 
+**FR-23.** My Lists shall show `Conceptos practicados 0/<active concept
+count>` and its English equivalent for each non-empty list. The denominator
+shall be the current number of active concepts; empty lists shall retain the
+empty-list state. The numerator remains zero until a later slice implements
+practice tracking. This indicator does not imply selection or progress.
+
+**FR-24.** Every authenticated content view in the VS-02 shell, including My
+Lists, List Detail, and authenticated Privacy, shall show a shared navbar.
+The navbar shall use `#fdeab7`, show the Chucao bird and app title at left as
+an accessible action returning to My Lists, and show a single locale toggle
+and Preferences action at right. Access and pre-authentication privacy shall
+remain outside this authenticated navbar.
+
+**FR-25.** The locale toggle shall show the destination locale (`En` when the
+active locale is Spanish and `Es` when it is English), switch immediately,
+and preserve the current view and form state. The former two-button language
+group shall not appear in authenticated views; Access keeps its existing
+language selection.
+
+**FR-26.** Preferences shall open a dismissible, accessible dialog over the
+current authenticated view. It shall show the current Auth email, offer
+Chucao local sign-out, and open authenticated Privacy. The email, sign-out,
+and authenticated Privacy entry shall no longer appear in the authenticated
+page body. Sign-out shall keep the existing local-scope Auth behavior and
+return to Access only after success.
+
+**FR-27.** Access language controls and its Privacy link shall be centered.
+The navbar and its controls shall remain usable at narrow mobile widths.
+Authenticated concept list/detail layouts shall wrap long unspaced titles and
+descriptions within their cards and panels without horizontal page overflow.
+Preferences shall use a centered, prominent title, centered sign-out action,
+and a close control that is visually distinct from the dialog background.
+
 ## Applicable non-functional requirements
 
 ### Quality, accessibility, and delivery
@@ -382,8 +420,9 @@ only the already approved publishable configuration.
 ## Flows and design references
 
 - `VIEW-03 List Detail`: concept collection, empty state, list identity, and
-  entry points for adding or opening concepts. Concept progress, draw, and
-  round controls remain excluded.
+  entry points for adding or opening concepts. The My Lists card count is a
+  static `0/active total`; practice progress, draw, and round controls remain
+  excluded.
 - `VIEW-04 Add Concepts`: Individual and By Batch modes, persistent labels,
   character guidance, accepted/omitted review, and confirm/cancel hierarchy.
 - `VIEW-05 Concept Detail`: title, description, current state, edit action,
@@ -480,6 +519,35 @@ line breaks, then the application rejects it before confirmation, explains the
 limit, performs no partial unreviewed write, and preserves the entered content
 where possible.
 
+### AC-11 — Static practiced-count card indicator
+
+Given a non-empty list, when My Lists is shown, then its card displays the
+localized `0/<active concept count>` practiced-count indicator. Confirmed
+concept addition or deletion updates the denominator; an empty list retains
+the empty-list state. The numerator stays zero because practice is not
+recorded in this slice.
+
+### AC-12 — Authenticated navbar and preferences
+
+Given an authenticated person in My Lists, List Detail, or Privacy, when the
+view is displayed, then the shared `#fdeab7` navbar is visible with the bird
+and Chucao action at left and one destination-language toggle plus Preferences
+at right. Selecting the brand returns to My Lists; the locale button shows
+`En` in Spanish and `Es` in English and changes locale without resetting the
+view. Opening Preferences shows the signed-in email, sign-out, and Privacy
+entry; these account controls do not remain in the page body. Privacy opens
+within the authenticated shell and returns to Preferences. Access and its
+privacy view remain unchanged and have no navbar.
+
+### AC-13 — Narrow layout and preferences styling
+
+Given Access or an authenticated concept view at a narrow mobile viewport,
+when the user opens the screen with a long title containing no spaces, then
+the navbar remains within the viewport and the title wraps inside its card or
+detail panel without forcing horizontal page overflow. Access language and
+Privacy controls are centered. The Preferences title is centered and bold,
+sign-out is centered, and the close button contrasts with the dialog surface.
+
 ## Dependencies and shared constraints
 
 - VS-01 is the required product dependency: authenticated session, private
@@ -501,9 +569,10 @@ where possible.
 - No new provider, analytics SDK, file capability, or privileged client
   configuration is needed or authorized by this slice.
 
-## Completion criteria
+## Completion record
 
-The draft is complete for clarification when:
+VS-02 is closed for the validated local scope as of 2026-11-17. The closure
+criteria were:
 
 - Every included behavior has a stable requirement and linked acceptance
   criterion or an explicit clarification marker.
@@ -516,9 +585,10 @@ The draft is complete for clarification when:
 - Applicable Q01–Q04, SEC01–SEC03, SEC08, SEC10, and DP02/DP03/DP10/DP13/
   DP14/DP19 obligations are represented without claiming evidence.
 - The spec, once clarified, can support a technical plan without inventing
-  physical schema, tooling, or deployment behavior.
-
-This draft is not approval, implementation, or validation evidence.
+  physical schema, tooling, or deployment behavior. T01–T09 and local
+  validation are recorded in `tasks.md`. CHECK-08 browser rendering and the
+  requirement to choose a workload before implementation are accepted closure
+  exceptions per CL-05; no browser or production performance result is claimed.
 
 ## Resolved clarification decisions
 
@@ -527,6 +597,8 @@ This draft is not approval, implementation, or validation evidence.
 | CL-01 | A batch is limited to 100 lines and 20,000 characters including line breaks. Excess input is rejected before confirmation and remains available for correction. | Establishes a bounded processing workload and a predictable user correction path. |
 | CL-02 | A stale edit is rejected rather than merged or overwritten. The UI identifies the conflict and offers `Reload current version` before another edit. | Prevents silent data loss and avoids ambiguous automatic merges. |
 | CL-03 | Concept deletion is logical/tombstone-based at the trusted boundary. The active collection hides the deleted concept and its title/description, while minimum reference data remains for future historical representation. | Preserves future history semantics and safe retry; final erasure follows retention/account-deletion rules. |
+| CL-04 | List cards show a static practiced count of `0/<active concept count>` for non-empty lists, localized in Spanish and English. | Reflects the user's explicit product decision; practice tracking remains outside VS-02. |
+| CL-05 | For local VS-02 closure, the user accepts the 500-concept database retrieval measurement as available workload evidence and waives browser rendering measurement. The workload was chosen during validation, after implementation. | Records an explicit closure exception to NFR-03's before-implementation timing and CHECK-08 browser-rendering component. No browser performance pass or production performance claim is made. |
 
 ## Open questions
 

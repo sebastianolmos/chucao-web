@@ -2,7 +2,7 @@
 
 ## Status and references
 
-- **Status:** T01–T05 complete; T06–T09 pending
+- **Status:** T01–T09 base scope complete; extraordinary extension T10 in progress
 - **Spec:** `specs/002-concept-management/spec.md`
 - **Plan:** `specs/002-concept-management/plan.md`
 - **Slice:** VS-02 — Concept Management
@@ -13,9 +13,9 @@
 - **Release conditions:** Production privacy/provider/legal review, deployment,
   real-user activation, and publication browser-matrix evidence remain outside
   this slice.
-- **Tooling constraint:** `package.json` currently provides `npm run lint`,
-  `npm run build`, `npm run dev`, and `npm run preview`; it has no test runner
-  or formatter script.
+- **Tooling:** `package.json` provides `npm test` (Vitest), `npm run lint`,
+  `npm run build`, `npm run dev`, and `npm run preview`; no formatter script
+  is configured.
 
 ## Tasks
 
@@ -231,7 +231,7 @@
     `git diff --check` passed. UI integration, browser query invalidation, and
     uncertain-network fault injection remain for later tasks.
 
-- [ ] T06 — Build concept list, individual entry, and batch review
+- [x] T06 — Build concept list, individual entry, and batch review
   - **Objective:** Deliver the first vertical UI path from List Detail through
     validation/review to confirmed persisted concepts.
   - **Depends on:** T04, T05.
@@ -263,8 +263,28 @@
     invalid/over-limit input remains correctable, and loading/error/retry
     behavior passes the relevant UI checks without exposing later round or
     practice controls.
+  - **Evidence (2026-11-17, local uncommitted state):** Added the list-scoped
+    concept query/view, individual form, batch review/confirmation, Spanish
+    and English labels/reasons/status messages, responsive CSS, and confirmed
+    write invalidation using the existing service/parser. Batch failure keeps
+    the reviewed input available; confirmed success disables repeat submission
+    and exposes a result summary. `npm.cmd run build` passed (TypeScript and
+    Vite; Vite emitted a >500 kB chunk advisory),
+    `npm.cmd run lint` passed, and `git diff --check` passed. Added Vitest/jsdom
+    and React Testing Library infrastructure plus three component tests
+    covering individual creation, explicit batch confirmation with no early
+    write, and over-limit rejection; `npm.cmd test -- --reporter=verbose`
+    passed (3 tests). The authenticated browser scenarios were completed by
+    the user after T08 wired the view into List Detail; results are recorded
+    below and T06 is complete.
+  - **Manual verification (user-confirmed, 2026-11-17):** Through the
+    authenticated browser flow, the user verified empty-list and individual
+    create/reload, mixed batch review with no write before confirmation,
+    confirmed batch ordering/result, limits, duplicate handling, recoverable
+    failure/retry, and language switching. The user reported all scenarios
+    worked as expected.
 
-- [ ] T07 — Build concept detail, editing, and deletion
+- [x] T07 — Build concept detail, editing, and deletion
   - **Objective:** Complete the saved-concept maintenance path with stable
     identity, conflict recovery, and explicit logical deletion.
   - **Depends on:** T05, T06.
@@ -292,8 +312,32 @@
     rejected with reload recovery, cancellation makes no change, confirmed
     deletion removes only active visibility and clears tombstone content, and
     no failed operation reports success.
+  - **Evidence (2026-11-17, local uncommitted state):** Added
+    `ConceptDetailView.tsx` and integrated it into the concept collection.
+    Detail content is rendered as text with explicit pending/seen state. Edit
+    submissions use the stable concept ID and last confirmed `updated_at`;
+    invalid/duplicate values remain correctable, stale conflicts disable
+    further edits until `Reload current version` loads the current row, and
+    confirmed updates invalidate the list query. Delete uses a separate
+    destructive panel and confirmation dialog; cancellation makes no service
+    call, success is shown only for `deleted`/`reconciled` results, and
+    uncertain/failure outcomes retain the visible concept and a safe retry.
+    Added tests for stable-ID/timestamp update, invalid and duplicate edits,
+    conflict/reload, delete cancellation/confirmation, and uncertain-delete
+    retry. `npm.cmd test` passed (9 tests total, including T06);
+    `npm.cmd run build`, `npm.cmd run lint`, and `git diff --check` passed.
+    Component tests mock service results and do not claim real database or
+    two-session verification. Those checks were completed by the user against
+    the authenticated List Detail path; results are recorded below and T07 is
+    complete.
+  - **Manual verification (user-confirmed, 2026-11-17):** The user verified
+    stale-edit conflict and reload recovery with two independent sessions on
+    the same account; the newer value remained and the stale value did not
+    overwrite it. The user also verified delete cancellation, confirmed
+    deletion, uncertain-result retry, reload, and active-versus-tombstone
+    content inspection. All scenarios worked as expected.
 
-- [ ] T08 — Integrate List Detail, localization, and privacy copy
+- [x] T08 — Integrate List Detail, localization, and privacy copy
   - **Objective:** Connect the concept views to the authenticated VS-01 shell
     and provide complete Spanish/English presentation for this slice.
   - **Depends on:** T06, T07.
@@ -322,8 +366,25 @@
     from an existing list in both locales, account changes cannot retain the
     previous concept/draft, all included states are translated and usable,
     and excluded later-slice behavior is not exposed.
+  - **Evidence (2026-11-17, local uncommitted state):** Replaced the VS-01
+    placeholder in `ListDetailView.tsx` with `ConceptManagementView`, passing
+    the current Auth UUID from `App.tsx`. Account switch and logout cleanup now
+    remove `concepts` query data; changing the selected account also unmounts
+    the concept view and its in-memory draft. Updated Spanish and English
+    local privacy copy to describe user-authored concept titles/descriptions,
+    their private-list oral-practice purpose, and the local review/release
+    limitation. Added tests for list-detail-to-concept wiring and owner/list
+    query scope, back navigation, concept controls in English with the
+    user-authored list name preserved, localized expired-session feedback, and
+    privacy claims in both locales. `npm.cmd test` passed (13 tests),
+    `npm.cmd run build`, `npm.cmd run lint`, and `git diff --check` passed;
+    Vite reports a >500 kB output chunk advisory. Tests use mocked service data
+    and do not verify real Supabase/account-switch behavior. Manual review was
+    completed by the user in Spanish/English, including the integrated views
+    and account switch/logout; the user confirmed the checks worked as
+    expected.
 
-- [ ] T09 — Run security, quality, and integrated slice validation
+- [x] T09 — Run security, quality, and integrated slice validation
   - **Objective:** Produce the evidence that the implemented increment satisfies
     its acceptance criteria and preserves the VS-01 boundary.
   - **Depends on:** T02, T05, T06, T07, T08.
@@ -356,6 +417,30 @@
     cross-user operations produce no prohibited effects; build/lint pass;
     accessibility/privacy/security review findings are resolved or recorded;
     and every remaining limitation is explicit.
+  - **Evidence (2026-11-17, local uncommitted state):** `npm.cmd test` passed
+    (2 files, 15 tests); `npm.cmd run build` passed (TypeScript and Vite,
+    with the existing >500 kB chunk advisory); `npm.cmd run lint` and
+    `git diff --check` passed. `npx.cmd supabase migration list --local`
+    confirmed the VS-01 and VS-02 migrations are applied in the local stack.
+    Direct local SQL checks using the existing synthetic accounts confirmed
+    owner list/concept reads and trusted create/update/logical-delete; account
+    B could not read account A's list/concept or call its create/update/delete
+    operations. Direct table insert/update/delete were rejected for both
+    authenticated and anonymous roles; anonymous reads and trusted writes
+    were rejected. Authorized mutations ran inside rollback-only
+    subtransactions; a follow-up query found zero temporary T09 rows.
+    Read-only catalog review confirmed RLS and FORCE RLS on lists/concepts,
+    no anon table access, authenticated select-only table grants, and
+    authenticated-only SECURITY DEFINER functions with fixed search paths.
+    Production bundle review found no source maps, privileged-key tokens,
+    unsafe HTML rendering, or console debug calls. Previously user-confirmed
+    T06–T08 manual scenarios cover the authenticated persistence/edit/delete
+    journey, failure/retry, stale conflict, account switch, localization, and
+    responsive views. The user completed CHECK-09 manual review on PC and
+    Android Chrome in both locales, confirming keyboard/focus, zoom,
+    error/dialog operation, wrapping, and touch target behavior. Final
+    production privacy/provider/legal and deployment readiness remain outside
+    VS-02.
 
 ## Coverage notes
 
@@ -365,10 +450,10 @@
 - T04 is intentionally independent of the migration because the parser has no
   persistence side effects; T05 depends on both the migration contract and
   parser result shape.
-- No task adds a test framework, CI workflow, provider, file capability,
-  public route, or later round/practice behavior. If a repeatable automated
-  parser test mechanism is authorized later, it must preserve CHECK-02 and
-  remain within this slice.
+- Vitest/jsdom and React Testing Library were added with user authorization
+  and are used by the concept and list component tests. No CI workflow,
+  provider, file capability, public route, or later round/practice behavior
+  was added.
 - External Docker/Supabase/Auth prerequisites can block execution of T01,
   T02, and T09. They do not change the selected scope and must be recorded
   explicitly rather than bypassed with production data.
@@ -378,8 +463,8 @@
 - **Required before slice closure:** T09, including CHECK-01, direct
   ownership/security evidence, persistence evidence, boundary/retry evidence,
   and the integrated UI journey.
-- **Required when the relevant environment is available:** PC and Android
-  browser accessibility/responsive review in CHECK-09.
+- **Completed for local VS-02:** User-confirmed PC and Android Chrome
+  accessibility/responsive review in CHECK-09; see T09 evidence below.
 - **Publication-only and not a VS-02 closure claim:** production HTTPS,
   provider/legal/privacy publication, backup/restore operations, public
   registration, deployment, and full browser-matrix evidence.
@@ -388,9 +473,77 @@
 
 ## Execution evidence
 
-T01 evidence is recorded inline above. T02–T09 have not been executed. Add
-evidence beside each task as work proceeds, including command, environment,
-synthetic-data scope, expected result, observed result, and any remaining
-limitation. Never mark `[x]` without recording the corresponding verification
-result.
+T01–T09 execution evidence is recorded inline above. The validation matrix
+below summarizes coverage and remaining issues. Evidence uses local services
+and synthetic accounts; no production or real-user data was used. Never mark
+`[x]` without recording the corresponding verification result.
+
+## Specification validation
+
+**Date and state:** 2026-11-17; local uncommitted working tree based on
+`9eb66c5`; local Supabase VS-01 and VS-02 migrations applied; two synthetic
+accounts and their local lists/concepts used for direct checks.
+
+**Verdict:** Closed for the user-approved local VS-02 scope. All functional,
+security, persistence, and user-confirmed UI criteria passed. The user accepted
+two documented scope exceptions for closure: the 500-concept workload was
+selected after implementation, and browser rendering measurement was waived.
+The spec now includes the user's static `0/active concept count` card behavior.
+No browser performance pass or production performance claim is made.
+
+| Requirement or criterion | Related tasks | Test or check | Status and result | Evidence or pending reason |
+| --- | --- | --- | --- | --- |
+| FR-01–FR-22; AC-01–AC-08, AC-10 | T02–T08 | Parser harness, Vitest components, local Supabase service/RLS checks, user-confirmed T06–T08 browser scenarios | Pass | Task evidence above; real local persistence and synthetic-account isolation are separately evidenced from mocked component tests. |
+| NFR-01, Q01–Q02; CHECK-03–CHECK-06, CHECK-10 | T02, T04–T09 | `npm.cmd test`; local SQL trusted-boundary checks; user-confirmed create/reload, batch/retry, conflict/reload, deletion/tombstone and session scenarios | Pass | 15 automated tests passed; local mutation checks rolled back; manual results recorded under T06–T09. |
+| CHECK-01; NFR-04, Q05–Q06 | T09 | `npm.cmd test`, `npm.cmd run build`, `npm.cmd run lint`, `git diff --check` | Pass | Test suite: 2 files/15 tests. Build and lint passed. Vite retains a >500 kB chunk advisory. |
+| CHECK-02; FR-03, FR-05–FR-08, AC-02, AC-03, AC-10 | T04, T06 | T04 parser boundary harness; component tests for batch confirmation and over-limit input | Pass | T04 evidence covers title/description boundaries, 100/101 lines, 20,000/20,001 characters, delimiter, malformed lines, duplicates and plain-text values. |
+| CHECK-07; AC-07, SEC01–SEC04, SEC10, DP10, DP13, DP19 | T02, T05, T09 | Local Supabase SQL under synthetic owner A, account B and `anon`; grants/RLS/catalog and production bundle review | Pass | Owner reads and trusted mutations worked; cross-user reads/writes/deletes and anonymous access were rejected. RLS is enabled/forced, functions are authenticated-only with fixed search paths, and no privileged-key token/source map was found in the bundle. Temporary mutations left zero rows. |
+| CHECK-08; NFR-03, Q04, SEC08 | T04, T06, T09 | Batch boundary tests; local Supabase synthetic 500-concept retrieval | Accepted closure exception | `EXPLAIN ANALYZE` fetched 500 synthetic rows in 1.181 ms on the local database (database query only). The temporary list was deleted and a fresh count returned to the pre-test baseline of 13 concepts. The user waived browser rendering measurement for local closure; it was not performed and no browser performance pass is claimed. |
+| NFR-03 timing requirement: define representative workload before implementation | T01, T04, T09 | Review spec/plan history and validation evidence | Accepted closure exception | The 500-concept workload was selected during validation, after implementation. The user accepts this exception for closing the local slice; the temporal requirement was not met retroactively. |
+| CHECK-09; NFR-02, AC-09, Q03, WEB03 | T08, T09 | User-confirmed keyboard/touch review on PC and Android Chrome in Spanish and English | Pass | User confirmed visible focus, zoom, errors/dialogs, wrapping and touch targets. Exact browser versions/viewports were not retained. |
+| CHECK-11; DP02, DP03, DP14 | T08, T09 | Human review of migration/grants, errors, local privacy copy and documentation | Pass for local slice | Copy describes concept fields, purpose and tombstone retention and disclaims final legal publication. Lawful-basis, provider/legal publication and account/backup erasure policy remain publication work, not a local-slice claim. |
+| FR-23, AC-11; static practiced-count indicator | T06, T09 | Review `MyListsView.tsx` against the updated spec and user direction | Pass | Non-empty cards show `0/active total`; the denominator is the actual active concept count. The numerator is static because practice is not implemented in VS-02. |
+| SEC09 and file/remote-fetch exclusions | T02–T09 | Scope review | Not applicable | This slice adds no file import/export, path handling, or user-supplied remote fetch. |
+
+No defect was demonstrated in the database retrieval. The browser-rendering
+portion of CHECK-08 was explicitly waived by the user for this local closure;
+the database query result must not be represented as a browser or production
+performance result. No code was changed during validation.
+
+## Closure
+
+VS-02 is closed for its validated local scope on 2026-11-17 by the user's
+decision to accept the documented CHECK-08/NFR-03 exception. T01–T09 are
+complete. The spec, plan, validation matrix, global plan, application flow,
+and design references were aligned with the delivered scope and the static
+`0/active concept count` card indicator. Publication, deployment, legal review,
+and release-wide browser compatibility remain outside this local slice; they
+do not leave VS-02 pending.
+
+## Extraordinary authenticated-shell extension
+
+- [ ] T10 — Add the authenticated navbar and Preferences dialog
+  - **Objective:** Extend the closed local VS-02 shell with the shared navbar,
+    single locale toggle, brand return action, and Preferences dialog.
+  - **Depends on:** T04, T05, and T08 (authenticated session, locale, and
+    privacy behavior are already implemented).
+  - **References:** FR-24–FR-27; AC-12–AC-13; `docs/app-flow.md` shared navigation;
+    `docs/design.md` shared shell.
+  - **Work:** Add the navbar to authenticated content views only; move the
+    signed-in email, sign-out, and authenticated Privacy entry into the
+    Preferences dialog; preserve Access and its language/privacy entry points;
+    add bilingual accessible labels and responsive styling.
+  - **Verification:** Run `npm run build` and `npm run lint`; review the
+    authenticated and Access states in Spanish and English, including the
+    brand return, modal dismissal/privacy navigation, local sign-out,
+    preserved view on locale change, keyboard focus, and narrow layout.
+    `npm.cmd run build` and `npm.cmd run lint` passed; `git diff --check`
+    passed. Interactive review with an authenticated browser session has not
+    been performed because the browser access host was unavailable. Automated
+    tests were not run for this task.
+  - **Done when:** AC-12 and AC-13 are satisfied, the authenticated page body
+    no longer duplicates identity/sign-out/privacy controls, Access remains unchanged,
+    and the required build/lint checks pass. T10 remains pending until the
+    authenticated visual/interaction review is recorded; it does not reopen
+    or revalidate unrelated VS-02 database behavior.
 

@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import type { ListRow } from '../../lib/database.types';
 import {
   createPrivateList,
+  getOwnedConceptCounts,
   getOwnedLists,
   listQueryKey,
   type CreatePrivateListResult,
@@ -75,7 +76,11 @@ export function MyListsView({ userId, onOpenList }: MyListsViewProps) {
   const [feedback, setFeedback] = useState<Feedback>(null);
   const listsQuery = useQuery({
     queryKey: listQueryKey(userId),
-    queryFn: () => getOwnedLists(userId),
+    queryFn: async () => {
+      const lists = await getOwnedLists(userId);
+      const conceptCounts = await getOwnedConceptCounts(userId, lists.map((list) => list.id));
+      return { lists, conceptCounts };
+    },
   });
   const createMutation = useMutation({
     mutationFn: createPrivateList,
@@ -126,7 +131,7 @@ export function MyListsView({ userId, onOpenList }: MyListsViewProps) {
     );
   }
 
-  const lists = listsQuery.data;
+  const { lists, conceptCounts } = listsQuery.data;
 
   return (
     <section aria-labelledby="my-lists-title" className={styles.view}>
@@ -176,7 +181,9 @@ export function MyListsView({ userId, onOpenList }: MyListsViewProps) {
               >
                 <span className={styles.cardName}>{list.name}</span>
                 <span className={styles.cardDetail}>
-                  {t('lists.emptyDetail')}
+                  {conceptCounts[list.id]
+                    ? t('lists.practiceProgress', { practiced: 0, total: conceptCounts[list.id] })
+                    : t('lists.emptyDetail')}
                 </span>
               </Card>
             ))}

@@ -119,6 +119,32 @@ export async function getOwnedLists(userId: string): Promise<ListRow[]> {
   return data;
 }
 
+export async function getOwnedConceptCounts(
+  userId: string,
+  listIds: string[],
+): Promise<Record<string, number>> {
+  await assertCurrentUser(userId);
+
+  if (listIds.length === 0) {
+    return {};
+  }
+
+  const { data, error } = await supabase
+    .from('concepts')
+    .select('list_id')
+    .in('list_id', listIds)
+    .is('deleted_at', null);
+
+  if (error) {
+    throw mapSupabaseError(error);
+  }
+
+  return data.reduce<Record<string, number>>((counts, concept) => {
+    counts[concept.list_id] = (counts[concept.list_id] ?? 0) + 1;
+    return counts;
+  }, {});
+}
+
 export async function reconcilePrivateList(
   userId: string,
   rawName: string,

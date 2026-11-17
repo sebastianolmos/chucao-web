@@ -42,9 +42,9 @@ code, migrations, dependencies, infrastructure, or tasks.
   messages, or concept tests exist in the current snapshot.
 - `ListDetailView` currently represents concepts as unavailable; this is the
   expected VS-02 replacement, not a behavior to preserve.
-- `package.json` has build/lint/dev/preview scripts but no test script or test
-  runner. The plan therefore defines integration, UI, SQL, and manual evidence
-  explicitly and does not invent a command that the repository cannot run.
+- `package.json` initially had build/lint/dev/preview scripts but no test
+  runner. T06 adds Vitest and React Testing Library for focused unit and
+  component checks; SQL and browser integration still need their own evidence.
 - The existing migration contains no concept dependency. VS-02 must add a
   versioned migration rather than editing the applied VS-01 migration.
 
@@ -443,10 +443,10 @@ spec's observable behavior.
   Spanish characters, duplicate titles, and boundary-length values.
 - No production or real-user data is permitted in fixtures, screenshots,
   logs, or diagnostics.
-- Existing commands are `npm run build`, `npm run lint`, `npm run dev`, and
-  `npx supabase start`. There is currently no repository test script; any
-  future automated test command must be added deliberately during task
-  decomposition rather than assumed here.
+- Existing commands include `npm test` (Vitest), `npm run build`,
+  `npm run lint`, `npm run dev`, and `npx supabase start`. Add or extend
+  focused tests before implementing behavior when automation can meaningfully
+  cover it.
 
 ### Planned checks
 
@@ -459,7 +459,7 @@ spec's observable behavior.
 | CHECK-05 | FR-12–FR-13, AC-05, Q02 | Use two isolated browser sessions for user A editing the same concept. Save one version, then submit the stale version. | Stale update is rejected, newer content remains, conflict is visible, and `Reload current version` is offered. Record both submitted timestamps and final row. |
 | CHECK-06 | FR-14–FR-16, AC-06, DP14 | Cancel deletion, confirm deletion, retry after a simulated/real uncertain response, and query active versus tombstone state locally. | Cancel changes nothing; confirmed deletion removes the active row from UI/query results, preserves only the intended minimum reference, and never shows false success. Record active query result and tombstone fields without exposing content. |
 | CHECK-07 | FR-17–FR-20, NFR-05–NFR-09, SC-05, AC-07, AC-08, SEC01–SEC03, SEC04, SEC10, DP10, DP13, DP19 | Use user A, user B, and unauthenticated/direct Supabase requests against known list/concept IDs; inspect browser bundle/config and mapped errors. | Cross-user/unauthenticated read/write/delete is rejected at the service boundary; no private content or secrets appear in responses, URLs, logs, or client configuration. Retain request outcomes and review notes with synthetic data. |
-| CHECK-08 | NFR-03, Q04, SEC08 | Run the 100-line/20,000-character boundary and a representative personal-scale concept collection on a local supported browser. | Over-limit input is rejected before confirmation; normal personal-scale parsing/rendering remains bounded and usable. Record workload, browser, and observed resource/interaction result; do not invent a latency claim. |
+| CHECK-08 | NFR-03, Q04, SEC08 | Run the 100-line/20,000-character boundary and retrieve 500 synthetic concepts in local Supabase. | Boundary tests pass. Local `EXPLAIN ANALYZE` returned 500 rows with 1.181 ms database execution time. User accepted this as local workload evidence and waived browser rendering measurement for VS-02 closure. This is not a browser rendering or production performance result. |
 | CHECK-09 | NFR-02, AC-09, Q03, WEB03 | Manual keyboard/touch review in Spanish and English on representative PC and Android Chrome/PC Chromium-family browsers, including long content, zoom, focus, errors, dialogs, and responsive reflow. | Labels, headings, focus, errors, touch targets, wrapping, status cues, and destructive hierarchy remain understandable without color/hover/animation alone. Record browser/viewport and findings. |
 | CHECK-10 | NFR-01, FR-18–FR-20, AC-08, V07/V09 | Exercise session expiry, account switch, reload, repeated submit, service failure, cancellation, and retry using isolated local accounts. | Last confirmed state is preserved, drafts are handled as specified, caches do not cross accounts, and retries do not duplicate or fabricate success. Retain scenario results and any defect references. |
 | CHECK-11 | NFR-04, Q06, DP02/DP03/DP14 | Human review of migration, grants/RLS, error mapping, changed privacy copy, and documentation against the spec and plan. | No privileged grant, unbounded operation, unreviewed data field, sensitive diagnostic, or undocumented behavior change remains. Record review findings and resolution. |
@@ -474,9 +474,10 @@ spec's observable behavior.
 - Local synthetic data does not establish production provider, HTTPS, backup,
   legal, or public-registration readiness. Those remain VS-07/publication
   conditions.
-- The repository has no current automated test runner, so repeatable rule
-  coverage remains pending the task-level decision to add or use one. This
-  limitation does not remove the required boundary and integration checks.
+- Vitest with jsdom and React Testing Library supports repeatable unit and
+  component checks. Browser accessibility, real Supabase persistence, and
+  trusted-boundary integration checks still require their planned manual or
+  local-service workflows.
 
 ## Traceability and implementation sequence
 
@@ -489,7 +490,9 @@ spec's observable behavior.
 | FR-13; AC-05 | `updated_at` compare-and-swap, conflict mapping, reload-current-version UI | CHECK-05 |
 | FR-14–FR-16; AC-06 | Delete confirmation, tombstone operation, active-only reads, retry/reconciliation | CHECK-06, CHECK-11 |
 | FR-17–FR-20; AC-07, AC-08 | Auth UUID ownership, RLS/function checks, account-scoped query keys, error mapping | CHECK-07, CHECK-10 |
-| FR-21–FR-22; AC-09 | i18n resources, accessible forms/states, plain-text rendering, responsive CSS | CHECK-02, CHECK-09 |
+| FR-21–FR-23; AC-09, AC-11 | i18n resources, accessible forms/states, plain-text rendering, responsive CSS, static list-card count | CHECK-02, CHECK-09 |
+| FR-24–FR-26; AC-12 | Shared authenticated navbar, single locale toggle, brand-to-lists navigation, Preferences dialog, signed-in identity and local sign-out, authenticated Privacy route | T10 UI checks, CHECK-01 build/lint, manual responsive/accessibility review |
+| FR-27; AC-13 | Centered Access controls, compact responsive navbar, wrapping for unspaced concept text, and Preferences dialog hierarchy | T10 narrow viewport and visual review |
 | NFR-01; Q01/Q02 | Query/mutation state model, atomic writes, safe retry, conflict and delete handling | CHECK-03–CHECK-06, CHECK-10 |
 | NFR-02; Q03 | Mantine labels/errors, focus/status semantics, responsive CSS and manual review | CHECK-09 |
 | NFR-03; Q04/SEC08 | Parser and service bounds, indexed active reads, representative workload | CHECK-02, CHECK-08 |
@@ -517,6 +520,16 @@ spec's observable behavior.
 No independent backend-first or frontend-only phase is intended: each step
 must keep the full List Detail → validated entry/review → trusted persistence
 → retrieved/editable/deletable concept journey demonstrable.
+
+### Extraordinary authenticated-shell extension
+
+T10 updates the existing `App` shell and its shared styling/resources without
+changing the VS-02 data model or trusted Supabase boundary. Keep Access and its
+pre-authentication Privacy route outside the navbar. In authenticated views,
+the brand action returns to My Lists, the locale toggle changes between `es`
+and `en` through the existing locale provider, and Preferences is a dialog
+that can open the authenticated Privacy view or invoke the existing local
+sign-out. The current form/view state must survive a locale change.
 
 ## Shared documentation updates
 

@@ -115,7 +115,12 @@ The request must occur before implementing each dependent view or animation. Do 
 
 ### 4.1. Shared shell
 
-After authentication, the principal destinations are **My Lists**, **History**, and **Settings**. Account information and sign-out are available from the user menu. The Spanish/English selector remains easy to locate. In VS-01, the authenticated shell exposes My Lists, privacy, sign-out, and the language selector directly; future navigation remains planned.
+After authentication, every current authenticated view uses a shared navbar. It has the Chucao bird and title at left, which return to My Lists, and a single destination-language toggle plus Preferences button at right. The navbar uses `#fdeab7`, defined by `--chucao-navbar` in `src/index.css`. Preferences opens a dialog with the signed-in email, sign-out, and Privacy entry. Access remains separate and keeps its existing language and privacy controls.
+
+Keep the authenticated navbar compact on mobile. The Access language selector
+and Privacy entry are centered. Preferences uses a centered bold title, a
+centered sign-out action, and a contrasting close control. Long unspaced
+concept titles and descriptions wrap within their cards and detail panels.
 
 Use a full-width cream application canvas so desktop viewports do not expose
 contrasting lateral strips. Constrain reading content, panels, and list grids
@@ -141,8 +146,8 @@ The functional behavior and transitions belong to [`docs/app-flow.md`](./app-flo
 | Flow view | Visual composition |
 |---|---|
 | `VIEW-01` Access | Cream surface, chucao identity art, application name, short explanation, one prominent “Continue with Google” action, language selector, and privacy link. In VS-01 the Access selector uses the same horizontal language-group presentation as the authenticated shell. |
-| `VIEW-02` My Lists | VS-01 uses a compact header, authenticated context, responsive form panel, cyan list cards, clear open target, and a warm empty state. Search, ordering, and Active/Archived controls remain future scope. |
-| `VIEW-03` List Detail | VS-01 uses back navigation, the persisted list name, an empty-state explanation, and return to My Lists. Concept progress, tabs, search/order, and draw behavior remain future scope. |
+| `VIEW-02` My Lists | VS-02 uses the shared authenticated navbar and adds a static `0/active concept count` practiced indicator to non-empty cyan cards; the empty state remains distinct. Search, ordering, and Active/Archived controls remain future scope. |
+| `VIEW-03` List Detail | VS-02 uses back navigation, the persisted list name, the concept collection or empty-state explanation, add/open actions, and return to My Lists. Round progress, tabs, search/order, and draw behavior remain future scope. |
 | `VIEW-04` Add Concepts | Persistent labels, comfortable text areas, character guidance, pasted-batch review, accepted/omitted summary, and clear confirm/cancel hierarchy. |
 | `VIEW-05` Concept Detail | Distinct title/description, round state, practices, notes, and ratings; long text wraps without clipping. |
 | `VIEW-06` Draw Result | Cream dialog over a warm darkened backdrop; concept centered; lilac “Practice” and secondary “Back to list” actions. |

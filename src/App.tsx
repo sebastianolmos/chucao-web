@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
+import { Button, Modal } from '@mantine/core';
 import { ensureProfile } from './features/preferences/preferencesService';
 import { useLocale } from './app/localeContext';
 import { MyListsView } from './features/lists/MyListsView';
@@ -36,7 +37,34 @@ function readOAuthError() {
 
 function clearPrivateState() {
   queryClient.removeQueries({ queryKey: ['lists'] });
+  queryClient.removeQueries({ queryKey: ['concepts'] });
   queryClient.removeQueries({ queryKey: ['profile'] });
+}
+
+function PrivacyContent({ onBack }: { onBack: () => void }) {
+  const { t } = useTranslation();
+
+  return (
+    <article aria-labelledby="privacy-title">
+      <h1 id="privacy-title">{t('privacy.title')}</h1>
+      <p>{t('privacy.version')}</p>
+      <p>{t('privacy.intro')}</p>
+      <h2>{t('privacy.dataTitle')}</h2>
+      <p>{t('privacy.data')}</p>
+      <h2>{t('privacy.purposesTitle')}</h2>
+      <p>{t('privacy.purposes')}</p>
+      <h2>{t('privacy.providersTitle')}</h2>
+      <p>{t('privacy.providers')}</p>
+      <h2>{t('privacy.retentionTitle')}</h2>
+      <p>{t('privacy.retention')}</p>
+      <h2>{t('privacy.rightsTitle')}</h2>
+      <p>{t('privacy.rights')}</p>
+      <h2>{t('privacy.securityTitle')}</h2>
+      <p>{t('privacy.security')}</p>
+      <p role="note">{t('privacy.pending')}</p>
+      <button type="button" onClick={onBack}>{t('privacy.back')}</button>
+    </article>
+  );
 }
 
 export default function App() {
@@ -53,6 +81,7 @@ export default function App() {
   const [authStatus, setAuthStatus] = useState<AuthStatus>('checking_session');
   const [busy, setBusy] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [preferencesOpen, setPreferencesOpen] = useState(false);
   const [selectedList, setSelectedList] = useState<ListRow | null>(null);
   const [messageKey, setMessageKey] = useState<MessageKey | null>(() =>
     readOAuthError() ? 'auth.oauthError' : null,
@@ -230,6 +259,8 @@ export default function App() {
       clearPrivateState();
       currentUserIdRef.current = null;
       setSelectedList(null);
+      setPreferencesOpen(false);
+      setPrivacyOpen(false);
       setSession(null);
       setAuthStatus('access');
     } catch {
@@ -282,33 +313,10 @@ export default function App() {
     );
   }
 
-  if (
-    privacyOpen
-    && (authStatus === 'access' || authStatus === 'authenticated')
-  ) {
+  if (privacyOpen && authStatus === 'access') {
     return (
       <main className={`${styles.shell} ${styles.privacy}`}>
-        <article aria-labelledby="privacy-title">
-          <h1 id="privacy-title">{t('privacy.title')}</h1>
-          <p>{t('privacy.version')}</p>
-          <p>{t('privacy.intro')}</p>
-          <h2>{t('privacy.dataTitle')}</h2>
-          <p>{t('privacy.data')}</p>
-          <h2>{t('privacy.purposesTitle')}</h2>
-          <p>{t('privacy.purposes')}</p>
-          <h2>{t('privacy.providersTitle')}</h2>
-          <p>{t('privacy.providers')}</p>
-          <h2>{t('privacy.retentionTitle')}</h2>
-          <p>{t('privacy.retention')}</p>
-          <h2>{t('privacy.rightsTitle')}</h2>
-          <p>{t('privacy.rights')}</p>
-          <h2>{t('privacy.securityTitle')}</h2>
-          <p>{t('privacy.security')}</p>
-          <p role="note">{t('privacy.pending')}</p>
-          <button type="button" onClick={() => setPrivacyOpen(false)}>
-            {t('privacy.back')}
-          </button>
-        </article>
+        <PrivacyContent onBack={() => setPrivacyOpen(false)} />
       </main>
     );
   }
@@ -370,47 +378,51 @@ export default function App() {
   return (
     <main className={`${styles.shell} ${styles.authenticatedShell}`}>
       <header className={styles.topBar}>
-        <div className={styles.brandMark}>
+        <button
+          aria-label={t('navigation.goToLists')}
+          className={styles.brandLink}
+          onClick={() => {
+            setPrivacyOpen(false);
+            setPreferencesOpen(false);
+            setSelectedList(null);
+          }}
+          type="button"
+        >
           <img alt="" aria-hidden="true" className={styles.birdSmall} src={stand} />
           <span>Chucao</span>
-        </div>
-        <div className={styles.languageGroup}>
+        </button>
+        <nav aria-label={t('navigation.label')} className={styles.navActions}>
           <button
-            aria-pressed={locale === 'es'}
-            onClick={() => selectLocale('es')}
+            aria-label={t('navigation.changeLanguage')}
+            className={`${styles.localeToggle} ${locale === 'es' ? styles.localeEnglish : styles.localeSpanish}`}
+            onClick={() => selectLocale(locale === 'es' ? 'en' : 'es')}
+            type="button"
           >
-            {t('access.spanish')}
+            {locale === 'es' ? 'En' : 'Es'}
           </button>
           <button
-            aria-pressed={locale === 'en'}
-            onClick={() => selectLocale('en')}
+            aria-label={t('preferences.open')}
+            className={styles.preferencesButton}
+            onClick={() => setPreferencesOpen(true)}
+            type="button"
           >
-            {t('access.english')}
+            <span aria-hidden="true">⚙</span>
           </button>
-        </div>
+        </nav>
       </header>
       <div className={styles.authenticatedContent}>
         {messageKey && <p role="alert">{t(messageKey)}</p>}
-        <p>{t('auth.signedInAs', { email: session?.user.email ?? '' })}</p>
-        {preferenceSyncStatus === 'read_error' && (
-          <p role="alert">
-            {t('preference.readError')}{' '}
-            <button onClick={() => void retryAccountLocale()}>
-              {t('preference.retry')}
-            </button>
-          </p>
-        )}
-        {preferenceSyncStatus === 'write_error' && (
-          <p role="alert">
-            {t('preference.writeError')}{' '}
-            <button onClick={() => void retryAccountLocale()}>
-              {t('preference.retry')}
-            </button>
-          </p>
-        )}
-        {selectedList ? (
+        {privacyOpen ? (
+          <div className={styles.privacy}>
+            <PrivacyContent onBack={() => {
+              setPrivacyOpen(false);
+              setPreferencesOpen(true);
+            }} />
+          </div>
+        ) : selectedList ? (
           <ListDetailView
             list={selectedList}
+            userId={session!.user.id}
             onBack={() => setSelectedList(null)}
           />
         ) : (
@@ -420,20 +432,65 @@ export default function App() {
           />
         )}
       </div>
-      <div className={styles.accountActions}>
-        <a
-          href="#privacy"
-          onClick={(event) => {
-            event.preventDefault();
-            setPrivacyOpen(true);
-          }}
-        >
-          {t('access.privacy')}
-        </a>
-        <button disabled={busy} onClick={signOut}>
-          {t('auth.signOut')}
-        </button>
-      </div>
+      <Modal
+        aria-label={t('preferences.title')}
+        centered
+        onClose={() => setPreferencesOpen(false)}
+        opened={preferencesOpen}
+        styles={{
+          close: {
+            backgroundColor: 'var(--chucao-cyan)',
+            color: 'var(--chucao-brown)',
+          },
+          header: { position: 'relative' },
+          title: {
+            position: 'absolute',
+            left: '50%',
+            maxWidth: 'calc(100% - 5rem)',
+            transform: 'translateX(-50%)',
+            textAlign: 'center',
+            fontSize: '1.5rem',
+            fontWeight: 700,
+          },
+        }}
+        title={t('preferences.title')}
+      >
+        <div className={styles.preferencesContent}>
+          <p>{t('auth.signedInAs', { email: session?.user.email ?? '' })}</p>
+          {messageKey === 'auth.signOutError' && (
+            <p role="alert">{t('auth.signOutError')}</p>
+          )}
+          {preferenceSyncStatus === 'read_error' && (
+            <p role="alert">
+              {t('preference.readError')}{' '}
+              <button onClick={() => void retryAccountLocale()} type="button">
+                {t('preference.retry')}
+              </button>
+            </p>
+          )}
+          {preferenceSyncStatus === 'write_error' && (
+            <p role="alert">
+              {t('preference.writeError')}{' '}
+              <button onClick={() => void retryAccountLocale()} type="button">
+                {t('preference.retry')}
+              </button>
+            </p>
+          )}
+          <Button
+            disabled={busy}
+            onClick={() => {
+              setPreferencesOpen(false);
+              setPrivacyOpen(true);
+            }}
+            variant="default"
+          >
+            {t('preferences.privacy')}
+          </Button>
+          <Button className={styles.signOutButton} color="red" disabled={busy} onClick={() => void signOut()}>
+            {t('auth.signOut')}
+          </Button>
+        </div>
+      </Modal>
     </main>
   );
 }

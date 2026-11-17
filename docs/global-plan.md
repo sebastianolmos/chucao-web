@@ -253,17 +253,22 @@ by this closure.
 
 ### Selected slice — VS-02 Concept management
 
-**Selection status and rationale:** **Selected** as the next implementation
-slice after the locally validated VS-01 foundation. It extends the existing
-private-list journey with the smallest useful content-management result:
-authenticated people can create and maintain concepts before round selection or
-practice behavior is introduced. This preserves the provisional order and
-reduces uncertainty around concept validation, pasted input, ownership, and
-deletion semantics without bundling the independent round state machine.
+**Slice status:** **Closed for validated local VS-02 scope (2026-11-17).**
+Implementation tasks T01–T09 are complete. The local slice delivers persisted
+concept entry, batch review, detail, editing, deletion, localization, privacy
+copy, and ownership controls. My Lists cards show the agreed static
+`0/<active concept count>` indicator; this does not implement practice tracking.
 
-**Specification:** Draft at
-`specs/002-concept-management/spec.md`; the initial behavioral clarification
-is resolved and the draft is ready for technical planning.
+**Validation boundary:** The user accepted a documented local closure exception
+for CHECK-08/NFR-03. A 500-row local database retrieval completed in 1.181 ms
+of database execution time; the workload was selected after implementation,
+and browser rendering measurement was waived. No browser or production
+performance pass is claimed. Details are in
+`specs/002-concept-management/tasks.md`. This exception does not leave VS-02
+pending and does not claim publication readiness.
+
+**Specification:** Closed at `specs/002-concept-management/spec.md` for the
+validated local scope described above.
 
 **User outcome:** An authenticated person opens one of their private lists,
 adds a concept individually or pastes a batch, reviews which entries are
@@ -285,7 +290,8 @@ change those concepts.
 **Included scope:**
 
 - Enter List Detail from an owned list and distinguish an empty list from a
-  list containing concepts.
+  list containing concepts. Non-empty My Lists cards show a static practiced
+  count of zero over the active concept count until practice tracking exists.
 - Add one concept with a required trimmed title of 1–50 characters and an
   optional trimmed description of up to 2,000 characters.
 - Paste a bounded batch of lines beginning with `-`; support the optional
@@ -398,14 +404,14 @@ rendering. Cross-device and full browser-matrix checks remain publication
 evidence; future history verification must confirm the established deleted
 concept representation once VS-03/VS-05 exist.
 
-**Open decisions and readiness for specification:** The behavioral decisions
-needed before technical planning are resolved in the VS-02 draft: the batch
-is limited to 100 lines and 20,000 characters including line breaks, stale
-edits are rejected with a reload-current-version path, and deletion uses a
-logical deleted/tombstone state that preserves only the minimum future-history
-reference. Exact atomicity, retry/idempotency mechanics, and physical schema
-remain technical-plan decisions. No product-level decision is currently
-blocking the next stage.
+**Closure record:** The behavioral decisions are recorded in the closed VS-02
+specification: the batch is limited to 100 lines and 20,000 characters
+including line breaks, stale edits are rejected with a reload-current-version
+path, and deletion uses a logical tombstone that preserves only the minimum
+future-history reference. Technical implementation and local validation
+evidence are recorded in its plan and task matrix. The accepted CHECK-08
+exception is local-only and does not assert browser rendering or production
+performance readiness.
 
 ## 9. Proposals and open questions
 
@@ -427,4 +433,5 @@ The following remain proposals rather than approvals: hidden-by-default descript
 | 2026-11-16 | Closed the controller, jurisdiction, privacy notice, rights, retention, backup, provider, and incident-responsibility planning item. | Establishes an initial Chilean-law review scope and a proportionate privacy operation for public registration; implementation and legal verification remain release prerequisites. |
 | 2026-11-16 | Selected VS-01, Account and first private list, as the first implementation slice. | Delivers the smallest demonstrable private product foundation while activating identity, ownership, persistence, responsive access, and required controls for later slices. |
 | 2026-11-17 | Selected VS-02 Concept management as the next implementation slice. | Extends the validated private-list foundation to a complete persisted concept-management journey while keeping rounds, selection, practice, and history separate. |
+| 2026-11-17 | Closed VS-02 for its validated local scope and aligned the spec, flow, design, and validation evidence with the static `0/active concept count` card indicator. | Records completed local concept management and the user-accepted CHECK-08 browser-measurement exception without claiming publication readiness. |
 

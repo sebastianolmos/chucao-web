@@ -24,11 +24,16 @@ local environment.
 | `npm run dev` | Start the Vite development server. |
 | `npm run build` | Run the TypeScript project build and create the Vite production artifact. |
 | `npm run lint` | Run Oxlint with the repository configuration. |
+| `npm test` | Run the Vitest unit and component tests once. |
 | `npm run preview` | Serve the previously built production artifact locally. |
 | `npx supabase start` | Start the configured local Supabase services when database/Auth work requires them. |
 
-`package.json` currently has no test or formatter script. Do not invent a
-replacement command or install testing infrastructure for a documentation task.
+Use Vitest with React Testing Library for automated unit and component tests.
+For behavior changes, write or extend a focused test before implementation
+when an automated test can meaningfully cover the behavior. Do not add tests
+for documentation-only work, and keep manual checks for browser, accessibility,
+provider, and database behavior that the component test environment cannot
+verify. There is no formatter script.
 The frontend requires the public Supabase URL and publishable key through the
 repository's Vite environment configuration; never put privileged credentials
 in the client or committed files.
