@@ -322,6 +322,14 @@ descriptions within their cards and panels without horizontal page overflow.
 Preferences shall use a centered, prominent title, centered sign-out action,
 and a close control that is visually distinct from the dialog background.
 
+**FR-28.** Confirmed successful list and concept create, update, and delete
+actions that are available in the application shall show a bilingual toast
+fixed to the lower-left corner. Notifications shall overlay content without
+moving it, remain visible for several seconds, support multiple stacked
+notifications, and provide an accessible dismissal action. They shall
+replace inline green success panels; validation and operation failures shall
+continue to appear with the relevant form or action.
+
 ## Applicable non-functional requirements
 
 ### Quality, accessibility, and delivery
@@ -547,6 +555,15 @@ the navbar remains within the viewport and the title wraps inside its card or
 detail panel without forcing horizontal page overflow. Access language and
 Privacy controls are centered. The Preferences title is centered and bold,
 sign-out is centered, and the close button contrasts with the dialog surface.
+
+### AC-14 — Stacked action notifications
+
+Given a successful list or concept action that is available in the app, when
+its persisted result is confirmed, then a localized snackbar appears at the
+lower-left without changing page layout, remains for a few seconds, and is
+independently dismissible. Several close-together successes remain visible as
+a stack. Green inline success banners are absent; validation and failure
+messages remain beside the related action.
 
 ## Dependencies and shared constraints
 

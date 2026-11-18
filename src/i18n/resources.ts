@@ -38,6 +38,10 @@ export const resources = {
         open: 'Abrir preferencias',
         privacy: 'Privacidad',
       },
+      toast: {
+        notifications: 'Notificaciones',
+        dismiss: 'Descartar notificación',
+      },
       lists: {
         title: 'Mis listas',
         loading: 'Cargando tus listas…',
@@ -162,6 +166,10 @@ export const resources = {
         title: 'Preferences',
         open: 'Open preferences',
         privacy: 'Privacy',
+      },
+      toast: {
+        notifications: 'Notifications',
+        dismiss: 'Dismiss notification',
       },
       lists: {
         title: 'My Lists',

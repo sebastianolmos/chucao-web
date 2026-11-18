@@ -10,7 +10,7 @@ import {
   TextInput,
   Title,
 } from '@mantine/core';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ActiveConceptRow } from '../../lib/database.types';
 import { queryClient } from '../../lib/queryClient';
@@ -23,6 +23,7 @@ import {
 } from './conceptService';
 import { validateConceptFields } from './conceptParser';
 import styles from './concepts.module.css';
+import { useToast } from '../../app/toasts/useToast';
 
 type Props = {
   userId: string;
@@ -55,25 +56,18 @@ export function ConceptDetailView({ userId, listId, concept, onClose, onReload, 
   const [description, setDescription] = useState(concept.description);
   const [fieldError, setFieldError] = useState<'title' | 'description' | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
-  const [editSuccess, setEditSuccess] = useState(false);
+  const { notify } = useToast();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const conflictPending = editError === 'conceptDetail.conflict' || editError === 'conceptDetail.reloadFailed';
 
-  useEffect(() => {
-    if (!editSuccess) return;
-    const timeout = window.setTimeout(() => setEditSuccess(false), 4000);
-    return () => window.clearTimeout(timeout);
-  }, [editSuccess]);
-
   function beginEdit() {
     setTitle(concept.title);
     setDescription(concept.description);
     setFieldError(null);
     setEditError(null);
-    setEditSuccess(false);
     setEditing(true);
   }
 
@@ -95,7 +89,6 @@ export function ConceptDetailView({ userId, listId, concept, onClose, onReload, 
 
     setSaving(true);
     setEditError(null);
-    setEditSuccess(false);
     try {
       const result = await updateConcept({
         userId,
@@ -110,7 +103,7 @@ export function ConceptDetailView({ userId, listId, concept, onClose, onReload, 
         setTitle(result.concept.title);
         setDescription(result.concept.description);
         setEditing(false);
-        setEditSuccess(true);
+        notify(t('conceptDetail.editSaved'));
         setFieldError(null);
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: conceptQueryKey(userId, listId) }),
@@ -179,7 +172,6 @@ export function ConceptDetailView({ userId, listId, concept, onClose, onReload, 
         <Button className={styles.detailBackButton} variant="default" disabled={saving || deleting || conflictPending} onClick={onClose}>{t('conceptDetail.backToList')}</Button>
       </header>
 
-      {editSuccess && <Alert color="green" role="status">{t('conceptDetail.editSaved')}</Alert>}
       {editing ? (
         <form onSubmit={(event) => void saveEdit(event)}>
           <Stack gap="sm">

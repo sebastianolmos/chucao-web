@@ -329,6 +329,10 @@ If a practice closure or unsaved form is active, sign out or account deletion fi
 
 Every asynchronous save, delete, draw, and preference change distinguishes pending, confirmed success, and failure. Success is not shown before the service confirms the operation.
 
+Confirmed successful list and concept actions use localized, fixed stacked
+toast notifications. They do not shift the current view; validation and
+failure messages remain next to the related form or action.
+
 Repeated submissions are disabled or made safe by the operation contract. Failed or uncertain operations preserve user-entered content in the active form where possible and explain whether retry is safe. Closure notes are not saved as drafts while being typed.
 
 ### Validation and destructive actions

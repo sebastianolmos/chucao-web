@@ -16,12 +16,12 @@ import {
   getOwnedConceptCounts,
   getOwnedLists,
   listQueryKey,
-  type CreatePrivateListResult,
 } from './listService';
 import { DomainServiceError } from '../shared/supabaseErrors';
 import { ListNameForm } from './ListNameForm';
 import styles from './lists.module.css';
 import { queryClient } from '../../lib/queryClient';
+import { useToast } from '../../app/toasts/useToast';
 
 type MyListsViewProps = {
   userId: string;
@@ -30,9 +30,7 @@ type MyListsViewProps = {
 
 type Feedback =
   | {
-      kind: 'success' | 'error';
       key:
-        | 'lists.created'
         | 'lists.duplicate'
         | 'lists.limit'
         | 'lists.unavailable'
@@ -47,32 +45,21 @@ type FeedbackMessage = Exclude<Feedback, null>;
 function feedbackForError(error: DomainServiceError): FeedbackMessage {
   switch (error.code) {
     case 'duplicate_name':
-      return { kind: 'error', key: 'lists.duplicate' };
+      return { key: 'lists.duplicate' };
     case 'list_limit':
-      return { kind: 'error', key: 'lists.limit' };
+      return { key: 'lists.limit' };
     case 'unauthorized':
-      return { kind: 'error', key: 'lists.unauthorized' };
+      return { key: 'lists.unauthorized' };
     case 'unauthenticated':
-      return { kind: 'error', key: 'lists.sessionExpired' };
+      return { key: 'lists.sessionExpired' };
     default:
-      return { kind: 'error', key: 'lists.unavailable' };
+      return { key: 'lists.unavailable' };
   }
-}
-
-function feedbackForResult(result: CreatePrivateListResult): Feedback {
-  if (result.status === 'created' || result.status === 'reconciled') {
-    return { kind: 'success', key: 'lists.created' };
-  }
-
-  if (result.status === 'rejected') {
-    return feedbackForError(result.error);
-  }
-
-  return { kind: 'error', key: 'lists.unresolved' };
 }
 
 export function MyListsView({ userId, onOpenList }: MyListsViewProps) {
   const { t } = useTranslation();
+  const { notify } = useToast();
   const [feedback, setFeedback] = useState<Feedback>(null);
   const listsQuery = useQuery({
     queryKey: listQueryKey(userId),
@@ -85,19 +72,22 @@ export function MyListsView({ userId, onOpenList }: MyListsViewProps) {
   const createMutation = useMutation({
     mutationFn: createPrivateList,
     onSuccess: async (result) => {
-      setFeedback(feedbackForResult(result));
-
       if (result.status === 'created' || result.status === 'reconciled') {
+        notify(t('lists.created'));
         await queryClient.invalidateQueries({
           queryKey: listQueryKey(userId),
         });
+      } else {
+        setFeedback(result.status === 'rejected'
+          ? feedbackForError(result.error)
+          : { key: 'lists.unresolved' });
       }
     },
     onError: (error) => {
       setFeedback(
         error instanceof DomainServiceError
           ? feedbackForError(error)
-          : { kind: 'error', key: 'lists.unavailable' },
+          : { key: 'lists.unavailable' },
       );
     },
   });
@@ -119,7 +109,7 @@ export function MyListsView({ userId, onOpenList }: MyListsViewProps) {
   if (listsQuery.isError) {
     const queryFeedback = listsQuery.error instanceof DomainServiceError
       ? feedbackForError(listsQuery.error)
-      : { kind: 'error' as const, key: 'lists.unavailable' as const };
+      : { key: 'lists.unavailable' as const };
 
     return (
       <section className={styles.view}>
@@ -143,10 +133,7 @@ export function MyListsView({ userId, onOpenList }: MyListsViewProps) {
       </header>
 
       {feedback && (
-        <Alert
-          color={feedback.kind === 'success' ? 'green' : 'red'}
-          role={feedback.kind === 'success' ? 'status' : 'alert'}
-        >
+        <Alert color="red" role="alert">
           {t(feedback.key)}
         </Alert>
       )}

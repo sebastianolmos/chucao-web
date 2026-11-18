@@ -4,6 +4,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import './index.css'
 import App from './App.tsx'
 import { LocaleProvider } from './app/LocaleProvider';
+import { ToastProvider, ToastViewport } from './app/toasts/ToastProvider';
 import '@mantine/core/styles.css';
 import '@fontsource/comfortaa/400.css';
 import '@fontsource/comfortaa/700.css';
@@ -23,7 +24,10 @@ createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <MantineProvider theme={theme}>
         <LocaleProvider>
-          <App />
+          <ToastProvider>
+            <App />
+            <ToastViewport />
+          </ToastProvider>
         </LocaleProvider>
       </MantineProvider>
     </QueryClientProvider>

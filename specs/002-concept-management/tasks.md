@@ -527,21 +527,27 @@ do not leave VS-02 pending.
     single locale toggle, brand return action, and Preferences dialog.
   - **Depends on:** T04, T05, and T08 (authenticated session, locale, and
     privacy behavior are already implemented).
-  - **References:** FR-24–FR-27; AC-12–AC-13; `docs/app-flow.md` shared navigation;
+  - **References:** FR-24–FR-28; AC-12–AC-14; `docs/app-flow.md` shared navigation;
     `docs/design.md` shared shell.
   - **Work:** Add the navbar to authenticated content views only; move the
     signed-in email, sign-out, and authenticated Privacy entry into the
     Preferences dialog; preserve Access and its language/privacy entry points;
-    add bilingual accessible labels and responsive styling.
+    add bilingual accessible labels and responsive styling. Add a shared
+    fixed stacked-toast surface and move successful list/concept confirmations
+    into it while keeping validation/failure feedback in context.
+    List rename/edit is not currently implemented in this repository; the
+    shared `notify` API can be used when that action is added.
   - **Verification:** Run `npm run build` and `npm run lint`; review the
     authenticated and Access states in Spanish and English, including the
     brand return, modal dismissal/privacy navigation, local sign-out,
     preserved view on locale change, keyboard focus, and narrow layout.
-    `npm.cmd run build` and `npm.cmd run lint` passed; `git diff --check`
+    `npm.cmd run build` and `npm.cmd run lint` passed; the build retains the
+    >500 kB chunk advisory; `git diff --check`
     passed. Interactive review with an authenticated browser session has not
     been performed because the browser access host was unavailable. Automated
-    tests were not run for this task.
-  - **Done when:** AC-12 and AC-13 are satisfied, the authenticated page body
+    tests were not run for this task. The toast flows cover list creation,
+    individual/batch concept creation, concept editing, and concept deletion.
+  - **Done when:** AC-12–AC-14 are satisfied, the authenticated page body
     no longer duplicates identity/sign-out/privacy controls, Access remains unchanged,
     and the required build/lint checks pass. T10 remains pending until the
     authenticated visual/interaction review is recorded; it does not reopen

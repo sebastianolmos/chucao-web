@@ -1,6 +1,6 @@
 import { Alert, Badge, Button, Group, Stack, Text, Title } from '@mantine/core';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ListRow } from '../../lib/database.types';
 import { queryClient } from '../../lib/queryClient';
@@ -12,6 +12,7 @@ import { ConceptEntryForm, type EntryMode } from './ConceptEntryForm';
 import { ConceptBatchReview } from './ConceptBatchReview';
 import { ConceptDetailView } from './ConceptDetailView';
 import styles from './concepts.module.css';
+import { useToast } from '../../app/toasts/useToast';
 
 type Props = { userId: string; list: ListRow; onBack: () => void };
 
@@ -37,7 +38,7 @@ export function ConceptManagementView({ userId, list, onBack }: Props) {
   const [batchError, setBatchError] = useState<string | null>(null);
   const [summary, setSummary] = useState<number | null>(null);
   const [selectedConceptId, setSelectedConceptId] = useState<string | null>(null);
-  const [successFeedback, setSuccessFeedback] = useState<{ key: string; count?: number } | null>(null);
+  const { notify } = useToast();
   const key = conceptQueryKey(userId, list.id);
   const conceptsQuery = useQuery({ queryKey: key, queryFn: () => getOwnedConcepts(userId, list.id) });
   const createMutation = useMutation({
@@ -60,24 +61,18 @@ export function ConceptManagementView({ userId, list, onBack }: Props) {
           queryClient.invalidateQueries({ queryKey: listQueryKey(userId) }),
         ]);
         setSummary(result.concepts.length); setBatchError(null); setRawInput('');
-        setSuccessFeedback({ key: 'concepts.batchSaved', count: result.concepts.length });
+        notify(t('concepts.batchSaved', { count: result.concepts.length }));
       } else if (result.status === 'rejected' || result.status === 'unresolved') { setBatchError(errorKey(result.error)); }
     },
     onError: (error) => setBatchError(errorKey(error)),
   });
-  useEffect(() => {
-    if (!successFeedback) return;
-    const timeout = window.setTimeout(() => setSuccessFeedback(null), 4000);
-    return () => window.clearTimeout(timeout);
-  }, [successFeedback]);
   const busy = createMutation.isPending || batchMutation.isPending;
 
   async function saveIndividual(title: string, description: string): Promise<boolean> {
     setSummary(null);
-    setSuccessFeedback(null);
     const result = await createMutation.mutateAsync({ userId, listId: list.id, title, description });
     if (result.status === 'created' || result.status === 'reconciled') {
-      setSuccessFeedback({ key: 'concepts.saved' });
+      notify(t('concepts.saved'));
       return true;
     }
     if (result.status === 'rejected' || result.status === 'unresolved') setBatchError(errorKey(result.error));
@@ -85,7 +80,7 @@ export function ConceptManagementView({ userId, list, onBack }: Props) {
   }
 
   function startReview(rawInput: string) {
-    setBatchError(null); setSummary(null); setSuccessFeedback(null);
+    setBatchError(null); setSummary(null);
     const existing = new Set((conceptsQuery.data ?? []).map((concept) => concept.title));
     setReview(parseConceptBatch(rawInput, existing));
   }
@@ -102,18 +97,17 @@ export function ConceptManagementView({ userId, list, onBack }: Props) {
   return (
     <section aria-labelledby="concept-list-title" aria-busy={busy} className={styles.view}>
       <Group className={styles.listHeader} justify="space-between"><Button variant="subtle" onClick={onBack}>{t('detail.back')}</Button><Title className={styles.listTitle} order={1} id="concept-list-title">{list.name}</Title><span /></Group>
-      {successFeedback && <Alert color="green" role="status">{successFeedback.count === undefined ? t(successFeedback.key) : t(successFeedback.key, { count: successFeedback.count })}</Alert>}
       {createMutation.data && (createMutation.data.status === 'rejected' || createMutation.data.status === 'unresolved') && <Alert color="red" role="alert">{t(errorKey(createMutation.data.error))}</Alert>}
       {selectedConcept ? (
         <ConceptDetailView userId={userId} listId={list.id} concept={selectedConcept}
           onClose={() => setSelectedConceptId(null)} onReload={reloadSelectedConcept}
-          onDeleted={() => { setSelectedConceptId(null); setSuccessFeedback({ key: 'conceptDetail.deleteSuccess' }); }} />
+          onDeleted={() => { setSelectedConceptId(null); notify(t('conceptDetail.deleteSuccess')); }} />
       ) : (
         <>
           {conceptsQuery.data.length === 0 ? <div className={styles.empty}><Text>{t('concepts.empty')}</Text></div> : (
             <Stack gap="sm" aria-label={t('concepts.list')}>
               {conceptsQuery.data.map((concept) => <article className={styles.conceptCard} key={concept.id}>
-                <Group className={styles.conceptRow} justify="space-between"><Button className={styles.conceptOpen} variant="subtle" onClick={() => { setSuccessFeedback(null); setSelectedConceptId(concept.id); }} aria-label={t('conceptDetail.viewConcept', { title: concept.title })}>{concept.title}</Button><Badge color="yellow">{t(`conceptDetail.state.${concept.state}`)}</Badge></Group>
+                <Group className={styles.conceptRow} justify="space-between"><Button className={styles.conceptOpen} variant="subtle" onClick={() => setSelectedConceptId(concept.id)} aria-label={t('conceptDetail.viewConcept', { title: concept.title })}>{concept.title}</Button><Badge color="yellow">{t(`conceptDetail.state.${concept.state}`)}</Badge></Group>
                 {concept.description && <Text>{concept.description}</Text>}
               </article>)}
             </Stack>

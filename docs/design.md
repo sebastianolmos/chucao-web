@@ -121,6 +121,8 @@ Keep the authenticated navbar compact on mobile. The Access language selector
 and Privacy entry are centered. Preferences uses a centered bold title, a
 centered sign-out action, and a contrasting close control. Long unspaced
 concept titles and descriptions wrap within their cards and detail panels.
+Successful list and concept actions use short stacked snackbars at the
+lower-left; the notification surface overlays the page and does not reflow it.
 
 Use a full-width cream application canvas so desktop viewports do not expose
 contrasting lateral strips. Constrain reading content, panels, and list grids
