@@ -57,7 +57,7 @@
 }
 
 .listCard:hover {
-  background: var(--chucao-green);
+  background: #d8fbff;
 }
 
 .cardName {
@@ -89,6 +89,17 @@
 }
 
 .addListButton {
+  justify-self: center;
+  min-height: 2.75rem;
+  padding-inline: 1.25rem;
+  --button-bg: var(--chucao-green) !important;
+  --button-hover: #a9df78 !important;
+  --button-color: var(--chucao-brown) !important;
+  --button-hover-color: var(--chucao-brown) !important;
+  --button-bd: 2px solid var(--chucao-brown) !important;
+}
+
+.independentTimerButton {
   justify-self: center;
   min-height: 2.75rem;
   padding-inline: 1.25rem;

@@ -42,8 +42,8 @@ Important shared constraints include:
 - Client validation improves usability but does not replace trusted-boundary validation.
 - Random selection and marking a concept as seen must be atomic.
 - Retried or repeated requests must not consume another concept or duplicate a practice.
-- Active timer/session state is client-only. It is not persisted, synchronized, or resumed across browser instances or devices.
-- Account preferences are synchronized data. The initial set is language, default timer duration, sound, volume, and reduced motion.
+- Active timer/session state is client-only. It is not persisted, synchronized, or resumed across browser instances or devices; completion or abandonment creates no practice record in VS-04.
+- Account preferences are synchronized data. Locale and timer preferences (default duration, sound, volume, and reduced motion) are stored on the owner profile; timer sessions snapshot their effective preferences at entry.
 - The timer duration is between 1 and 59 minutes, and time cannot be added after it starts.
 - No custom email/password credential store or password-recovery flow exists in the product architecture.
 - Privileged provider secrets never reach the browser bundle.
@@ -273,6 +273,7 @@ The architecture guides delivered authentication, list, concept, and round slice
 
 | Date | Change | Rationale |
 |---|---|---|
+| 2026-11-18 | Recorded the locally validated VS-04 boundary: constrained account timer preferences, narrow profile update access, and transient in-memory timer/scene state without recovery or practice persistence. | Keeps the architecture aligned with the delivered slice and preserves VS-05 practice records and VS-07 release review as separate scope. |
 | 2026-11-18 | Recorded the locally validated VS-03 round boundary: list-scoped operation ledger, parent-list serialization, fixed-search-path RPCs, RLS, and retained appearance history. | Keeps the shared ownership and atomicity architecture aligned with the closed local slice while leaving physical schema and functions in the executable migrations/spec. |
 | 2026-11-18 | Recorded accepted VS-03 deletion handling: retain only anonymous round totals after permanent list deletion and remove links/content/event detail. | Minimizes retained history and aligns round persistence with the accepted global deletion boundary, subject to DP14 review. |
 | 2026-11-18 | Clarified historical title retention on concept deletion: replace the displayable title with a neutral marker while preserving appearance order and origin. | Aligns historical snapshots with the global privacy and deletion behavior. |

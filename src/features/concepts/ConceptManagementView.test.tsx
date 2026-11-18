@@ -54,13 +54,13 @@ const currentRound = {
   anonymous_appearance_total: null, created_at: '2026-01-01T00:00:00Z',
 };
 
-function renderView() {
+function renderView(onStartPractice = vi.fn()) {
   queryClient.clear();
   return render(
     <QueryClientProvider client={queryClient}>
       <MantineProvider env="test">
         <ToastProvider>
-          <ConceptManagementView userId="user-a" list={list} onBack={vi.fn()} />
+          <ConceptManagementView userId="user-a" list={list} onBack={vi.fn()} onStartPractice={onStartPractice} />
           <ToastViewport />
         </ToastProvider>
       </MantineProvider>
@@ -157,7 +157,7 @@ describe('ConceptManagementView', () => {
     expect(dialog).toHaveAttribute('aria-modal', 'true');
     const returnButton = screen.getByRole('button', { name: 'Volver a la lista' });
     expect(returnButton).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /practicar/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Practicar' })).toBeInTheDocument();
     await user.tab();
     expect(returnButton).toHaveFocus();
     await user.keyboard('{Enter}');
@@ -283,6 +283,21 @@ describe('ConceptManagementView', () => {
     expect(await screen.findByRole('dialog')).toHaveTextContent('Selected concept');
     expect(screen.getByRole('dialog')).toHaveTextContent('Appearance 3 in this round');
     expect(screen.getByRole('button', { name: 'Return to list' })).toBeInTheDocument();
+  });
+
+  it('offers Practice after a successful draw and passes the selected concept id', async () => {
+    const user = userEvent.setup();
+    const startPractice = vi.fn();
+    currentConcepts = [existingConcept];
+    renderView(startPractice);
+
+    await user.click(await screen.findByRole('button', { name: 'Sortear concepto' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent(existingConcept.title);
+    await user.click(screen.getByRole('button', { name: 'Practicar' }));
+
+    expect(startPractice).toHaveBeenCalledWith(existingConcept.id);
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
   it('shows empty and numeric pending progress without hiding Add Concepts', async () => {
@@ -632,7 +647,7 @@ describe('ConceptManagementView', () => {
     const user = userEvent.setup();
     const onBack = vi.fn();
     currentConcepts = [existingConcept];
-    const detailProps = { list, userId: 'user-a', onBack };
+    const detailProps = { list, userId: 'user-a', onBack, onStartPractice: vi.fn() };
     queryClient.clear();
     render(
       <QueryClientProvider client={queryClient}>
@@ -671,7 +686,7 @@ describe('ConceptManagementView', () => {
   it('renders concept controls in English while preserving the user-authored list name', async () => {
     await i18n.changeLanguage('en');
     currentConcepts = [];
-    const detailProps = { list, userId: 'user-a', onBack: vi.fn() };
+    const detailProps = { list, userId: 'user-a', onBack: vi.fn(), onStartPractice: vi.fn() };
     queryClient.clear();
     render(
       <QueryClientProvider client={queryClient}>
@@ -689,7 +704,7 @@ describe('ConceptManagementView', () => {
   it('localizes an expired session state when the selected concept list cannot load', async () => {
     await i18n.changeLanguage('en');
     vi.mocked(getOwnedConcepts).mockRejectedValue(new DomainServiceError('unauthenticated', 'unauthenticated'));
-    const detailProps = { list, userId: 'user-a', onBack: vi.fn() };
+    const detailProps = { list, userId: 'user-a', onBack: vi.fn(), onStartPractice: vi.fn() };
     queryClient.clear();
     render(
       <QueryClientProvider client={queryClient}>

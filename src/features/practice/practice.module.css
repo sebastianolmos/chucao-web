@@ -1,0 +1,263 @@
+.practice {
+  display: grid;
+  justify-items: center;
+  gap: clamp(0.85rem, 2vw, 1.4rem);
+  width: min(100%, 68rem);
+  margin: 0 auto;
+  color: var(--chucao-brown);
+}
+
+.practiceHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  width: 100%;
+  gap: 0.5rem;
+}
+
+.practiceHeader > h1 {
+  grid-column: 2;
+  grid-row: 1;
+  max-width: 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-align: center;
+  font-size: clamp(1.5rem, 4vw, 2.35rem);
+}
+
+.backButton {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
+  min-width: 0;
+  padding-inline: 0.75rem;
+  --button-bg: var(--chucao-cream) !important;
+  --button-hover: #fffbed !important;
+  --button-color: var(--chucao-brown) !important;
+  --button-hover-color: var(--chucao-brown) !important;
+  --button-bd: 2px solid var(--chucao-brown) !important;
+}
+
+.sceneFrame {
+  width: min(100%, 64rem);
+  overflow: hidden;
+  border: 3px solid var(--chucao-brown);
+  border-radius: clamp(0.8rem, 2.3vw, 1.5rem);
+  background: #b8e8e8;
+  box-shadow: 5px 6px 0 var(--chucao-brown);
+  isolation: isolate;
+}
+
+.scene {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.timerPanel {
+  display: grid;
+  justify-items: center;
+  gap: 0.15rem;
+  min-width: min(100%, 13rem);
+  padding: 0.55rem 1.25rem;
+  border: 2px solid var(--chucao-brown);
+  border-radius: 0.9rem;
+  background: var(--chucao-panel);
+}
+
+.state,
+.clock {
+  margin: 0;
+}
+
+.clockEditButton {
+  min-height: 3.5rem;
+  padding: 0 0.25rem;
+  border: 0;
+  background: transparent;
+  color: var(--chucao-brown);
+  cursor: pointer;
+  font: inherit;
+  font-size: clamp(2rem, 6vw, 3rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.clockEditButton:focus-visible {
+  outline: 3px solid var(--chucao-cyan);
+  outline-offset: 3px;
+}
+
+.clockEditButton:hover {
+  border-radius: 0.4rem;
+  background: #eeeadd;
+}
+
+.durationEditor {
+  display: grid;
+  justify-items: center;
+  gap: 0.2rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.clockInput {
+  width: 8.4rem;
+  min-height: 3.5rem;
+  padding: 0.1rem 0.35rem;
+  border: 2px solid var(--chucao-brown);
+  border-radius: 0.55rem;
+  background: var(--chucao-cream);
+  color: var(--chucao-brown);
+  font: inherit;
+  font-size: clamp(2rem, 6vw, 3rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  text-align: center;
+}
+
+.state {
+  font-weight: 700;
+}
+
+.clock {
+  font-size: clamp(2rem, 6vw, 3rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.concept {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  width: min(100%, 48rem);
+  padding: 1rem clamp(0.9rem, 3vw, 1.5rem);
+  border: 2px solid var(--chucao-brown);
+  border-radius: 0.9rem;
+  background: var(--chucao-panel);
+  box-shadow: 3px 4px 0 var(--chucao-brown);
+  text-align: center;
+}
+
+.concept h2,
+.description {
+  max-width: 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.description {
+  line-height: 1.6;
+  white-space: pre-wrap;
+  text-align: left;
+}
+
+.controls {
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  width: 100%;
+}
+
+.timerActionButton,
+.restartButton,
+.cancelButton {
+  min-height: 2.9rem;
+  min-width: 7rem;
+  border: 2px solid var(--chucao-brown) !important;
+  --button-color: var(--chucao-brown) !important;
+  --button-hover-color: var(--chucao-brown) !important;
+  --button-bd: 2px solid var(--chucao-brown) !important;
+}
+
+.timerActionButton {
+  --button-bg: var(--chucao-cyan) !important;
+  --button-hover: #e1fbff !important;
+}
+
+.restartButton {
+  --button-bg: var(--chucao-yellow) !important;
+  --button-hover: #fffedc !important;
+}
+
+.cancelButton {
+  --button-bg: var(--chucao-cream) !important;
+  --button-hover: #fffbed !important;
+}
+
+.controls button,
+.dialogActions button {
+  min-height: 2.9rem;
+  min-width: 7rem;
+  --button-color: var(--chucao-brown) !important;
+  --button-hover-color: var(--chucao-brown) !important;
+}
+
+.restartModalClose:hover {
+  background-color: #e1fbff !important;
+}
+
+.error {
+  flex-basis: 100%;
+  margin: 0;
+  padding: 0.7rem 1rem;
+  border: 2px solid var(--chucao-brown);
+  border-radius: 0.65rem;
+  background: var(--chucao-pink);
+  line-height: 1.5;
+  text-align: center;
+}
+
+.dialogActions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding-top: 0.75rem;
+}
+
+@media (max-width: 36rem) {
+  .practice {
+    gap: 1rem;
+  }
+
+  .sceneFrame {
+    border-width: 2px;
+    box-shadow: 3px 4px 0 var(--chucao-brown);
+  }
+
+  .controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .practiceHeader {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .practiceHeader > h1 {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .backButton {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  .controls button {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .practice * {
+    scroll-behavior: auto;
+    transition-duration: 0.01ms !important;
+  }
+}

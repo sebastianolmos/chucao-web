@@ -3,6 +3,10 @@ export type Locale = 'es' | 'en';
 export type ProfileRow = {
   id: string;
   locale: Locale | null;
+  default_timer_minutes: number | null;
+  completion_sound_enabled: boolean | null;
+  sound_volume: number | null;
+  reduced_motion: boolean | null;
   created_at: string;
   updated_at: string;
 };
@@ -108,12 +112,20 @@ export type Database = {
         Insert: {
           id: string;
           locale?: Locale | null;
+          default_timer_minutes?: number | null;
+          completion_sound_enabled?: boolean | null;
+          sound_volume?: number | null;
+          reduced_motion?: boolean | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           id?: string;
           locale?: Locale | null;
+          default_timer_minutes?: number | null;
+          completion_sound_enabled?: boolean | null;
+          sound_volume?: number | null;
+          reduced_motion?: boolean | null;
           created_at?: string;
           updated_at?: string;
         };

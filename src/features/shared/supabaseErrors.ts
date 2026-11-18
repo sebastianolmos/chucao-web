@@ -13,6 +13,7 @@ export type DomainErrorCode =
   | 'concept_batch_empty'
   | 'concept_conflict'
   | 'concept_not_found'
+  | 'invalid_timer_preference'
   | 'round_action_rejected'
   | 'unresolved'
   | 'unavailable'
@@ -133,4 +134,11 @@ export function unauthenticatedError(): DomainServiceError {
 
 export function unauthorizedError(): DomainServiceError {
   return new DomainServiceError('unauthorized', 'unauthorized');
+}
+
+export function invalidTimerPreferenceError(): DomainServiceError {
+  return new DomainServiceError(
+    'invalid_timer_preference',
+    'invalid_timer_preference',
+  );
 }

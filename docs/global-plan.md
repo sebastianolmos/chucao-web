@@ -47,14 +47,14 @@ No numeric adoption, latency, retention, or learning targets are invented at thi
 | CAP-02 | Private user-owned lists with create, view, rename, and delete | MVP | Partially delivered locally: create/view; rename/delete remain pending |
 | CAP-03 | Concepts with stable identity, title validation, optional description, individual entry, pasted batch entry, edit, and delete | MVP | Delivered locally in VS-02; selection, rounds, and practice remain separate capabilities |
 | CAP-04 | Independent list rounds, pending/seen state, uniform random selection, manual marking, appearance order, and new-round history | MVP | Planned |
-| CAP-05 | Timed practice from a selected concept or independently, with a configurable duration from 1 to 59 minutes, pause, resume, restart, and reduced-motion behavior | MVP | Planned |
-| CAP-06 | Chucao forest animation and optional completion sound synchronized with the timer | MVP | Planned |
+| CAP-05 | Timed practice from a selected concept or independently, with a configurable duration from 1 to 59 minutes, pause, resume, restart, and reduced-motion behavior | MVP | Delivered locally in VS-04; active sessions remain transient and are not saved as practices |
+| CAP-06 | Chucao forest animation and optional completion sound synchronized with the timer | MVP | Delivered locally in VS-04; browser background/audio restrictions remain for release validation |
 | CAP-07 | Completed practice records, notes, prior rounds, and practice history, including a 0â€“5 satisfaction rating distinct from Unrated; independent practices are saved only when given a free-text label | MVP | Planned |
 | CAP-08 | Spanish/English interface, translated validation and accessibility text, and locale-aware dates/plurals | MVP | Partially delivered locally in VS-01/VS-02; remaining views and locale-aware study content remain pending |
 | CAP-09 | Responsive, keyboard-usable, accessible interface for PC and mobile browsers | MVP | Partially delivered and user-reviewed locally for VS-01/VS-02; later views and release-wide validation remain pending |
 | CAP-10 | Cross-device access to the same signed-in user's saved data through the responsive web application | MVP baseline from the first release, not a later feature | Partially delivered locally for private lists/concepts; supported-device release validation remains pending |
 | CAP-11 | List duplication, archiving workflow, return-to-pending, search/filtering, ordering, and defined multi-selection actions | Later increment, except any subset explicitly pulled into MVP | Planned |
-| CAP-12 | Account-synchronized preferences for language, default timer duration, sound, volume, and reduced motion | MVP baseline from the first release | Partially delivered locally: account locale and Preferences shell; timer settings remain pending |
+| CAP-12 | Account-synchronized preferences for language, default timer duration, sound, volume, and reduced motion | MVP baseline from the first release | Delivered locally in VS-04 for locale and timer preferences; broader release validation remains pending |
 | CAP-13 | Public sharing, shared lists, organizations, analytics/marketing, social features, and learning assessment | Out of scope | Excluded |
 | CAP-14 | Synchronization or continuation of an active timer/session across devices or browser instances | Out of scope | Excluded |
 
@@ -155,7 +155,7 @@ The sequence preserves the proposed increment order while making each increment 
 | **VS-01 Account and first private list** | **Closed for validated local scope; publication conditions remain pending.** A person can sign in with Google and create and view a private empty list in Spanish or English from supported responsive devices. | CAP-01, CAP-02 (partial: create/view), CAP-08, CAP-09, CAP-10, CAP-12 (partial: language/account shell) | Supabase Auth, Google OAuth, database, RLS, frontend shell, and the minimum account linkage needed for private lists. Rename/delete lists, full settings, concepts, and later study behavior remain outside this slice. Requires account lifecycle and privacy notice decisions before real users. | Q01â€“Q06, SEC01, SEC04â€“SEC08, SEC10, WEB02â€“WEB04; DP01â€“DP03, DP08â€“DP13 |
 | **VS-02 Concept management** | **Closed for validated local scope (2026-11-18, including T10).** A person can manage concepts in private lists, use the shared authenticated navigation/preferences, and receive localized action feedback. | CAP-01 (partial), CAP-02 (partial), CAP-03, CAP-08 (partial), CAP-09 (partial), CAP-10 (partial), CAP-12 (partial) | Depends on private lists and trusted validation. The delivered local scope excludes rounds, selection, practice, account deletion, list rename/delete, release-wide browser validation, and publication. | Q01â€“Q04, SEC01â€“SEC03, SEC08; DP02, DP03, DP10, DP13, DP14 |
 | VS-03 Persistent round and selection | **Closed for validated local scope (2026-11-18).** A person can mark or randomly select a pending concept, see the result and appearance order, and start a new round without losing prior history. | CAP-04, CAP-10 (partial) | Depends on concepts and atomic persistence; requires concurrency, retry/idempotency, return-to-pending, and the defined concept/list history rules. Broader release compatibility and publication remain VS-07. | Q01â€“Q04, SEC01â€“SEC04, SEC08; DP02, DP10, DP12â€“DP14, DP16 |
-| **VS-04 Timed practice journey** | **Selected; specification clarified and ready for technical planning.** An authenticated person can run a timed practice for a selected concept or independently, control/restart/complete the timer, and use account-synced timer preferences. Active timer state is transient; completing or abandoning it does not save practice history in this slice. | CAP-05, CAP-06, CAP-09, CAP-12 (timer preferences) | Reuses VS-01â€“VS-03 auth, concepts, Draw Result and shell. Extends profile preferences beyond locale, adds a minimal Credits and Licenses section to existing Preferences, and includes no practice persistence. Timer visual/audio assets and attribution are confirmed; browser background/locked-device sound remains platform-limited. | Q01â€“Q06, SEC01, SEC03, SEC04, SEC08, SEC10, WEB03â€“WEB04; DP02, DP10, DP12â€“DP14. DP07 only if telemetry/storage is added. [`spec.md`](../specs/004-timed-practice-journey/spec.md) is ready for technical planning. |
+| **VS-04 Timed practice journey** | **Closed for validated local scope (2026-11-18).** An authenticated person can run and control an associated or independent timer, see the timer-synchronized Chucao scene, and configure account-level timer preferences. Active sessions are transient; completion and abandonment do not save practice history. | CAP-05, CAP-06, CAP-09 (local/user-reviewed scope), CAP-12 (timer preferences) | Reuses VS-01â€“VS-03 auth, concepts, Draw Result and shell. Adds constrained account preference fields, a minimal Credits and Licenses section in existing Preferences, and no practice persistence. T07/T08 manual review was user-confirmed; broad release compatibility, accessibility and publication checks remain VS-07. | Q01â€“Q06, SEC01, SEC03, SEC04, SEC08, SEC10, WEB03â€“WEB04; DP02, DP10, DP12â€“DP14. DP07 only if telemetry/storage is added. See [`spec.md`](../specs/004-timed-practice-journey/spec.md), [`tasks.md`](../specs/004-timed-practice-journey/tasks.md), and local closure evidence. |
 | VS-05 Notes and history | A person can complete a practice, save notes, and review prior practices and rounds without confusing notes with descriptions. Abandoning a timer creates no practice record. | CAP-07, CAP-10 | Depends on practice lifecycle and deletion/retention rules; note length/edit/delete and deleted-reference behavior are defined. | Q01â€“Q04, SEC01â€“SEC04; DP02, DP03, DP10, DP13â€“DP16, DP18 |
 | VS-06 Advanced organization | A person can search/order, duplicate/archive/restore lists, filter List Detail to all, pending, or practiced concepts, and use the defined multi-selection actions. | CAP-02, CAP-03, CAP-04, CAP-11 | Depends on stable identities and history semantics; list filters, limits, sorting, multi-selection actions, and confirmation rules are defined. Permanent list deletion must preserve the documented anonymization and retention behavior. | Q01â€“Q04, SEC01â€“SEC04, SEC08; DP10, DP13â€“DP16 |
 | VS-07 Publication readiness | The integrated study journey is validated on modern browsers on PC and Android, with accessibility, migration reproducibility, deployment, and documented privacy handling. | CAP-01, CAP-10, CAP-12 | Depends on all release-blocking decisions, provider review, production configuration, migration/recovery evidence, and representative PC/Android checks. | All selected release criteria; unresolved DP items block real-user publication unless explicitly resolved with rationale. |
@@ -277,10 +277,11 @@ has not started.
 
 ### Selected slice: VS-04 Timed practice journey
 
-**Selection status and rationale:** Selected as the next slice after VS-03
-closed for validated local scope. It activates the core timed practice behavior
-before VS-05 adds saved practices, notes, ratings, and history. Selection is
-not specification, implementation, or validation.
+**Status and rationale:** Closed for validated local scope on 2026-11-18 after
+T01–T08. It delivers the core timed practice behavior before VS-05 adds saved
+practices, notes, ratings, and history. Automated, database, privacy, and
+user-confirmed manual review evidence is recorded in the VS-04 task breakdown;
+this is not a deployment or release-wide validation claim.
 
 **User outcome:** An authenticated person starts a 1–59 minute timer either
 from a selected concept's Draw Result or as an independent timer, can reveal
@@ -291,8 +292,8 @@ completion state with the Chucao scene and optional completion sound.
 controls, transient lifecycle); CAP-06 (timer-synchronized scene and optional
 sound); CAP-09 (responsive, localized, keyboard-accessible practice surface,
 including reduced-motion presentation); CAP-12 (account-level default
-duration, sound, volume, and reduced-motion preferences). CAP-12 currently
-only has locale persisted, so timer preferences are a partial extension here.
+duration, sound, volume, and reduced-motion preferences), now implemented for
+timer settings in VS-04. Wider release validation remains in VS-07.
 
 **Included scope:** Entry from Draw Result and the planned Independent Timer
 entry; duration selection before start, constrained to 1–59 minutes; hidden
@@ -315,12 +316,10 @@ excluded (CAP-14); post-start time extension, list organization, publication,
 and release-wide browser validation are also out of scope. Completion here is
 a transient result, not a saved practice.
 
-**Dependencies and readiness:** VS-01–VS-03 provide the authenticated shell,
-private ownership, concept detail, and Draw Result. Code evidence confirms
-`profiles` currently stores only `locale`, `preferencesService` reads/writes
-only that field, and the existing Preferences dialog has no timer controls;
-VS-04 must extend the account preference contract and trusted update boundary.
-The active timer remains client-only, so no practice/timer persistence layer is
+**Implementation and boundaries:** VS-01–VS-03 provide the authenticated shell,
+private ownership, concept detail, and Draw Result. VS-04 extends the owner
+profile with constrained timer preference fields and a narrow trusted update
+grant; the timer remains client-only, so no practice/timer persistence layer is
 needed. The user confirmed `src/assets/fly1.png`, `fly2.png`, and `tronco.png`
 are owner-created and approved for reuse, and confirmed `src/assets/chucao.wav`
 as the completion sound and its CC BY-NC-SA 4.0 attribution terms. The root
@@ -417,4 +416,5 @@ The following remain proposals rather than approvals: hidden-by-default descript
 | 2026-11-18 | Closed VS-03 for validated local scope after T01–T07 and the accepted CL-06 browser review; aligned the slice status with validation evidence. | Records the delivered round journey without claiming production deployment or release-wide compatibility. |
 | 2026-11-18 | Selected and bounded VS-04 Timed practice journey after VS-03 closure. | Activates the associated and independent transient timer plus account-synced timer preferences; keeps saved practice/notes/history in VS-05 and records unconfirmed timer asset provenance as an implementation constraint. |
 | 2026-11-18 | Clarified VS-04 behavior and approved timer-media reuse and attribution. | Adds the account-preference timing rules, timer background behavior, controlled abandonment and completion navigation, owner-created scene assets, licensed sound attribution, and a minimal Credits and Licenses section in existing Preferences; the spec is ready for technical planning. |
+| 2026-11-18 | Closed VS-04 for validated local scope after T01â€“T08; recorded automated/database evidence and user-confirmed T07/T08 review. | Marks the associated and independent timer journey locally complete while keeping broad browser compatibility, accessibility, and publication readiness in VS-07. |
 

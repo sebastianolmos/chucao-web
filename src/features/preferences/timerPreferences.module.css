@@ -1,0 +1,71 @@
+.panel {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem;
+  border: 2px solid var(--chucao-brown);
+  border-radius: 0.9rem;
+  background: var(--chucao-panel);
+  box-shadow: 3px 4px 0 var(--chucao-brown);
+  color: var(--chucao-brown);
+}
+
+.panel h2,
+.panel h3 {
+  margin: 0;
+  color: var(--chucao-brown);
+}
+
+.panel h2 {
+  font-size: 1.1rem;
+}
+
+.panel h3 {
+  font-size: 1rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--chucao-brown) 42%, transparent);
+  border-radius: 0.7rem;
+  background: var(--chucao-navbar);
+}
+
+.field > p,
+.panel > p,
+.credits p {
+  margin: 0;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.sliderLabel {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--chucao-brown);
+  font-weight: 700;
+}
+
+.hint {
+  color: var(--chucao-brown);
+  font-size: 0.875rem;
+}
+
+.error {
+  color: var(--mantine-color-red-8);
+}
+
+.field :global(.mantine-Switch-track) {
+  border-color: var(--chucao-brown);
+  background: var(--chucao-cream);
+}
+
+.field :global(.mantine-Switch-input:checked + .mantine-Switch-track) {
+  background: var(--chucao-green);
+}
+
+.field :global(.mantine-Switch-thumb) {
+  border-color: var(--chucao-brown);
+}

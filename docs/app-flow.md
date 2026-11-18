@@ -2,12 +2,14 @@
 
 ## 1. Status, scope, and references
 
-**Status:** Complete flow draft, awaiting product review  
+**Status:** Confirmed flow; VS-01–VS-04 implemented for local scope
 **Date:** 2026-11-18
 **Scope:** General navigation, main user journeys, observable states, transitions, and recovery behavior for the MVP and explicitly described later flows.
 
 **Definition state:** Requirements from the global plan are marked **confirmed**. Additions from `temp/flow.md` that are not in the global plan are marked **proposed** or **open**.  
 **Implementation state:** VS-01 and VS-02 are implemented and validated for local scope, including the T10 authenticated-shell extension. VS-03 is closed for local scope after T01–T07 implementation and validation within the owner-accepted Chrome/Brave PC and mobile review scope (CL-06); broader release browser review remains VS-07. Later study journeys are planned unless explicitly marked otherwise.
+
+The VS-04 completion and evidence boundary is recorded in [`specs/004-timed-practice-journey/tasks.md`](../specs/004-timed-practice-journey/tasks.md); this local closure does not claim VS-07 release-wide browser or accessibility validation.
 
 **Sources**
 
@@ -40,8 +42,8 @@ Entry conditions:
 | VIEW-03 | List Detail | Shared authenticated navbar; short Back action, centered list title, scrollable concept-name rows showing both pending and practiced (seen) concepts with a state label and available state action, View buttons, round progress, and one add action | VS-03 closed locally; status filters remain deferred to VS-06 |
 | VIEW-04 | Add Concepts | Dialog with Individual and By Batch modes, batch review, confirm or cancel | VS-02 implemented and locally validated |
 | VIEW-05 | Concept Detail | One Back action to the concept collection; view, edit, or delete a concept with confirmation and conflict handling | VS-02 implemented and locally validated |
-| VIEW-06 | Draw Result | At VS-03 show the confirmed selected concept and appearance order, keep its description hidden, and return to the list; add Practice when VS-04 is delivered | VS-03 closed locally; user-confirmed walkthrough is recorded under CL-06 |
-| VIEW-07 | Practice | Practice with a selected or independent timer, reveal description, pause/resume/restart, adjust pre-start duration, and finish | Planned |
+| VIEW-06 | Draw Result | Show the confirmed selected concept and appearance order, keep its description hidden, and return to the list; Practice opens the associated VIEW-07 timer | VS-03/VS-04 closed locally; walkthrough evidence is recorded under CL-06 and the VS-04 task record |
+| VIEW-07 | Practice | Associated or independent timer; reveal description, edit duration before start, pause/resume/restart, finish, or return/abandon to the entry context | VS-04 closed for validated local scope; broader release review remains VS-07 |
 | VIEW-08 | Practice Closure | Save a completed practice, optional note, and 0–5 satisfaction rating; return, repeat, or draw another | Planned |
 | VIEW-09 | History | Browse practices and rounds, filter, and inspect read-only details | Planned |
 | VIEW-10 | Settings | Change language, default duration, sound, volume, and reduced motion; view credits/licenses | Full Settings view remains planned; VS-02 adds the existing Preferences dialog for identity, sign-out, and Privacy, and VS-04 adds timer controls plus a minimal Credits and Licenses section there |
@@ -223,7 +225,7 @@ Navigation changes destination; saving, drawing, marking, deleting, and changing
 **Scope:** MVP  
 **State:** Confirmed for timed practice, notes, history, and the satisfaction rating.
 
-**Entry:** The person selects Practice from Draw Result or a concept context.
+**Entry:** The person selects Practice from Draw Result or a concept context. This associated journey and FLOW-06 are implemented locally in VS-04.
 
 1. Practice opens with the concept context and a prepared scene.
 2. The person may change the duration before starting, within 1–59 minutes.
@@ -231,8 +233,8 @@ Navigation changes destination; saving, drawing, marking, deleting, and changing
 4. Starting begins elapsed-time calculation and the chucao animation.
 5. The person may pause, continue, or restart after confirmation.
 6. At zero, the animation reaches its destination and optional sound is triggered once.
-7. Practice Closure offers saving the completed practice, an optional note, and an optional satisfaction rating from 0 to 5.
-8. Saving returns to the list, repeats the same concept, or draws another pending concept when available.
+7. Completion is shown in VIEW-07 with textual status and an optional sound attempt; completion is transient and creates no practice record in VS-04.
+8. Returning or abandoning discards the timer session and returns to its entry context. Saving the practice and its note/rating actions remain in VS-05.
 
 **Confirmed timer boundary**
 
@@ -260,15 +262,14 @@ The supplied `temp/flow.md` proposed registering a practice at start, saving int
 **Scope:** MVP  
 **State:** Confirmed for independent timer access and optional free-text identification.
 
-**Entry:** The person opens Independent Timer from My Lists.
+**Entry:** The person opens Independent Timer from My Lists. This journey is implemented locally in VS-04.
 
 1. The timer opens without a list or concept.
 2. The person selects a duration from 1–59 minutes and starts, pauses, continues, or restarts.
 3. The animation and optional sound follow the same timer rules as associated practice.
-4. On completion, the person may enter an optional free-text concept label, note, and 0–5 satisfaction rating.
-5. If a concept label is provided and the person confirms the save, the practice appears in general history as an independent practice.
-6. If no concept label is provided, the practice is not saved and does not appear in history.
-7. The free-text label does not create or modify a concept in any list.
+4. Completion is shown in VIEW-07 with textual status and an optional sound attempt; no label, note, rating, or practice record is collected in VS-04.
+5. Returning or abandoning discards the timer session and returns to My Lists.
+6. Independent labels, notes, ratings, and saved practice history remain in VS-05.
 
 An incomplete independent timer is never saved. Reloading or leaving it abandons it without recovery or a history record.
 

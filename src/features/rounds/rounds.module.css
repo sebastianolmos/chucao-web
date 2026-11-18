@@ -84,6 +84,7 @@
 }
 
 .drawButton,
+.drawPracticeButton,
 .drawReturnButton,
 .newRoundConfirmButton {
   --button-bg: var(--chucao-cyan) !important;
@@ -98,6 +99,16 @@
 .newRoundCancelButton {
   --button-bg: var(--chucao-cream) !important;
   --button-hover: #f2dfb7 !important;
+}
+
+.drawPracticeButton {
+  min-height: 2.75rem;
+  padding-inline: 1rem;
+  --button-bg: var(--chucao-lilac) !important;
+  --button-hover: #d8a4f5 !important;
+  --button-color: var(--chucao-brown) !important;
+  --button-hover-color: var(--chucao-brown) !important;
+  --button-bd: 2px solid var(--chucao-brown) !important;
 }
 
 .roundModalContent {

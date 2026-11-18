@@ -25,6 +25,7 @@ import { useToast } from '../../app/toasts/useToast';
 type MyListsViewProps = {
   userId: string;
   onOpenList: (list: ListRow) => void;
+  onStartIndependentTimer: () => void;
 };
 
 type Feedback =
@@ -56,7 +57,7 @@ function feedbackForError(error: DomainServiceError): FeedbackMessage {
   }
 }
 
-export function MyListsView({ userId, onOpenList }: MyListsViewProps) {
+export function MyListsView({ userId, onOpenList, onStartIndependentTimer }: MyListsViewProps) {
   const { t } = useTranslation();
   const { notify } = useToast();
   const [feedback, setFeedback] = useState<Feedback>(null);
@@ -181,6 +182,13 @@ export function MyListsView({ userId, onOpenList }: MyListsViewProps) {
           type="button"
         >
           {t('lists.addButton')}
+        </Button>
+        <Button
+          className={styles.independentTimerButton}
+          onClick={onStartIndependentTimer}
+          type="button"
+        >
+          {t('practice.independentEntry')}
         </Button>
       </div>
 

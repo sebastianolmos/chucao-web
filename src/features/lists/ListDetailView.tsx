@@ -5,8 +5,9 @@ type ListDetailViewProps = {
   userId: string;
   list: ListRow;
   onBack: () => void;
+  onStartPractice: (conceptId: string) => void;
 };
 
-export function ListDetailView({ userId, list, onBack }: ListDetailViewProps) {
-  return <ConceptManagementView userId={userId} list={list} onBack={onBack} />;
+export function ListDetailView({ userId, list, onBack, onStartPractice }: ListDetailViewProps) {
+  return <ConceptManagementView userId={userId} list={list} onBack={onBack} onStartPractice={onStartPractice} />;
 }

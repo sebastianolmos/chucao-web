@@ -27,7 +27,7 @@ import { ConceptDetailView } from './ConceptDetailView';
 import styles from './concepts.module.css';
 import { useToast } from '../../app/toasts/useToast';
 
-type Props = { userId: string; list: ListRow; onBack: () => void };
+type Props = { userId: string; list: ListRow; onBack: () => void; onStartPractice: (conceptId: string) => void };
 
 function errorKey(error: unknown): string {
   if (!(error instanceof DomainServiceError)) return 'concepts.unavailable';
@@ -56,7 +56,7 @@ function roundErrorKey(error: unknown, context: 'load' | 'action' = 'action'): s
   }
 }
 
-export function ConceptManagementView({ userId, list, onBack }: Props) {
+export function ConceptManagementView({ userId, list, onBack, onStartPractice }: Props) {
   const { t } = useTranslation();
   const [mode, setMode] = useState<EntryMode>('individual');
   const [review, setReview] = useState<BatchReview | null>(null);
@@ -77,7 +77,7 @@ export function ConceptManagementView({ userId, list, onBack }: Props) {
   const [roundActionStatus, setRoundActionStatus] = useState<string | null>(null);
   const [roundOperationUnresolved, setRoundOperationUnresolved] = useState(false);
   const [newRoundOpen, setNewRoundOpen] = useState(false);
-  const [drawResult, setDrawResult] = useState<{ title: string; appearanceOrder: number } | null>(null);
+  const [drawResult, setDrawResult] = useState<{ conceptId: string; title: string; appearanceOrder: number } | null>(null);
   const roundFlowBusyRef = useRef(false);
 
   function handleRoundResult(result: RoundCommandResult) {
@@ -148,9 +148,11 @@ export function ConceptManagementView({ userId, list, onBack }: Props) {
 
     if (result.result.action === 'draw') {
       if (result.result.outcome === 'applied'
+        && result.result.concept_id !== null
         && result.result.title !== null
         && result.result.appearance_order !== null) {
         setDrawResult({
+          conceptId: result.result.concept_id,
           title: result.result.title,
           appearanceOrder: result.result.appearance_order,
         });
@@ -303,6 +305,11 @@ export function ConceptManagementView({ userId, list, onBack }: Props) {
           <DrawResultModal
             appearanceOrder={drawResult?.appearanceOrder ?? 0}
             onReturn={() => setDrawResult(null)}
+            onPractice={() => {
+              if (!drawResult) return;
+              setDrawResult(null);
+              onStartPractice(drawResult.conceptId);
+            }}
             opened={drawResult !== null}
             title={drawResult?.title ?? ''}
           />

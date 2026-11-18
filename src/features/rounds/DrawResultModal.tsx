@@ -7,9 +7,10 @@ type Props = {
   appearanceOrder: number;
   opened: boolean;
   onReturn: () => void;
+  onPractice: () => void;
 };
 
-export function DrawResultModal({ title, appearanceOrder, opened, onReturn }: Props) {
+export function DrawResultModal({ title, appearanceOrder, opened, onReturn, onPractice }: Props) {
   const { t } = useTranslation();
 
   return (
@@ -36,6 +37,9 @@ export function DrawResultModal({ title, appearanceOrder, opened, onReturn }: Pr
         <Text className={styles.drawResultOrder}>
           {t('rounds.drawResultOrder', { order: appearanceOrder })}
         </Text>
+        <Button className={styles.drawPracticeButton} onClick={onPractice} type="button">
+          {t('rounds.practice')}
+        </Button>
         <Button className={styles.drawReturnButton} onClick={onReturn} type="button">
           {t('rounds.returnToList')}
         </Button>

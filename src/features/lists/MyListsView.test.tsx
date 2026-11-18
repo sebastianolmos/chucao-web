@@ -21,6 +21,7 @@ const populatedList = { id: 'full-list', name: 'Biology' } as ListRow;
 function renderView(
   lists: ListRow[],
   counts: Record<string, { practiced: number; total: number }>,
+  onStartIndependentTimer = vi.fn(),
 ) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   vi.mocked(getOwnedLists).mockResolvedValue(lists);
@@ -29,7 +30,7 @@ function renderView(
     <QueryClientProvider client={client}>
       <ToastProvider>
         <MantineProvider>
-          <MyListsView userId="user-a" onOpenList={vi.fn()} />
+          <MyListsView userId="user-a" onOpenList={vi.fn()} onStartIndependentTimer={onStartIndependentTimer} />
         </MantineProvider>
       </ToastProvider>
     </QueryClientProvider>,
@@ -62,5 +63,14 @@ describe('MyListsView concept progress', () => {
       expect(screen.getByRole('button', { name: /Biology/ }))
         .toHaveTextContent('Conceptos practicados 2/4');
     });
+  });
+
+  it('offers the independent timer when the account has no lists', async () => {
+    const startTimer = vi.fn();
+    renderView([], {}, startTimer);
+
+    expect(await screen.findByText(/Todavía no tienes listas/i)).toBeInTheDocument();
+    screen.getByRole('button', { name: 'Temporizador independiente' }).click();
+    expect(startTimer).toHaveBeenCalledOnce();
   });
 });

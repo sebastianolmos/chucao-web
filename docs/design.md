@@ -162,16 +162,16 @@ The functional behavior and transitions belong to [`docs/app-flow.md`](./app-flo
 | `VIEW-03` List Detail | Short Back control at upper left, centered list title, a bordered scrollable list of concept names with right-aligned View actions, and one Add Concepts action below. |
 | `VIEW-04` Add Concepts | Dialog matching the supplied desktop reference, with Individual/By Batch modes, persistent labels, pasted-batch review, accepted/omitted summary, and clear confirm/cancel hierarchy. |
 | `VIEW-05` Concept Detail | One upper-left Back action to the collection, centered title, aligned description/edit form, centered Edit above Delete actions, and a destructive confirmation dialog; long unspaced text wraps without clipping. |
-| `VIEW-06` Draw Result | Cream dialog over a warm darkened backdrop; concept centered; at VS-03 show the secondary “Back to list” action, then add the lilac “Practice” action when VS-04 is delivered. |
-| `VIEW-07` Practice | Concept, forest scene, and clock are dominant. Mobile stacks navigation, scene, concept, clock, controls, and revealable description; PC may place description/notes in a side panel. |
+| `VIEW-06` Draw Result | Cream dialog over a warm darkened backdrop; concept centered; show the secondary “Back to list” action and lilac “Practice” action to open associated VIEW-07. |
+| `VIEW-07` Practice | Concept, forest scene, and clock are dominant. Mobile stacks navigation, scene, concept, clock, controls, and revealable description; PC may place description/notes in a side panel. Implemented locally in VS-04 with the Chucao palette and responsive controls; the clickable clock is visually unraised and opens inline duration editing while prepared. |
 | `VIEW-08` Practice Closure | Preserve concept context; show satisfaction selector, optional note, save status, and a clear completion action. Independent practice includes an optional free-text concept label before rating/note. |
 | `VIEW-09` History | Practices and rounds sections, visible filters with reset, stacked mobile entries, aligned desktop columns, and explicit distinction between `0` and `Unrated`. |
 | `VIEW-10` Settings | Group language, default duration, sound/volume, reduced motion, and credits/licences by purpose; immediate changes show their result and save state. |
 | `VIEW-11` Account | Show available name/email and “Signed in with Google”; separate sign-out from account deletion; do not show password controls. |
 
-VS-04 adds only timer controls and a concise Credits and Licenses section to the existing authenticated Preferences dialog. It does not introduce the full `VIEW-10` Settings surface; keep the credit content readable, localized, and consistent with the dialog's established visual treatment.
+VS-04 adds timer controls and a concise Credits and Licenses section to the existing authenticated Preferences dialog. It does not introduce the full `VIEW-10` Settings surface; the credit content remains localized and consistent with the dialog's established visual treatment.
 
-The timer design must reflect the confirmed behavior: duration is configured before starting, time cannot be added after starting, and reload/navigation/abandonment does not recover the active timer.
+The implemented timer design reflects the confirmed behavior: duration is configured before starting, time cannot be added after starting, and reload/navigation/abandonment does not recover the active timer. The forest bird turns at each support and moves continuously between frames; its shadow appears only while flying and sits on the ground, and arrival call marks are brief.
 
 ## 5. Components and states
 
@@ -259,6 +259,7 @@ The following are not open product-behavior decisions here: responsive PC/Androi
 
 | Date | Change | Rationale |
 |---|---|---|
+| 2026-11-18 | Recorded VIEW-07's implemented timer/forest presentation and closed VS-04 visual decisions, including inline duration editing, the unraised clock affordance, continuous bird travel, support turns, grounded flight shadow, and brief arrival cue. | Documents the delivered local design while retaining broad accessibility and release conformance review for VS-07. |
 | 2026-11-18 | Updated VIEW-06 to stage its actions: Return to List at VS-03 and Practice when VS-04 is delivered. | Keeps the visual action hierarchy aligned with the selected slice boundaries without showing an inactive control. |
 | 2026-11-18 | Recorded the validated VS-02/T10 shared navbar, Preferences and list-creation dialogs, list/concept layouts, progress count, footer, and semantic action/hover colors. | Carries reusable visual decisions into future views while keeping later study screens planned and accessibility/release conformance unclaimed. |
 | 2026-11-16 | Created the visual design baseline from `temp/design.md`, the global plan, application flow, quality criteria, and existing Mantine/Comfortaa evidence. | Establishes a shared visual direction without implementing the interface or claiming validation. |

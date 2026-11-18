@@ -151,8 +151,57 @@
   overflow-wrap: anywhere;
 }
 
-.preferencesContent > button {
-  justify-self: start;
+.preferencesLinks {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.practiceRecovery {
+  display: grid;
+  justify-items: center;
+  gap: 0.7rem;
+  margin-bottom: 1rem;
+  padding: 0.9rem 1rem;
+  border: 2px solid var(--chucao-brown);
+  border-radius: 0.75rem;
+  background: var(--chucao-pink);
+  color: var(--chucao-brown);
+  text-align: center;
+}
+
+.practiceRecovery p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.practiceRecoveryButton,
+.stayPracticeButton,
+.abandonPracticeButton {
+  min-height: 2.75rem;
+  --button-color: var(--chucao-brown) !important;
+  --button-hover-color: var(--chucao-brown) !important;
+  --button-bd: 2px solid var(--chucao-brown) !important;
+}
+
+.practiceRecoveryButton,
+.abandonPracticeButton {
+  --button-bg: var(--chucao-lilac) !important;
+  --button-hover: #d8a4f5 !important;
+}
+
+.stayPracticeButton {
+  --button-bg: var(--chucao-cream) !important;
+  --button-hover: #f2dfb7 !important;
+}
+
+.practiceDialogActions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding-top: 0.75rem;
 }
 
 .preferencesContent > .signOutButton {
