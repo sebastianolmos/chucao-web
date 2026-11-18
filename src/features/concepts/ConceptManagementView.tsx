@@ -1,4 +1,4 @@
-import { Alert, Badge, Button, Group, Stack, Text, Title } from '@mantine/core';
+import { Alert, Button, Modal, Text, Title } from '@mantine/core';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -38,6 +38,7 @@ export function ConceptManagementView({ userId, list, onBack }: Props) {
   const [batchError, setBatchError] = useState<string | null>(null);
   const [summary, setSummary] = useState<number | null>(null);
   const [selectedConceptId, setSelectedConceptId] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
   const { notify } = useToast();
   const key = conceptQueryKey(userId, list.id);
   const conceptsQuery = useQuery({ queryKey: key, queryFn: () => getOwnedConcepts(userId, list.id) });
@@ -68,11 +69,31 @@ export function ConceptManagementView({ userId, list, onBack }: Props) {
   });
   const busy = createMutation.isPending || batchMutation.isPending;
 
+  function openAddDialog() {
+    setReview(null);
+    setRawInput('');
+    setBatchError(null);
+    setSummary(null);
+    setMode('individual');
+    setAddOpen(true);
+  }
+
+  function closeAddDialog() {
+    if (busy) return;
+    setAddOpen(false);
+    setReview(null);
+    setRawInput('');
+    setBatchError(null);
+    setSummary(null);
+  }
+
   async function saveIndividual(title: string, description: string): Promise<boolean> {
     setSummary(null);
+    setBatchError(null);
     const result = await createMutation.mutateAsync({ userId, listId: list.id, title, description });
     if (result.status === 'created' || result.status === 'reconciled') {
       notify(t('concepts.saved'));
+      setAddOpen(false);
       return true;
     }
     if (result.status === 'rejected' || result.status === 'unresolved') setBatchError(errorKey(result.error));
@@ -95,28 +116,99 @@ export function ConceptManagementView({ userId, list, onBack }: Props) {
   }
 
   return (
-    <section aria-labelledby="concept-list-title" aria-busy={busy} className={styles.view}>
-      <Group className={styles.listHeader} justify="space-between"><Button variant="subtle" onClick={onBack}>{t('detail.back')}</Button><Title className={styles.listTitle} order={1} id="concept-list-title">{list.name}</Title><span /></Group>
-      {createMutation.data && (createMutation.data.status === 'rejected' || createMutation.data.status === 'unresolved') && <Alert color="red" role="alert">{t(errorKey(createMutation.data.error))}</Alert>}
+    <section aria-busy={busy} className={styles.view}>
       {selectedConcept ? (
         <ConceptDetailView userId={userId} listId={list.id} concept={selectedConcept}
           onClose={() => setSelectedConceptId(null)} onReload={reloadSelectedConcept}
           onDeleted={() => { setSelectedConceptId(null); notify(t('conceptDetail.deleteSuccess')); }} />
       ) : (
         <>
-          {conceptsQuery.data.length === 0 ? <div className={styles.empty}><Text>{t('concepts.empty')}</Text></div> : (
-            <Stack gap="sm" aria-label={t('concepts.list')}>
-              {conceptsQuery.data.map((concept) => <article className={styles.conceptCard} key={concept.id}>
-                <Group className={styles.conceptRow} justify="space-between"><Button className={styles.conceptOpen} variant="subtle" onClick={() => setSelectedConceptId(concept.id)} aria-label={t('conceptDetail.viewConcept', { title: concept.title })}>{concept.title}</Button><Badge color="yellow">{t(`conceptDetail.state.${concept.state}`)}</Badge></Group>
-                {concept.description && <Text>{concept.description}</Text>}
-              </article>)}
-            </Stack>
-          )}
-          {review ? <ConceptBatchReview review={review} busy={batchMutation.isPending} error={batchError} summary={summary}
-            onConfirm={() => { if (summary === null) { setBatchError(null); batchMutation.mutate(); } }} onCancel={() => { if (!busy) { setReview(null); setBatchError(null); } }} /> : (
-            <ConceptEntryForm busy={busy} mode={mode} onModeChange={setMode} onIndividualSubmit={saveIndividual}
-              onBatchReview={startReview} rawInput={rawInput} onRawInputChange={setRawInput} onCancel={() => { setReview(null); setSummary(null); }} />
-          )}
+          <header className={styles.listHeader}>
+            <Button className={styles.backButton} variant="default" onClick={onBack}>
+              {t('detail.backShort')}
+            </Button>
+            <Title className={styles.listTitle} order={1} id="concept-list-title">{list.name}</Title>
+          </header>
+          <div
+            aria-label={t('concepts.list')}
+            className={styles.conceptScroller}
+            role="region"
+            tabIndex={0}
+          >
+            {conceptsQuery.data.length === 0 ? (
+              <div className={styles.empty}><Text>{t('concepts.empty')}</Text></div>
+            ) : (
+              <ul className={styles.conceptList}>
+                {conceptsQuery.data.map((concept) => (
+                  <li className={styles.conceptRow} key={concept.id}>
+                    <span className={styles.conceptName}>{concept.title}</span>
+                    <Button
+                      className={styles.viewConceptButton}
+                      onClick={() => setSelectedConceptId(concept.id)}
+                      type="button"
+                    >
+                      {t('concepts.viewOne')}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <Button className={styles.addConceptsButton} onClick={openAddDialog} type="button">
+            {t('concepts.addTitle')}
+          </Button>
+
+          <Modal
+            centered
+            closeOnClickOutside={false}
+            closeOnEscape={false}
+            onClose={closeAddDialog}
+            opened={addOpen}
+            classNames={{
+              content: styles.addModalContent,
+              header: styles.addModalHeader,
+              title: styles.addModalTitle,
+              body: styles.addModalBody,
+            }}
+            overlayProps={{ className: styles.conceptModalOverlay }}
+            title={t('concepts.addTitle')}
+            withCloseButton={false}
+          >
+            {review ? (
+              <ConceptBatchReview
+                review={review}
+                busy={batchMutation.isPending}
+                error={batchError}
+                summary={summary}
+                onConfirm={() => {
+                  if (summary === null) {
+                    setBatchError(null);
+                    batchMutation.mutate();
+                  }
+                }}
+                onCancel={() => {
+                  if (busy) return;
+                  if (summary !== null) closeAddDialog();
+                  else {
+                    setReview(null);
+                    setBatchError(null);
+                  }
+                }}
+              />
+            ) : (
+              <ConceptEntryForm
+                busy={busy}
+                error={batchError}
+                mode={mode}
+                onModeChange={setMode}
+                onIndividualSubmit={saveIndividual}
+                onBatchReview={startReview}
+                rawInput={rawInput}
+                onRawInputChange={setRawInput}
+                onCancel={closeAddDialog}
+              />
+            )}
+          </Modal>
         </>
       )}
       {busy && <Text role="status">{t('concepts.processing')}</Text>}

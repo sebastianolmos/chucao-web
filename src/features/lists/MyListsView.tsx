@@ -2,8 +2,7 @@ import {
   Alert,
   Button,
   Card,
-  Group,
-  Stack,
+  Modal,
   Text,
   Title,
 } from '@mantine/core';
@@ -61,13 +60,16 @@ export function MyListsView({ userId, onOpenList }: MyListsViewProps) {
   const { t } = useTranslation();
   const { notify } = useToast();
   const [feedback, setFeedback] = useState<Feedback>(null);
+  const [createOpen, setCreateOpen] = useState(false);
   const listsQuery = useQuery({
     queryKey: listQueryKey(userId),
-    queryFn: async () => {
-      const lists = await getOwnedLists(userId);
-      const conceptCounts = await getOwnedConceptCounts(userId, lists.map((list) => list.id));
-      return { lists, conceptCounts };
-    },
+    queryFn: () => getOwnedLists(userId),
+  });
+  const listIds = listsQuery.data?.map((list) => list.id) ?? [];
+  const conceptCountsQuery = useQuery({
+    queryKey: [...listQueryKey(userId), 'concept-counts', listIds],
+    queryFn: () => getOwnedConceptCounts(userId, listIds),
+    enabled: listsQuery.isSuccess,
   });
   const createMutation = useMutation({
     mutationFn: createPrivateList,
@@ -95,7 +97,9 @@ export function MyListsView({ userId, onOpenList }: MyListsViewProps) {
   async function submitListName(rawName: string): Promise<boolean> {
     setFeedback(null);
     const result = await createMutation.mutateAsync(rawName);
-    return result.status === 'created' || result.status === 'reconciled';
+    const created = result.status === 'created' || result.status === 'reconciled';
+    if (created) setCreateOpen(false);
+    return created;
   }
 
   if (listsQuery.isPending) {
@@ -121,62 +125,93 @@ export function MyListsView({ userId, onOpenList }: MyListsViewProps) {
     );
   }
 
-  const { lists, conceptCounts } = listsQuery.data;
+  const lists = listsQuery.data;
 
   return (
     <section aria-labelledby="my-lists-title" className={styles.view}>
-      <header className={styles.header}>
-        <Title order={1} id="my-lists-title">
-          {t('lists.title')}
-        </Title>
-        <Text>{t('lists.privateContext')}</Text>
-      </header>
+      <div className={styles.panel}>
+        <header className={styles.header}>
+          <Title order={1} id="my-lists-title">
+            {t('lists.title')}
+          </Title>
+          <Text>{t('lists.privateContext')}</Text>
+        </header>
 
-      {feedback && (
-        <Alert color="red" role="alert">
-          {t(feedback.key)}
-        </Alert>
-      )}
-
-      <ListNameForm
-        disabled={createMutation.isPending}
-        onSubmit={submitListName}
-      />
-
-      {lists.length === 0 ? (
-        <div className={styles.empty}>
-          <Text>{t('lists.empty')}</Text>
+        <div
+          aria-label={t('lists.region')}
+          className={styles.listScroller}
+          role="region"
+          tabIndex={0}
+        >
+          {lists.length === 0 ? (
+            <div className={styles.empty}><Text>{t('lists.empty')}</Text></div>
+          ) : (
+            <div className={styles.listGrid}>
+              {lists.map((list) => (
+                <Card
+                  className={styles.listCard}
+                  component="button"
+                  key={list.id}
+                  onClick={() => onOpenList(list)}
+                  shadow="sm"
+                  type="button"
+                  withBorder
+                >
+                  <span className={styles.cardName}>{list.name}</span>
+                  <span className={styles.cardProgress}>
+                    {t('lists.practiceProgress', {
+                      practiced: 0,
+                      total: conceptCountsQuery.data?.[list.id] ?? 0,
+                    })}
+                  </span>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
-      ) : (
-        <Stack gap="sm">
-          <Group justify="space-between">
-            <Text>{t('lists.count', { count: lists.length })}</Text>
-            {lists.length >= 100 && (
-              <Text c="dimmed">{t('lists.limit')}</Text>
-            )}
-          </Group>
-          <div className={styles.listGrid}>
-            {lists.map((list) => (
-              <Card
-                className={styles.listCard}
-                component="button"
-                key={list.id}
-                onClick={() => onOpenList(list)}
-                shadow="sm"
-                type="button"
-                withBorder
-              >
-                <span className={styles.cardName}>{list.name}</span>
-                <span className={styles.cardDetail}>
-                  {conceptCounts[list.id]
-                    ? t('lists.practiceProgress', { practiced: 0, total: conceptCounts[list.id] })
-                    : t('lists.emptyDetail')}
-                </span>
-              </Card>
-            ))}
-          </div>
-        </Stack>
-      )}
+
+        {lists.length >= 100 && <Text c="dimmed">{t('lists.limit')}</Text>}
+
+        <Button
+          className={styles.addListButton}
+          onClick={() => {
+            setFeedback(null);
+            setCreateOpen(true);
+          }}
+          type="button"
+        >
+          {t('lists.addButton')}
+        </Button>
+      </div>
+
+      <Modal
+        centered
+        opened={createOpen}
+        onClose={() => {
+          if (!createMutation.isPending) {
+            setFeedback(null);
+            setCreateOpen(false);
+          }
+        }}
+        title={t('lists.addButton')}
+        classNames={{
+          content: styles.createModalContent,
+          header: styles.createModalHeader,
+          title: styles.createModalTitle,
+          body: styles.createModalBody,
+        }}
+        overlayProps={{ className: styles.createModalOverlay }}
+      >
+        {feedback && <Alert color="red" role="alert">{t(feedback.key)}</Alert>}
+        <ListNameForm
+          disabled={createMutation.isPending}
+          onCancel={() => {
+            setFeedback(null);
+            setCreateOpen(false);
+          }}
+          onSubmit={submitListName}
+        />
+      </Modal>
     </section>
   );
 }

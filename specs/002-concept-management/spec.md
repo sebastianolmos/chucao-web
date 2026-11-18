@@ -4,7 +4,7 @@
 
 - **Spec ID:** VS-02
 - **Title:** Concept Management
-- **Status:** Base scope closed; extraordinary authenticated-shell extension T10 in progress
+- **Status:** Closed for validated local scope (T01–T10); publication remains outside this slice
 - **Slice:** VS-02, selected after the locally validated VS-01 foundation
 - **Global source:** `docs/global-plan.md`, sections 4, 5, 7, and 8; selected-slice record for VS-02
 - **Flow source:** `docs/app-flow.md`, `VIEW-03`, `VIEW-04`, `VIEW-05`, and `FLOW-03`
@@ -330,6 +330,38 @@ notifications, and provide an accessible dismissal action. They shall
 replace inline green success panels; validation and operation failures shall
 continue to appear with the relevant form or action.
 
+**FR-29.** My Lists shall present its heading, private-list explanation,
+list cards, inline creation controls, and action feedback inside one bordered
+panel. The title and explanation shall be centered. List cards shall show the
+list name with a visible shadow. The cards area shall scroll independently
+when it exceeds its available height. List creation shall start from a
+centered `Add list` action that opens a dialog matching the Add Concepts
+dialog, with the existing name form inside; save and cancel controls shall
+remain compact and centered, and save shall use the short label `Save` /
+`Guardar`.
+
+**FR-30.** List Detail shall place a short `Back` / `Volver` action at the
+upper left and center the list title. Its concept collection shall be a
+separately scrollable bordered panel containing only concept names and a
+`View` / `Ver` action for each row; it shall omit descriptions and pending
+badges. A single `Add concepts` action shall appear below the collection and
+open a dialog containing the existing individual and batch flows. The dialog
+shall retain their validation, review, cancel, and persistence behavior.
+
+**FR-31.** Concept Detail shall provide one upper-left `Back` / `Volver`
+action that returns to the list of concepts, followed by a clear centered
+concept title and an ordered content/edit area. It shall not show a second
+`Back to My Lists` action or redundant pending state.
+
+**FR-32.** Each My Lists card shall show the number of practiced concepts over
+the total active concepts. Until practice selection is implemented, the
+practiced value shall remain zero while the total reflects the active concepts
+in that list.
+
+**FR-33.** Every app view, including Access, loading, and recoverable error
+views, shall show a simple footer crediting Sebastian Olmos as developer.
+The credit shall follow the selected interface language.
+
 ## Applicable non-functional requirements
 
 ### Quality, accessibility, and delivery
@@ -564,6 +596,26 @@ lower-left without changing page layout, remains for a few seconds, and is
 independently dismissible. Several close-together successes remain visible as
 a stack. Green inline success banners are absent; validation and failure
 messages remain beside the related action.
+
+### AC-15 — Lists and concept views layout
+
+Given an authenticated person with many lists or concepts, when My Lists or
+List Detail is displayed at PC or narrow mobile width, then its primary
+content stays inside the described panel, and only the list/cards region
+scrolls as needed while the create/add action remains visible below it. My
+Lists shows a centered heading and description, shadowed name cards, and a
+centered Add List action opening a dialog with the existing name form. List
+Detail shows a short upper-left Back action,
+centered list title, concept-name rows with View buttons, and one add action
+that opens the individual/batch dialog. Opening a concept shows one Back
+action to the concept collection and a readable, aligned detail/edit layout.
+
+### AC-16 — Progress totals and app credit
+
+Given a user with lists containing active concepts, when My Lists is shown,
+then every card displays practiced concepts over total active concepts, with
+the practiced value at zero until practice selection exists. The footer names
+Sebastian Olmos in both app languages on Access and authenticated views.
 
 ## Dependencies and shared constraints
 

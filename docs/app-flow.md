@@ -3,11 +3,11 @@
 ## 1. Status, scope, and references
 
 **Status:** Complete flow draft, awaiting product review  
-**Date:** 2026-11-16  
+**Date:** 2026-11-18
 **Scope:** General navigation, main user journeys, observable states, transitions, and recovery behavior for the MVP and explicitly described later flows.
 
 **Definition state:** Requirements from the global plan are marked **confirmed**. Additions from `temp/flow.md` that are not in the global plan are marked **proposed** or **open**.  
-**Implementation state:** The current repository implements only a minimal Google sign-in/session/logout proof. The flows below are planned unless explicitly marked otherwise.
+**Implementation state:** VS-01 and VS-02 are implemented and validated for local scope, including the T10 authenticated-shell extension. The remaining study journeys below are planned unless explicitly marked otherwise.
 
 **Sources**
 
@@ -15,7 +15,8 @@
 - [`docs/architecture.md`](./architecture.md): authentication, ownership, persistence, platform, and timer boundaries.
 - [`docs/quality-project.md`](./quality-project.md): interaction, accessibility, security, and recovery constraints.
 - [`temp/flow.md`](../temp/flow.md): supplied flow proposal and detailed navigation reference.
-- [`src/App.tsx`](../src/App.tsx): current minimal access flow.
+- [`src/App.tsx`](../src/App.tsx): implemented Access/authenticated shell and
+  Preferences behavior; VS-02 list/concept journeys are in `src/features/`.
 
 ## 2. Actors and entry conditions
 
@@ -34,11 +35,11 @@ Entry conditions:
 
 | ID | Interaction point | Purpose and main actions | State |
 |---|---|---|---|
-| VIEW-01 | Access | Explain Chucao, continue with Google, change language, open privacy information | Planned; minimal Google proof exists |
-| VIEW-02 | My Lists | Shared authenticated navbar; view current lists, create/open a list; concept cards show a static `0/active concept count` practiced indicator | VS-02 implemented locally; advanced list actions remain planned |
-| VIEW-03 | List Detail | Shared authenticated navbar; view/add/open concepts and return to My Lists; no round controls | VS-02 implemented locally; draw and round behavior remain planned |
-| VIEW-04 | Add Concepts | Add one concept or paste a batch, review accepted/omitted lines, confirm or cancel | VS-02 implemented and locally validated |
-| VIEW-05 | Concept Detail | View, edit, or delete a concept with confirmation and conflict handling | VS-02 implemented and locally validated |
+| VIEW-01 | Access | Explain Chucao, continue with Google, change language, open privacy information | VS-01 implemented locally; no authenticated navbar |
+| VIEW-02 | My Lists | Shared authenticated navbar; centered title/context, shadowed list cards with practiced/total counts in a scrollable panel, centered Add List action opening a dialog with the list-name form, and developer footer | VS-02 implemented locally; advanced list actions remain planned |
+| VIEW-03 | List Detail | Shared authenticated navbar; short Back action, centered list title, scrollable concept-name rows with View buttons, and one add action | VS-02 implemented locally; draw and round behavior remain planned |
+| VIEW-04 | Add Concepts | Dialog with Individual and By Batch modes, batch review, confirm or cancel | VS-02 implemented and locally validated |
+| VIEW-05 | Concept Detail | One Back action to the concept collection; view, edit, or delete a concept with confirmation and conflict handling | VS-02 implemented and locally validated |
 | VIEW-06 | Draw Result | Show the saved selected concept, practice it, or return to the list | Planned |
 | VIEW-07 | Practice | Practice with a selected or independent timer, reveal description, pause/resume/restart, adjust pre-start duration, and finish | Planned |
 | VIEW-08 | Practice Closure | Save a completed practice, optional note, and 0–5 satisfaction rating; return, repeat, or draw another | Planned |
@@ -113,11 +114,11 @@ Navigation changes destination; saving, drawing, marking, deleting, and changing
 
 **Entry:** An authenticated person is in My Lists.
 
-1. My Lists displays lists and Create List. Non-empty cards show `Conceptos practicados 0/<active concept count>` (localized in English); this is a static count, not practice progress. Search, ordering, and Independent Timer remain planned.
-2. Create List opens a form/dialog for a required name.
-3. The person submits the name.
-4. The application validates the length and uniqueness rules and persists the new list.
-5. On confirmed success, the new empty list remains visible in My Lists.
+1. My Lists shows its heading, private-list explanation, list cards, and create action inside one panel. The cards area scrolls independently when needed.
+2. The person selects the centered Add List action; a dialog opens with the required-name form.
+3. The person submits the name, and the application validates length and uniqueness before persisting the new list.
+4. On confirmed success, the dialog closes, a toast confirms creation, and the new empty list appears in My Lists.
+5. A validation or persistence failure remains visible in the dialog; the person may correct the name, retry, or cancel.
 6. Selecting a persisted list opens List Detail.
 
 **List actions**
@@ -147,7 +148,7 @@ Navigation changes destination; saving, drawing, marking, deleting, and changing
 
 **Entry:** The person is in List Detail.
 
-1. Add Concepts opens a form with Individual and By Batch modes.
+1. List Detail shows a scrollable collection of concept names with a View action; Add Concepts opens a dialog with Individual and By Batch modes.
 2. Individual accepts a required 1–50 character title and optional description.
 3. By Batch accepts pasted lines beginning with `-`; the optional `- Title : Description` form extracts the description.
 4. Before confirmation, the batch view shows accepted concepts and omitted lines with reasons.
@@ -169,6 +170,7 @@ Navigation changes destination; saving, drawing, marking, deleting, and changing
 - Cancel with unsaved content asks whether to discard it.
 - Failure preserves entered content and permits retry without duplicating accepted concepts.
 - The interface distinguishes an empty list from an exhausted round.
+- Concept Detail has one Back action to the concept collection; deleting a concept requires confirmation.
 
 **Constraints:** SEC01–SEC03, SEC08, Q01–Q03, DP02, DP10, DP13.
 
@@ -296,7 +298,16 @@ Notes may be edited or deleted from the relevant concept/list context, not from 
 **Scope:** MVP  
 **State:** Confirmed.
 
-**Settings**
+**Implemented authenticated-shell behavior (VS-02/T10):** From any authenticated
+view, the navbar brand returns to My Lists, and the locale toggle changes the
+interface language while retaining the current view. Preferences opens a
+dialog showing the signed-in email, a Privacy entry, and local sign-out.
+Privacy returns to Preferences; sign-out ends the Chucao session and returns
+to Access. Access retains its language and Privacy controls without the
+authenticated navbar. Timer and audio preference controls below remain future
+scope.
+
+**Future timer and audio settings (planned)**
 
 1. The person opens Settings from private navigation.
 2. Language, default duration, volume, sound, and reduced motion can be changed.
@@ -370,6 +381,7 @@ The following are later-scope journeys and should not be treated as MVP commitme
 
 | Date | Change | Rationale |
 |---|---|---|
+| 2026-11-18 | Closed the local VS-02/T10 flow: list creation opens a name dialog; authenticated navigation, Preferences, Privacy return, locale switching, concept add/view/edit/delete, and toast feedback are recorded as implemented. | Aligns the flow with the user-confirmed local UI while leaving rounds, practice, history, and publication journeys planned. |
 | 2026-11-16 | Created the application-flow baseline from `temp/flow.md`, `docs/global-plan.md`, `docs/architecture.md`, and current authentication evidence. | Establishes navigable MVP journeys without treating every supplied proposal as confirmed. |
 | 2026-11-16 | Reconciled the supplied flow with the current architecture by marking timer interruption/reload recovery and satisfaction ratings as unresolved or proposed where they conflict with confirmed decisions. | Prevents the flow document from silently changing persistence or practice-history scope. |
 | 2026-11-16 | Confirmed 0–5 satisfaction ratings, no timer recovery or abandonment records, optional labels for saved independent practices, no closure drafts, read-only History, and note editing from concept/list context. | Closes the flow decisions raised in the previous review. |

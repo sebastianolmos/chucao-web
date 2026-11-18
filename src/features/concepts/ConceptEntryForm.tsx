@@ -8,6 +8,7 @@ export type EntryMode = 'individual' | 'batch';
 
 type ConceptEntryFormProps = {
   busy: boolean;
+  error: string | null;
   mode: EntryMode;
   onModeChange: (mode: EntryMode) => void;
   onIndividualSubmit: (title: string, description: string) => Promise<boolean>;
@@ -17,7 +18,7 @@ type ConceptEntryFormProps = {
   onCancel: () => void;
 };
 
-export function ConceptEntryForm({ busy, mode, onModeChange, onIndividualSubmit, onBatchReview, rawInput, onRawInputChange, onCancel }: ConceptEntryFormProps) {
+export function ConceptEntryForm({ busy, error, mode, onModeChange, onIndividualSubmit, onBatchReview, rawInput, onRawInputChange, onCancel }: ConceptEntryFormProps) {
   const { t } = useTranslation();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -40,9 +41,9 @@ export function ConceptEntryForm({ busy, mode, onModeChange, onIndividualSubmit,
   }
 
   return (
-    <section aria-labelledby="concept-entry-title" className={styles.panel}>
+    <section aria-label={t('concepts.addTitle')} className={styles.modalContent}>
       <Stack gap="md">
-        <Text fw={700} id="concept-entry-title">{t('concepts.addTitle')}</Text>
+        {error && <Alert color="red" role="alert">{t(error)}</Alert>}
         <SegmentedControl aria-label={t('concepts.entryMode')} data={[
           { label: t('concepts.individualMode'), value: 'individual' },
           { label: t('concepts.batchMode'), value: 'batch' },
@@ -56,9 +57,9 @@ export function ConceptEntryForm({ busy, mode, onModeChange, onIndividualSubmit,
               <Textarea label={t('concepts.descriptionLabel')} maxLength={2000} value={description}
                 onChange={(event) => setDescription(event.currentTarget.value)} error={fieldError === 'description' ? t('concepts.descriptionInvalid') : undefined}
                 description={t('concepts.descriptionGuidance', { count: Array.from(description.trim()).length })} autosize minRows={2} maxRows={6} />
-              <Group>
-                <Button type="submit" loading={busy} disabled={busy}>{t('concepts.save')}</Button>
-                <Button type="button" variant="default" disabled={busy} onClick={discard}>{t('concepts.cancel')}</Button>
+              <Group className={styles.modalActions} justify="center">
+                <Button className={styles.modalPrimaryButton} type="submit" loading={busy} disabled={busy}>{t('concepts.save')}</Button>
+                <Button className={styles.modalSecondaryButton} type="button" disabled={busy} onClick={discard}>{t('concepts.cancel')}</Button>
               </Group>
             </Stack>
           </form>
@@ -68,9 +69,9 @@ export function ConceptEntryForm({ busy, mode, onModeChange, onIndividualSubmit,
               description={t('concepts.batchGuidance')} autosize minRows={5} maxRows={12} />
             <Text size="sm">{t('concepts.batchCounter', { lines: rawInput ? rawInput.split(/\r\n|\n|\r/).length : 0, characters: Array.from(rawInput).length })}</Text>
             {Array.from(rawInput).length > 20000 && <Alert color="yellow" role="status">{t('concepts.batchCharacterLimit')}</Alert>}
-            <Group>
-              <Button disabled={busy || !rawInput} onClick={() => onBatchReview(rawInput)}>{t('concepts.review')}</Button>
-              <Button variant="default" disabled={busy} onClick={discard}>{t('concepts.cancel')}</Button>
+            <Group className={styles.modalActions} justify="center">
+              <Button className={styles.modalPrimaryButton} disabled={busy || !rawInput} onClick={() => onBatchReview(rawInput)}>{t('concepts.review')}</Button>
+              <Button className={styles.modalSecondaryButton} disabled={busy} onClick={discard}>{t('concepts.cancel')}</Button>
             </Group>
           </Stack>
         )}

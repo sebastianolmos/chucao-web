@@ -1,19 +1,303 @@
-.view { display: grid; gap: 1.25rem; width: min(100%, 56rem); min-width: 0; margin: 0 auto; }
-.panel, .conceptCard { display: grid; gap: 1rem; min-width: 0; padding: clamp(1rem, 3vw, 1.5rem); border: 2px solid var(--chucao-brown); border-radius: 1rem; background: var(--chucao-panel); box-shadow: 4px 5px 0 var(--chucao-brown); }
-.empty { padding: 1.5rem; border: 2px dashed var(--chucao-brown); border-radius: .9rem; background: var(--chucao-yellow); }
-.reviewList { display: grid; gap: .75rem; padding-inline-start: 1.5rem; }
-.reviewList li { padding-inline-start: .25rem; overflow-wrap: anywhere; }
-.conceptCard { background: var(--chucao-cyan); }
-.conceptRow { min-width: 0; gap: 0.5rem; }
-.conceptOpen { flex: 1 1 0; min-width: 0; min-height: 2.75rem; padding-inline: 0.25rem; font-size: 1rem; font-weight: 700; color: var(--chucao-brown); text-align: start; white-space: normal; overflow-wrap: anywhere; }
-.conceptOpen :global(.mantine-Button-label) { white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
-.listHeader { min-width: 0; gap: 0.5rem; }
-.listTitle { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
-.detail { display: grid; gap: 1.25rem; min-width: 0; padding: clamp(1rem, 3vw, 1.5rem); border: 2px solid var(--chucao-brown); border-radius: 1rem; background: var(--chucao-panel); box-shadow: 4px 5px 0 var(--chucao-brown); }
-.detailHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; min-width: 0; }
-.detailHeading { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
-.detailTitle { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
-.detailBackButton { flex: 0 0 auto; }
-.detailText { display: grid; gap: 0.5rem; min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
-.detailText :global(.mantine-Text-root) { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }
-.dangerPanel { display: grid; gap: 0.75rem; padding: 1rem; border: 2px solid var(--chucao-brown); border-radius: 0.85rem; background: var(--chucao-pink); }
+.view {
+  display: grid;
+  gap: 1.25rem;
+  width: min(100%, 56rem);
+  min-width: 0;
+  margin: 0 auto;
+}
+
+.panel,
+.conceptCard {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+  padding: clamp(1rem, 3vw, 1.5rem);
+  border: 2px solid var(--chucao-brown);
+  border-radius: 1rem;
+  background: var(--chucao-panel);
+  box-shadow: 4px 5px 0 var(--chucao-brown);
+}
+
+.modalContent {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.empty {
+  padding: 1.5rem;
+  border: 2px dashed var(--chucao-brown);
+  border-radius: .9rem;
+  background: var(--chucao-yellow);
+}
+
+.reviewList {
+  display: grid;
+  gap: .75rem;
+  padding-inline-start: 1.5rem;
+}
+
+.reviewList li {
+  padding-inline-start: .25rem;
+  overflow-wrap: anywhere;
+}
+
+.conceptCard {
+  background: var(--chucao-cyan);
+}
+
+.listHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.backButton {
+  justify-self: start;
+  transform: translateY(-0.35rem);
+}
+
+.listTitle {
+  min-width: 0;
+  margin: 0;
+  text-align: center;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.conceptScroller {
+  min-width: 0;
+  min-height: 12rem;
+  max-height: min(55vh, 28rem);
+  overflow: auto;
+  padding: 0.35rem 0.75rem;
+  border: 2px solid var(--chucao-brown);
+  border-radius: 0.9rem;
+  background: var(--chucao-panel);
+  box-shadow: 3px 4px 0 var(--chucao-brown);
+  scrollbar-gutter: stable;
+}
+
+.conceptList {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.conceptRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 0.55rem 0.2rem;
+  border-bottom: 1px solid rgb(92 45 0 / 70%);
+}
+
+.conceptName {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--chucao-brown);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.viewConceptButton {
+  flex: 0 0 auto;
+  min-width: 3.5rem;
+  min-height: 2.4rem;
+  padding-inline: 0.75rem;
+  --button-bg: var(--chucao-cyan) !important;
+  --button-hover: #72e6f2 !important;
+  --button-color: var(--chucao-brown) !important;
+  --button-hover-color: var(--chucao-brown) !important;
+  --button-bd: 2px solid var(--chucao-brown) !important;
+}
+
+.addConceptsButton {
+  justify-self: center;
+  min-height: 2.75rem;
+  padding-inline: 1.25rem;
+  --button-bg: var(--chucao-lilac) !important;
+  --button-hover: #d8a4f5 !important;
+  --button-color: var(--chucao-brown) !important;
+  --button-hover-color: var(--chucao-brown) !important;
+  --button-bd: 2px solid var(--chucao-brown) !important;
+}
+
+.modalActions {
+  --group-justify: center;
+  flex-wrap: wrap;
+}
+
+.addModalContent,
+.deleteModalContent {
+  border: 2px solid var(--chucao-brown);
+  border-radius: 1rem;
+  background: var(--chucao-panel);
+  box-shadow: 4px 5px 0 var(--chucao-brown);
+}
+
+.addModalHeader,
+.deleteModalHeader {
+  background: var(--chucao-cream) !important;
+  color: var(--chucao-brown) !important;
+}
+
+.addModalTitle,
+.deleteModalTitle {
+  color: var(--chucao-brown) !important;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.addModalBody,
+.deleteModalBody {
+  background: var(--chucao-panel);
+  color: var(--chucao-brown);
+}
+
+.addModalBody input,
+.addModalBody textarea {
+  border-color: var(--chucao-brown);
+  background: var(--chucao-yellow);
+  color: var(--chucao-brown);
+}
+
+.addModalBody :global(.mantine-SegmentedControl-root) {
+  background: var(--chucao-lilac);
+}
+
+.addModalBody :global(.mantine-SegmentedControl-label) {
+  color: var(--chucao-brown);
+}
+
+.addModalBody :global(.mantine-Button-root),
+.deleteModalBody :global(.mantine-Button-root) {
+  --button-bg: var(--chucao-cyan) !important;
+  --button-hover: #72e6f2 !important;
+  --button-color: var(--chucao-brown) !important;
+  --button-hover-color: var(--chucao-brown) !important;
+  --button-bd: 2px solid var(--chucao-brown) !important;
+}
+
+.modalPrimaryButton,
+.editSaveButton {
+  --button-bg: var(--chucao-cyan) !important;
+  --button-hover: #72e6f2 !important;
+  --button-color: var(--chucao-brown) !important;
+  --button-hover-color: var(--chucao-brown) !important;
+  --button-bd: 2px solid var(--chucao-brown) !important;
+}
+
+.modalSecondaryButton {
+  --button-bg: var(--chucao-cream) !important;
+  --button-hover: #f2dfb7 !important;
+  --button-color: var(--chucao-brown) !important;
+  --button-hover-color: var(--chucao-brown) !important;
+  --button-bd: 2px solid var(--chucao-brown) !important;
+}
+
+.deleteConfirmButton {
+  --button-bg: #c92a2a !important;
+  --button-hover: #a61e1e !important;
+  --button-color: #fff !important;
+  --button-hover-color: #fff !important;
+  --button-bd: 2px solid #8f1d1d !important;
+}
+
+.conceptModalOverlay,
+.deleteModalOverlay {
+  background: rgba(53, 26, 8, 0.58);
+}
+
+.detail {
+  display: grid;
+  gap: 1.25rem;
+  min-width: 0;
+  padding: clamp(1rem, 3vw, 1.5rem);
+  border: 2px solid var(--chucao-brown);
+  border-radius: 1rem;
+  background: var(--chucao-panel);
+  box-shadow: 4px 5px 0 var(--chucao-brown);
+}
+
+.detailHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.detailTitle {
+  grid-column: 1;
+  grid-row: 2;
+  min-width: 0;
+  margin: 0;
+  text-align: center;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.detailBackButton {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
+  min-width: 0;
+  padding-inline: 0.75rem;
+}
+
+.detailActions {
+  justify-content: center;
+}
+
+.editConceptButton {
+  min-width: 11rem;
+  --button-bg: var(--chucao-cyan) !important;
+  --button-hover: #72e6f2 !important;
+  --button-color: var(--chucao-brown) !important;
+  --button-hover-color: var(--chucao-brown) !important;
+  --button-bd: 2px solid var(--chucao-brown) !important;
+}
+
+.deleteConceptButton {
+  min-width: 11rem;
+  --button-bg: var(--chucao-pink) !important;
+  --button-hover: #f39b9b !important;
+  --button-color: var(--chucao-brown) !important;
+  --button-hover-color: var(--chucao-brown) !important;
+  --button-bd: 2px solid var(--chucao-brown) !important;
+}
+
+.detailText {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.detailText :global(.mantine-Text-root) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@media (max-width: 36rem) {
+  .conceptScroller {
+    max-height: 52vh;
+  }
+
+  .conceptRow {
+    gap: 0.5rem;
+  }
+
+  .viewConceptButton {
+    min-width: 3.2rem;
+    padding-inline: 0.55rem;
+  }
+}

@@ -494,6 +494,8 @@ spec's observable behavior.
 | FR-24–FR-26; AC-12 | Shared authenticated navbar, single locale toggle, brand-to-lists navigation, Preferences dialog, signed-in identity and local sign-out, authenticated Privacy route | T10 UI checks, CHECK-01 build/lint, manual responsive/accessibility review |
 | FR-27; AC-13 | Centered Access controls, compact responsive navbar, wrapping for unspaced concept text, and Preferences dialog hierarchy | T10 narrow viewport and visual review |
 | FR-28; AC-14 | Shared bilingual toast provider and fixed stacked viewport; successful list/concept actions publish only after confirmed persistence | T10 component/service flow review, build/lint, and manual layout review |
+| FR-29–FR-31; AC-15 | My Lists panel and Add List dialog, scrollable concept rows with View actions, add-concepts modal, single Back navigation and aligned concept detail | T10 responsive UI review, build/lint, and manual navigation review |
+| FR-32–FR-33; AC-16 | Static practiced/active-concept total on each My Lists card and bilingual developer footer on all app views | T10 manual UI review, build/lint |
 | NFR-01; Q01/Q02 | Query/mutation state model, atomic writes, safe retry, conflict and delete handling | CHECK-03–CHECK-06, CHECK-10 |
 | NFR-02; Q03 | Mantine labels/errors, focus/status semantics, responsive CSS and manual review | CHECK-09 |
 | NFR-03; Q04/SEC08 | Parser and service bounds, indexed active reads, representative workload | CHECK-02, CHECK-08 |

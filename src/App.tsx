@@ -67,6 +67,11 @@ function PrivacyContent({ onBack }: { onBack: () => void }) {
   );
 }
 
+function AppFooter() {
+  const { t } = useTranslation();
+  return <footer className={styles.footer}>{t('app.developedBy', { name: 'Sebastian Olmos' })}</footer>;
+}
+
 export default function App() {
   const { t } = useTranslation();
   const {
@@ -274,6 +279,7 @@ export default function App() {
     return (
       <main className={styles.shell}>
         <p role="status">{t('auth.checkingSession')}</p>
+        <AppFooter />
       </main>
     );
   }
@@ -286,6 +292,7 @@ export default function App() {
         <button disabled={busy} onClick={() => void refreshSession()}>
           {t('auth.retry')}
         </button>
+        <AppFooter />
       </main>
     );
   }
@@ -294,6 +301,7 @@ export default function App() {
     return (
       <main className={styles.shell}>
         <p role="status">{t('auth.preparingPrivateSpace')}</p>
+        <AppFooter />
       </main>
     );
   }
@@ -309,6 +317,7 @@ export default function App() {
         <button disabled={busy} onClick={signOut}>
           {t('auth.signOut')}
         </button>
+        <AppFooter />
       </main>
     );
   }
@@ -317,6 +326,7 @@ export default function App() {
     return (
       <main className={`${styles.shell} ${styles.privacy}`}>
         <PrivacyContent onBack={() => setPrivacyOpen(false)} />
+        <AppFooter />
       </main>
     );
   }
@@ -371,6 +381,7 @@ export default function App() {
             </a>
           </p>
         </section>
+        <AppFooter />
       </main>
     );
   }
@@ -442,7 +453,10 @@ export default function App() {
             backgroundColor: 'var(--chucao-cyan)',
             color: 'var(--chucao-brown)',
           },
-          header: { position: 'relative' },
+          header: {
+            position: 'relative',
+            backgroundColor: 'var(--chucao-cream)',
+          },
           title: {
             position: 'absolute',
             left: '50%',
@@ -491,6 +505,7 @@ export default function App() {
           </Button>
         </div>
       </Modal>
+      <AppFooter />
     </main>
   );
 }

@@ -9,7 +9,7 @@ export function ConceptBatchReview({ review, busy, error, summary, onConfirm, on
   const { t } = useTranslation();
   const ready = review.status === 'ready';
   return (
-    <section aria-labelledby="batch-review-title" aria-busy={busy} className={styles.panel}>
+    <section aria-labelledby="batch-review-title" aria-busy={busy} className={styles.modalContent}>
       <Stack gap="md">
         <Title order={2} id="batch-review-title">{t('concepts.reviewTitle')}</Title>
         {error && <Alert color="red" role="alert">{t(error)}</Alert>}
@@ -22,9 +22,9 @@ export function ConceptBatchReview({ review, busy, error, summary, onConfirm, on
           <Text fw={700}>{t('concepts.omitted', { count: ready ? review.omitted.length : 0 })}</Text>
           {ready && review.omitted.length > 0 ? <ol className={styles.reviewList}>{review.omitted.map((item) => <li key={item.sourceIndex}><Text>{item.rawLine || t('concepts.emptyLine')}</Text><Text size="sm">{t(`concepts.reason.${item.reasonCode}`)}</Text><Text size="xs" c="dimmed">{t('concepts.sourceLine', { line: item.sourceIndex + 1 })}</Text></li>)}</ol> : <Text>{t('concepts.noneOmitted')}</Text>}
         </div>
-        <Group>
-          <Button onClick={onConfirm} loading={busy} disabled={busy || summary !== null || !ready || review.accepted.length === 0}>{summary !== null ? t('concepts.batchConfirmed') : t('concepts.confirmBatch')}</Button>
-          <Button variant="default" disabled={busy} onClick={onCancel}>{summary !== null ? t('concepts.done') : t('concepts.editBatch')}</Button>
+        <Group className={styles.modalActions} justify="center">
+          <Button className={styles.modalPrimaryButton} onClick={onConfirm} loading={busy} disabled={busy || summary !== null || !ready || review.accepted.length === 0}>{summary !== null ? t('concepts.batchConfirmed') : t('concepts.confirmBatch')}</Button>
+          <Button className={styles.modalSecondaryButton} disabled={busy} onClick={onCancel}>{summary !== null ? t('concepts.done') : t('concepts.editBatch')}</Button>
         </Group>
         {busy && <Text role="status">{t('concepts.processing')}</Text>}
       </Stack>

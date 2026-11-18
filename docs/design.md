@@ -2,14 +2,16 @@
 
 ## 1. Status, scope, and references
 
-**Status:** Visual design baseline implemented for VS-01; future views remain planned  
-**Date:** 2026-11-17  
+**Status:** Visual baseline implemented for VS-01 and local VS-02/T10; future study views remain planned
+**Date:** 2026-11-18
 **Scope:** Shared visual direction, foundations, interface composition, reusable components, interaction states, accessibility constraints, and visual resources for the MVP study journey.
 
-This document defines the shared visual direction. The VS-01 shell, Access,
-privacy, My Lists, and minimal List Detail presentation are implemented and
-manually reviewed; later study views remain design guidance until their slices
-are implemented.
+This document defines the shared visual direction. VS-01 and the VS-02/T10
+shell, Access, Preferences, My Lists, List Detail, concept detail, and related
+dialogs are implemented for local scope. The user confirmed manual review of
+the final T10 visual/interaction changes on 2026-11-18; this is not a claim of
+accessibility conformance or release-wide browser validation. Later study
+views remain design guidance until their slices are implemented.
 
 ### References
 
@@ -18,9 +20,10 @@ are implemented.
 - [`docs/app-flow.md`](./app-flow.md): views `VIEW-01` through `VIEW-11`, journeys, states, and navigation behavior.
 - [`docs/quality-project.md`](./quality-project.md): selected criteria for keyboard use, focus, labels, contrast, reduced motion, touch targets, responsive behavior, and image alternatives.
 - Existing implementation evidence: `src/main.tsx` loads Comfortaa through
-  Fontsource and configures Mantine; VS-01 implementation is in
-  `src/App.tsx`, `src/app/app.module.css`, `src/features/lists/lists.module.css`,
-  and `src/index.css`.
+  Fontsource and configures Mantine; the VS-01/VS-02 shell and list/concept
+  views are in `src/App.tsx`, `src/app/app.module.css`,
+  `src/features/lists/lists.module.css`,
+  `src/features/concepts/concepts.module.css`, and `src/index.css`.
 
 The design rules are not by themselves accessibility proof; the current
 implementation has been reviewed manually for the validated VS-01 desktop and
@@ -35,6 +38,11 @@ Shared visual characteristics:
 - Cream background and light reading surfaces.
 - Dark coffee-brown text, borders, icons, and solid offset shadows.
 - Pastel action colors with clear semantic roles.
+- List creation and concept addition share a centered dialog treatment with a
+  cream header, light surface, warm dimmed backdrop, and centered actions.
+- Add List uses the lilac action treatment; View and Edit use cyan. These
+  actions use coffee-brown text and a stronger same-hue hover. Destructive
+  actions use red tones and remain separately labelled.
 - Rounded typography and generous reading space.
 - Cards that make grouping and progress easy to scan.
 - Nature illustrations used deliberately in access, empty states, and timed practice.
@@ -123,6 +131,8 @@ centered sign-out action, and a contrasting close control. Long unspaced
 concept titles and descriptions wrap within their cards and detail panels.
 Successful list and concept actions use short stacked snackbars at the
 lower-left; the notification surface overlays the page and does not reflow it.
+A simple developer credit appears in the footer across Access, loading/error,
+and authenticated views.
 
 Use a full-width cream application canvas so desktop viewports do not expose
 contrasting lateral strips. Constrain reading content, panels, and list grids
@@ -147,11 +157,11 @@ The functional behavior and transitions belong to [`docs/app-flow.md`](./app-flo
 
 | Flow view | Visual composition |
 |---|---|
-| `VIEW-01` Access | Cream surface, chucao identity art, application name, short explanation, one prominent “Continue with Google” action, language selector, and privacy link. In VS-01 the Access selector uses the same horizontal language-group presentation as the authenticated shell. |
-| `VIEW-02` My Lists | VS-02 uses the shared authenticated navbar and adds a static `0/active concept count` practiced indicator to non-empty cyan cards; the empty state remains distinct. Search, ordering, and Active/Archived controls remain future scope. |
-| `VIEW-03` List Detail | VS-02 uses back navigation, the persisted list name, the concept collection or empty-state explanation, add/open actions, and return to My Lists. Round progress, tabs, search/order, and draw behavior remain future scope. |
-| `VIEW-04` Add Concepts | Persistent labels, comfortable text areas, character guidance, pasted-batch review, accepted/omitted summary, and clear confirm/cancel hierarchy. |
-| `VIEW-05` Concept Detail | Distinct title/description, round state, practices, notes, and ratings; long text wraps without clipping. |
+| `VIEW-01` Access | Cream surface, chucao identity art, application name, short explanation, one prominent “Continue with Google” action, centered language selector, centered privacy link, and the developer footer. Access remains outside the authenticated navbar. |
+| `VIEW-02` My Lists | Shared authenticated navbar above one bordered panel containing centered title/context, shadowed list-name cards with practiced/total counts in an independently scrollable area, and a centered Add List action that opens a dialog styled like Add Concepts. A simple developer credit appears in the app footer. |
+| `VIEW-03` List Detail | Short Back control at upper left, centered list title, a bordered scrollable list of concept names with right-aligned View actions, and one Add Concepts action below. |
+| `VIEW-04` Add Concepts | Dialog matching the supplied desktop reference, with Individual/By Batch modes, persistent labels, pasted-batch review, accepted/omitted summary, and clear confirm/cancel hierarchy. |
+| `VIEW-05` Concept Detail | One upper-left Back action to the collection, centered title, aligned description/edit form, centered Edit above Delete actions, and a destructive confirmation dialog; long unspaced text wraps without clipping. |
 | `VIEW-06` Draw Result | Cream dialog over a warm darkened backdrop; concept centered; lilac “Practice” and secondary “Back to list” actions. |
 | `VIEW-07` Practice | Concept, forest scene, and clock are dominant. Mobile stacks navigation, scene, concept, clock, controls, and revealable description; PC may place description/notes in a side panel. |
 | `VIEW-08` Practice Closure | Preserve concept context; show satisfaction selector, optional note, save status, and a clear completion action. Independent practice includes an optional free-text concept label before rating/note. |
@@ -180,6 +190,7 @@ The planned implementation uses Mantine, CSS Modules, CSS variables, React Hook 
 | List/concept card or row | Scanable owned content and actions | Empty, loading, selected, seen/pending, error, and long-content states |
 | Timer scene | Forest, chucao, clock, and completion state | Prepared, running, paused, finished, restarted, and reduced-motion alternatives |
 | Notice/toast | Save confirmation, recoverable error, session expiry | Short confirmations may be transient; actionable errors remain visible; no success state before persistence completes |
+| Add List/Add Concepts dialog | Create a list name or enter/review concepts | Cream header, light surface, centered action group, focused form labels/errors; cancel remains secondary and destructive confirmation uses red action styling |
 
 Interactive targets should generally provide a 44–48 px touch area. Small icons may be visually compact when contained in a larger interactive surface.
 
@@ -225,6 +236,10 @@ The design is constrained by `Q03`, `WEB03`, `WEB04`, and the relevant security/
 
 Contrast, keyboard, screen-reader, zoom, touch, and reduced-motion conformance require validation on functioning software. This document records constraints, not test results.
 
+Mantine buttons use the CSS variables for base and hover background, text, and
+border colors. View-specific CSS Modules set these variables so the
+library's component styles do not restore the default blue/white treatment.
+
 ## 8. Proposals and open questions
 
 | Question | Impact | Resolution point |
@@ -243,6 +258,7 @@ The following are not open product-behavior decisions here: responsive PC/Androi
 
 | Date | Change | Rationale |
 |---|---|---|
+| 2026-11-18 | Recorded the validated VS-02/T10 shared navbar, Preferences and list-creation dialogs, list/concept layouts, progress count, footer, and semantic action/hover colors. | Carries reusable visual decisions into future views while keeping later study screens planned and accessibility/release conformance unclaimed. |
 | 2026-11-16 | Created the visual design baseline from `temp/design.md`, the global plan, application flow, quality criteria, and existing Mantine/Comfortaa evidence. | Establishes a shared visual direction without implementing the interface or claiming validation. |
 | 2026-11-16 | Recorded the owner-created chucao asset request for the main presentation, favicon, and flying animation resources. | Prevents placeholder or invented artwork from becoming an unapproved product identity and identifies the assets that block dependent views. |
 | 2026-11-16 | Aligned timer presentation with the confirmed no-recovery and no-add-time behavior. | Keeps the design document consistent with the current global plan and application flow rather than obsolete source proposals. |

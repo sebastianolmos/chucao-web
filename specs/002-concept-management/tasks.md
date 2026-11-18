@@ -2,7 +2,7 @@
 
 ## Status and references
 
-- **Status:** T01–T09 base scope complete; extraordinary extension T10 in progress
+- **Status:** T01–T10 complete; VS-02 closed for validated local scope
 - **Spec:** `specs/002-concept-management/spec.md`
 - **Plan:** `specs/002-concept-management/plan.md`
 - **Slice:** VS-02 — Concept Management
@@ -473,18 +473,20 @@
 
 ## Execution evidence
 
-T01–T09 execution evidence is recorded inline above. The validation matrix
-below summarizes coverage and remaining issues. Evidence uses local services
+T01–T10 execution evidence is recorded in the task details and the validation
+matrix below summarizes coverage and remaining issues. Evidence uses local services
 and synthetic accounts; no production or real-user data was used. Never mark
 `[x]` without recording the corresponding verification result.
 
 ## Specification validation
 
-**Date and state:** 2026-11-17; local uncommitted working tree based on
-`9eb66c5`; local Supabase VS-01 and VS-02 migrations applied; two synthetic
-accounts and their local lists/concepts used for direct checks.
+**Date and state:** T01–T09 validation was completed on 2026-11-17 against the
+local uncommitted working tree based on `9eb66c5`, with local Supabase VS-01
+and VS-02 migrations and synthetic accounts. T10 was completed on 2026-11-18
+against the local uncommitted working tree based on `d91d9dc`.
 
-**Verdict:** Closed for the user-approved local VS-02 scope. All functional,
+**Verdict:** Closed for the user-approved local VS-02 scope, including T10.
+All functional,
 security, persistence, and user-confirmed UI criteria passed. The user accepted
 two documented scope exceptions for closure: the 500-concept workload was
 selected after implementation, and browser rendering measurement was waived.
@@ -503,31 +505,36 @@ No browser performance pass or production performance claim is made.
 | CHECK-09; NFR-02, AC-09, Q03, WEB03 | T08, T09 | User-confirmed keyboard/touch review on PC and Android Chrome in Spanish and English | Pass | User confirmed visible focus, zoom, errors/dialogs, wrapping and touch targets. Exact browser versions/viewports were not retained. |
 | CHECK-11; DP02, DP03, DP14 | T08, T09 | Human review of migration/grants, errors, local privacy copy and documentation | Pass for local slice | Copy describes concept fields, purpose and tombstone retention and disclaims final legal publication. Lawful-basis, provider/legal publication and account/backup erasure policy remain publication work, not a local-slice claim. |
 | FR-23, AC-11; static practiced-count indicator | T06, T09 | Review `MyListsView.tsx` against the updated spec and user direction | Pass | Non-empty cards show `0/active total`; the denominator is the actual active concept count. The numerator is static because practice is not implemented in VS-02. |
+| FR-24–FR-33; AC-12–AC-16 | T10 | Build/lint, `git diff --check`, and user-confirmed manual review of final Access/authenticated visual and interaction changes | Pass for local scope | Build, lint, and diff check passed on the working tree based on `d91d9dc`. On 2026-11-18 the user reported reviewing the final UI changes, including the My Lists creation dialog, and confirmed they work. Exact browser versions and viewport dimensions were not retained. No automated T10 tests were run. |
 | SEC09 and file/remote-fetch exclusions | T02–T09 | Scope review | Not applicable | This slice adds no file import/export, path handling, or user-supplied remote fetch. |
 
 No defect was demonstrated in the database retrieval. The browser-rendering
 portion of CHECK-08 was explicitly waived by the user for this local closure;
 the database query result must not be represented as a browser or production
-performance result. No code was changed during validation.
+performance result. T10's later UI changes and checks are recorded in the T10
+task; its manual review result is user-reported, not an agent browser
+observation.
 
 ## Closure
 
-VS-02 is closed for its validated local scope on 2026-11-17 by the user's
-decision to accept the documented CHECK-08/NFR-03 exception. T01–T09 are
-complete. The spec, plan, validation matrix, global plan, application flow,
-and design references were aligned with the delivered scope and the static
-`0/active concept count` card indicator. Publication, deployment, legal review,
-and release-wide browser compatibility remain outside this local slice; they
-do not leave VS-02 pending.
+VS-02, including extraordinary extension T10, is closed for its validated
+local scope on 2026-11-18. T01–T10 are complete. The user accepted the
+documented CHECK-08/NFR-03 exception for the original local scope and reported
+that the final T10 visual and interaction changes work. The validation record,
+spec, technical plan, global plan, application flow, and design document now
+describe the static `0/active concept count` indicator, shared authenticated
+shell, list/concept dialogs, and local UI limits. Publication, deployment,
+legal review, and release-wide browser compatibility remain outside this
+local slice and are not implied by closure.
 
 ## Extraordinary authenticated-shell extension
 
-- [ ] T10 — Add the authenticated navbar and Preferences dialog
+- [x] T10 — Add the authenticated navbar and Preferences dialog
   - **Objective:** Extend the closed local VS-02 shell with the shared navbar,
     single locale toggle, brand return action, and Preferences dialog.
   - **Depends on:** T04, T05, and T08 (authenticated session, locale, and
     privacy behavior are already implemented).
-  - **References:** FR-24–FR-28; AC-12–AC-14; `docs/app-flow.md` shared navigation;
+  - **References:** FR-24–FR-33; AC-12–AC-16; `docs/app-flow.md` shared navigation;
     `docs/design.md` shared shell.
   - **Work:** Add the navbar to authenticated content views only; move the
     signed-in email, sign-out, and authenticated Privacy entry into the
@@ -536,20 +543,36 @@ do not leave VS-02 pending.
     fixed stacked-toast surface and move successful list/concept confirmations
     into it while keeping validation/failure feedback in context.
     List rename/edit is not currently implemented in this repository; the
-    shared `notify` API can be used when that action is added.
+    shared `notify` API can be used when that action is added. Redesign My
+    Lists and concept list/detail surfaces around the supplied desktop
+    references, keeping content scrollable and add flows within dialogs.
+    Restore per-list active concept totals with zero practiced concepts until
+    practice selection exists; center modal action groups, remove the
+    redundant delete warning, and add the bilingual developer footer on every
+    app view. The My Lists Add List action opens a dialog matching Add
+    Concepts and retains the existing list-name form and validation.
   - **Verification:** Run `npm run build` and `npm run lint`; review the
     authenticated and Access states in Spanish and English, including the
     brand return, modal dismissal/privacy navigation, local sign-out,
     preserved view on locale change, keyboard focus, and narrow layout.
     `npm.cmd run build` and `npm.cmd run lint` passed; the build retains the
     >500 kB chunk advisory; `git diff --check`
-    passed. Interactive review with an authenticated browser session has not
-    been performed because the browser access host was unavailable. Automated
-    tests were not run for this task. The toast flows cover list creation,
+    passed. The user reported completing the final manual review of the Access
+    and authenticated visual/interaction changes, including the list-creation
+    dialog, and confirmed they work; exact browser versions and viewport sizes
+    were not retained. The browser access host was unavailable to the agent,
+    so this evidence is explicitly user-reported. Automated tests were not run
+    for this task. The toast flows cover list creation,
     individual/batch concept creation, concept editing, and concept deletion.
-  - **Done when:** AC-12–AC-14 are satisfied, the authenticated page body
-    no longer duplicates identity/sign-out/privacy controls, Access remains unchanged,
-    and the required build/lint checks pass. T10 remains pending until the
-    authenticated visual/interaction review is recorded; it does not reopen
-    or revalidate unrelated VS-02 database behavior.
+    Follow-up UI adjustments restored per-list active concept totals (with
+    practiced fixed at zero), centered add/review/delete modal actions,
+    removed the duplicate delete warning, moved the list Back control upward,
+    added the bilingual developer footer, and changed list creation to a
+    matching styled dialog. The follow-up `npm.cmd run build`,
+    `npm.cmd run lint`, and `git diff --check` passed after the final UI changes.
+  - **Done when:** AC-12–AC-16 are satisfied, the authenticated page body
+    no longer duplicates identity/sign-out/privacy controls, Access remains
+    outside the navbar and retains its language/Privacy entry points,
+    and the required build/lint checks pass. T10 closes the visual extension;
+    it does not reopen or revalidate unrelated VS-02 database behavior.
 

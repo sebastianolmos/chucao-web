@@ -1,6 +1,5 @@
 import {
   Alert,
-  Badge,
   Button,
   Group,
   Modal,
@@ -165,11 +164,10 @@ export function ConceptDetailView({ userId, listId, concept, onClose, onReload, 
   return (
     <section aria-labelledby="concept-detail-title" aria-busy={saving || deleting} className={styles.detail}>
       <header className={styles.detailHeader}>
-        <div className={styles.detailHeading}>
-          <Title className={styles.detailTitle} order={2} id="concept-detail-title">{title}</Title>
-          <Badge color={concept.state === 'pending' ? 'yellow' : 'cyan'}>{t(`conceptDetail.state.${concept.state}`)}</Badge>
-        </div>
-        <Button className={styles.detailBackButton} variant="default" disabled={saving || deleting || conflictPending} onClick={onClose}>{t('conceptDetail.backToList')}</Button>
+        <Button className={styles.detailBackButton} variant="default" disabled={saving || deleting || conflictPending} onClick={onClose}>
+          {t('conceptDetail.back')}
+        </Button>
+        <Title className={styles.detailTitle} order={1} id="concept-detail-title">{title}</Title>
       </header>
 
       {editing ? (
@@ -187,9 +185,9 @@ export function ConceptDetailView({ userId, listId, concept, onClose, onReload, 
               onChange={(event) => { setDescription(event.currentTarget.value); setFieldError(null); }}
               error={fieldError === 'description' ? t('concepts.descriptionInvalid') : undefined}
               description={t('concepts.descriptionGuidance', { count: Array.from(description.trim()).length })} autosize minRows={2} maxRows={8} />
-            <Group>
-              <Button type="submit" loading={saving} disabled={saving || conflictPending}>{t('conceptDetail.saveChanges')}</Button>
-              <Button type="button" variant="default" disabled={saving || conflictPending} onClick={cancelEdit}>{t('conceptDetail.cancelEdit')}</Button>
+            <Group justify="center">
+              <Button className={styles.editSaveButton} type="submit" loading={saving} disabled={saving || conflictPending}>{t('conceptDetail.saveChanges')}</Button>
+              <Button className={styles.modalSecondaryButton} type="button" disabled={saving || conflictPending} onClick={cancelEdit}>{t('conceptDetail.cancelEdit')}</Button>
             </Group>
           </Stack>
         </form>
@@ -199,28 +197,35 @@ export function ConceptDetailView({ userId, listId, concept, onClose, onReload, 
             <Text fw={700}>{t('conceptDetail.descriptionLabel')}</Text>
             <Text>{description || t('conceptDetail.noDescription')}</Text>
           </div>
-          <Group>
-            <Button onClick={beginEdit}>{t('conceptDetail.editConcept')}</Button>
-          </Group>
+          <Stack className={styles.detailActions} align="center" gap="sm">
+            <Button className={styles.editConceptButton} onClick={beginEdit}>{t('conceptDetail.editConcept')}</Button>
+            <Button className={styles.deleteConceptButton} disabled={saving || deleting} onClick={() => { setDeleteError(null); setDeleteOpen(true); }}>
+              {t('conceptDetail.deleteConcept')}
+            </Button>
+          </Stack>
         </Stack>
       )}
 
-      <div className={styles.dangerPanel}>
-        <Text fw={700}>{t('conceptDetail.deleteSectionTitle')}</Text>
-        <Text>{t('conceptDetail.deleteSectionDescription')}</Text>
-          <Button color="red" variant="light" disabled={saving || deleting} onClick={() => { setDeleteError(null); setDeleteOpen(true); }}>
-          {t('conceptDetail.deleteConcept')}
-        </Button>
-      </div>
-
-      <Modal opened={deleteOpen} onClose={() => { if (!deleting) { setDeleteOpen(false); setDeleteError(null); } }} title={t('conceptDetail.deleteConfirmTitle')} centered>
+      <Modal
+        opened={deleteOpen}
+        onClose={() => { if (!deleting) { setDeleteOpen(false); setDeleteError(null); } }}
+        title={t('conceptDetail.deleteConfirmTitle')}
+        centered
+        classNames={{
+          content: styles.deleteModalContent,
+          header: styles.deleteModalHeader,
+          title: styles.deleteModalTitle,
+          body: styles.deleteModalBody,
+        }}
+        overlayProps={{ className: styles.deleteModalOverlay }}
+      >
         <Stack gap="md">
           <Text>{t('conceptDetail.deleteConfirmDescription')}</Text>
           {deleteError && <Alert color="red" role="alert">{t(deleteError)}</Alert>}
           {deleting && <Text role="status">{t('conceptDetail.processingDelete')}</Text>}
-          <Group justify="flex-end">
-            <Button variant="default" disabled={deleting} onClick={() => { setDeleteOpen(false); setDeleteError(null); }}>{t('conceptDetail.cancelDelete')}</Button>
-            <Button color="red" loading={deleting} disabled={deleting} onClick={() => void confirmDelete()}>{t('conceptDetail.confirmDelete')}</Button>
+          <Group className={styles.modalActions} justify="center">
+            <Button className={styles.modalSecondaryButton} disabled={deleting} onClick={() => { setDeleteOpen(false); setDeleteError(null); }}>{t('conceptDetail.cancelDelete')}</Button>
+            <Button className={styles.deleteConfirmButton} loading={deleting} disabled={deleting} onClick={() => void confirmDelete()}>{t('conceptDetail.confirmDelete')}</Button>
           </Group>
         </Stack>
       </Modal>

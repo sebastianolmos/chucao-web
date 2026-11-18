@@ -1,4 +1,4 @@
-import { Button, TextInput } from '@mantine/core';
+import { Button, Group, TextInput } from '@mantine/core';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { validateListName } from './listService';
@@ -11,11 +11,13 @@ type FormValues = {
 type ListNameFormProps = {
   disabled: boolean;
   onSubmit: (rawName: string) => Promise<boolean>;
+  onCancel: () => void;
 };
 
 export function ListNameForm({
   disabled,
   onSubmit,
+  onCancel,
 }: ListNameFormProps) {
   const { t } = useTranslation();
   const {
@@ -71,9 +73,14 @@ export function ListNameForm({
           {fieldError}
         </span>
       )}
-      <Button disabled={disabled} loading={disabled} type="submit">
-        {t('lists.submit')}
-      </Button>
+      <Group className={styles.formActions} justify="center">
+        <Button className={styles.saveListButton} disabled={disabled} loading={disabled} type="submit">
+          {t('lists.submit')}
+        </Button>
+        <Button className={styles.cancelListButton} disabled={disabled} onClick={onCancel} type="button">
+          {t('concepts.cancel')}
+        </Button>
+      </Group>
     </form>
   );
 }

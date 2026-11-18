@@ -1,4 +1,4 @@
-# Chucao Web — Global Plan
+﻿# Chucao Web â€” Global Plan
 
 ## 1. Document status and sources
 
@@ -43,18 +43,18 @@ No numeric adoption, latency, retention, or learning targets are invented at thi
 
 | ID | Capability | Scope | Delivery state |
 |---|---|---|---|
-| CAP-01 | Google account authentication, logout, and session handling through Supabase Auth | MVP | Planned |
-| CAP-02 | Private user-owned lists with create, view, rename, and delete | MVP | Planned |
-| CAP-03 | Concepts with stable identity, title validation, optional description, individual entry, pasted batch entry, edit, and delete | MVP | Planned |
+| CAP-01 | Google account authentication, logout, and session handling through Supabase Auth | MVP | Delivered locally in VS-01/T10; publication/account lifecycle remain release work |
+| CAP-02 | Private user-owned lists with create, view, rename, and delete | MVP | Partially delivered locally: create/view; rename/delete remain pending |
+| CAP-03 | Concepts with stable identity, title validation, optional description, individual entry, pasted batch entry, edit, and delete | MVP | Delivered locally in VS-02; selection, rounds, and practice remain separate capabilities |
 | CAP-04 | Independent list rounds, pending/seen state, uniform random selection, manual marking, appearance order, and new-round history | MVP | Planned |
 | CAP-05 | Timed practice from a selected concept or independently, with a configurable duration from 1 to 59 minutes, pause, resume, restart, and reduced-motion behavior | MVP | Planned |
 | CAP-06 | Chucao forest animation and optional completion sound synchronized with the timer | MVP | Planned |
-| CAP-07 | Completed practice records, notes, prior rounds, and practice history, including a 0–5 satisfaction rating distinct from Unrated; independent practices are saved only when given a free-text label | MVP | Planned |
-| CAP-08 | Spanish/English interface, translated validation and accessibility text, and locale-aware dates/plurals | MVP | Planned |
-| CAP-09 | Responsive, keyboard-usable, accessible interface for PC and mobile browsers | MVP | Planned |
-| CAP-10 | Cross-device access to the same signed-in user's saved data through the responsive web application | MVP baseline from the first release, not a later feature | Planned |
+| CAP-07 | Completed practice records, notes, prior rounds, and practice history, including a 0â€“5 satisfaction rating distinct from Unrated; independent practices are saved only when given a free-text label | MVP | Planned |
+| CAP-08 | Spanish/English interface, translated validation and accessibility text, and locale-aware dates/plurals | MVP | Partially delivered locally in VS-01/VS-02; remaining views and locale-aware study content remain pending |
+| CAP-09 | Responsive, keyboard-usable, accessible interface for PC and mobile browsers | MVP | Partially delivered and user-reviewed locally for VS-01/VS-02; later views and release-wide validation remain pending |
+| CAP-10 | Cross-device access to the same signed-in user's saved data through the responsive web application | MVP baseline from the first release, not a later feature | Partially delivered locally for private lists/concepts; supported-device release validation remains pending |
 | CAP-11 | List duplication, archiving workflow, return-to-pending, search/filtering, ordering, and defined multi-selection actions | Later increment, except any subset explicitly pulled into MVP | Planned |
-| CAP-12 | Account-synchronized preferences for language, default timer duration, sound, volume, and reduced motion | MVP baseline from the first release | Planned |
+| CAP-12 | Account-synchronized preferences for language, default timer duration, sound, volume, and reduced motion | MVP baseline from the first release | Partially delivered locally: account locale and Preferences shell; timer settings remain pending |
 | CAP-13 | Public sharing, shared lists, organizations, analytics/marketing, social features, and learning assessment | Out of scope | Excluded |
 | CAP-14 | Synchronization or continuation of an active timer/session across devices or browser instances | Out of scope | Excluded |
 
@@ -75,10 +75,10 @@ The existing plan treats list search/order, duplication, archive/restore, return
 - The timer uses elapsed time and recorded pauses rather than visual frame updates as its source of truth. Its duration is between 1 and 59 minutes. Users may edit the duration before starting, but cannot add time after starting.
 - Active timer/session state is not persisted, synchronized, or resumed across devices or browser instances. Leaving the practice abandons the active timer and does not create a resumable timer state.
 - The animation uses React, SVG, transparent images, CSS Modules, and `requestAnimationFrame`; reduced-motion behavior is required.
-- Concept titles are 1–50 characters after trimming. Duplicate detection initially preserves the desktop rule: exact, case-sensitive match within the same list, including seen concepts and duplicates within a pasted block.
+- Concept titles are 1â€“50 characters after trimming. Duplicate detection initially preserves the desktop rule: exact, case-sensitive match within the same list, including seen concepts and duplicates within a pasted block.
 - Maximum lengths are 80 characters for list names, 50 characters for concept titles, 2,000 characters for descriptions, and 2,000 characters for practice notes. Limits apply after trimming and are enforced in the backend as well as the interface.
 - List names are unique per user after trimming and case folding.
-- MVP ordering is predefined and does not provide manual ordering: lists by name A–Z/Z–A, recently/oldest created, or recently modified; concepts by title A–Z/Z–A, pending/seen first, or incorporation order; history newest/oldest first. Ordering is local and does not change persisted concept order.
+- MVP ordering is predefined and does not provide manual ordering: lists by name Aâ€“Z/Zâ€“A, recently/oldest created, or recently modified; concepts by title Aâ€“Z/Zâ€“A, pending/seen first, or incorporation order; history newest/oldest first. Ordering is local and does not change persisted concept order.
 - Multi-selection applies to concepts and supports delete, mark as seen, and return to pending. Only delete requires confirmation; bulk results report successes and failures.
 - Privileged credentials stay out of the frontend. Authorization is enforced at the backend/database boundary, not only by hidden controls.
 - Random selection and manual marking must be atomic, and retries must not consume another concept or duplicate a practice.
@@ -88,7 +88,7 @@ The existing plan treats list search/order, duplication, archive/restore, return
 - A selected concept remains seen when its result is closed without practice.
 - A new round closes the previous round, preserves its history, and makes existing concepts available again; deleted concepts are not restored.
 - Concept identity is stable across title and description edits, so editing does not reset round state. Historical appearances keep a snapshot of the title used at that time.
-- Deleting a concept removes it from the active list and shows it as “Deleted concept” in history, without allowing new practices. Deleting a list should generally be preceded by archiving; permanent deletion removes active content and preserves only anonymized historical records.
+- Deleting a concept removes it from the active list and shows it as â€œDeleted conceptâ€ in history, without allowing new practices. Deleting a list should generally be preceded by archiving; permanent deletion removes active content and preserves only anonymized historical records.
 - Notes can be edited or deleted without deleting their associated practice.
 - Deleting an account removes or anonymizes all associated personal and content data, subject to the documented retention and backup process.
 - Abandoning a timer creates no practice record. Practice history contains only practices explicitly completed and saved according to the later practice specification.
@@ -150,268 +150,122 @@ The sequence preserves the proposed increment order while making each increment 
 
 | Slice | Observable result | Capabilities | Boundary and dependencies | Activated quality/privacy conditions |
 |---|---|---|---|---|
-| **VS-01 Account and first private list** | **Closed for validated local scope; publication conditions remain pending.** A person can sign in with Google and create and view a private empty list in Spanish or English from supported responsive devices. | CAP-01, CAP-02 (partial: create/view), CAP-08, CAP-09, CAP-10, CAP-12 (partial: language/account shell) | Supabase Auth, Google OAuth, database, RLS, frontend shell, and the minimum account linkage needed for private lists. Rename/delete lists, full settings, concepts, and later study behavior remain outside this slice. Requires account lifecycle and privacy notice decisions before real users. | Q01–Q06, SEC01, SEC04–SEC08, SEC10, WEB02–WEB04; DP01–DP03, DP08–DP13 |
-| VS-02 Concept management | A person can add, paste, validate, edit, and delete concepts with descriptions while seeing clear accepted/rejected results. | CAP-03, CAP-09 | Depends on private lists and trusted validation; requires description length and deletion/history policy decisions. | Q01–Q04, SEC01–SEC03, SEC08; DP02, DP03, DP10, DP13, DP14 |
-| VS-03 Persistent round and selection | A person can mark or randomly select a pending concept, see the result and appearance order, and start a new round without losing prior history. | CAP-04, CAP-10 | Depends on concepts and atomic persistence; requires concurrency, retry/idempotency, return-to-pending, and the defined concept/list history rules. | Q01–Q04, SEC01–SEC04, SEC08; DP02, DP10, DP12–DP14, DP16 |
-| VS-04 Timed practice journey | A person can practice from a selected concept or independently for 1–59 minutes, pause/resume/restart, and see the animation reach the end with optional sound. Leaving the view does not preserve an active timer. | CAP-05, CAP-06, CAP-09, CAP-12 | Depends on selected concept context and timer limits; requires platform limitation review for background/locked-device sound. | Q01–Q06, SEC03, SEC08, SEC10, WEB03–WEB04; DP02, DP07 if telemetry/storage is added, DP13 |
-| VS-05 Notes and history | A person can complete a practice, save notes, and review prior practices and rounds without confusing notes with descriptions. Abandoning a timer creates no practice record. | CAP-07, CAP-10 | Depends on practice lifecycle and deletion/retention rules; note length/edit/delete and deleted-reference behavior are defined. | Q01–Q04, SEC01–SEC04; DP02, DP03, DP10, DP13–DP16, DP18 |
-| VS-06 Advanced organization | A person can search/order, duplicate/archive/restore lists, return concepts to pending, and use the defined multi-selection actions. | CAP-02, CAP-03, CAP-04, CAP-11 | Depends on stable identities and history semantics; list limits, sorting, multi-selection actions, and confirmation rules are defined. Permanent list deletion must preserve the documented anonymization and retention behavior. | Q01–Q04, SEC01–SEC04, SEC08; DP10, DP13–DP16 |
-| VS-07 Publication readiness | The integrated study journey is validated on modern browsers on PC and Android, with accessibility, migration reproducibility, deployment, and documented privacy handling. | CAP-01–CAP-10, CAP-12 | Depends on all release-blocking decisions, provider review, production configuration, migration/recovery evidence, and representative PC/Android checks. | All selected release criteria; unresolved DP items block real-user publication unless explicitly resolved with rationale. |
+| **VS-01 Account and first private list** | **Closed for validated local scope; publication conditions remain pending.** A person can sign in with Google and create and view a private empty list in Spanish or English from supported responsive devices. | CAP-01, CAP-02 (partial: create/view), CAP-08, CAP-09, CAP-10, CAP-12 (partial: language/account shell) | Supabase Auth, Google OAuth, database, RLS, frontend shell, and the minimum account linkage needed for private lists. Rename/delete lists, full settings, concepts, and later study behavior remain outside this slice. Requires account lifecycle and privacy notice decisions before real users. | Q01â€“Q06, SEC01, SEC04â€“SEC08, SEC10, WEB02â€“WEB04; DP01â€“DP03, DP08â€“DP13 |
+| **VS-02 Concept management** | **Closed for validated local scope (2026-11-18, including T10).** A person can manage concepts in private lists, use the shared authenticated navigation/preferences, and receive localized action feedback. | CAP-01 (partial), CAP-02 (partial), CAP-03, CAP-08 (partial), CAP-09 (partial), CAP-10 (partial), CAP-12 (partial) | Depends on private lists and trusted validation. The delivered local scope excludes rounds, selection, practice, account deletion, list rename/delete, release-wide browser validation, and publication. | Q01â€“Q04, SEC01â€“SEC03, SEC08; DP02, DP03, DP10, DP13, DP14 |
+| VS-03 Persistent round and selection | A person can mark or randomly select a pending concept, see the result and appearance order, and start a new round without losing prior history. | CAP-04, CAP-10 | Depends on concepts and atomic persistence; requires concurrency, retry/idempotency, return-to-pending, and the defined concept/list history rules. | Q01â€“Q04, SEC01â€“SEC04, SEC08; DP02, DP10, DP12â€“DP14, DP16 |
+| VS-04 Timed practice journey | A person can practice from a selected concept or independently for 1â€“59 minutes, pause/resume/restart, and see the animation reach the end with optional sound. Leaving the view does not preserve an active timer. | CAP-05, CAP-06, CAP-09, CAP-12 | Depends on selected concept context and timer limits; requires platform limitation review for background/locked-device sound. | Q01â€“Q06, SEC03, SEC08, SEC10, WEB03â€“WEB04; DP02, DP07 if telemetry/storage is added, DP13 |
+| VS-05 Notes and history | A person can complete a practice, save notes, and review prior practices and rounds without confusing notes with descriptions. Abandoning a timer creates no practice record. | CAP-07, CAP-10 | Depends on practice lifecycle and deletion/retention rules; note length/edit/delete and deleted-reference behavior are defined. | Q01â€“Q04, SEC01â€“SEC04; DP02, DP03, DP10, DP13â€“DP16, DP18 |
+| VS-06 Advanced organization | A person can search/order, duplicate/archive/restore lists, return concepts to pending, and use the defined multi-selection actions. | CAP-02, CAP-03, CAP-04, CAP-11 | Depends on stable identities and history semantics; list limits, sorting, multi-selection actions, and confirmation rules are defined. Permanent list deletion must preserve the documented anonymization and retention behavior. | Q01â€“Q04, SEC01â€“SEC04, SEC08; DP10, DP13â€“DP16 |
+| VS-07 Publication readiness | The integrated study journey is validated on modern browsers on PC and Android, with accessibility, migration reproducibility, deployment, and documented privacy handling. | CAP-01â€“CAP-10, CAP-12 | Depends on all release-blocking decisions, provider review, production configuration, migration/recovery evidence, and representative PC/Android checks. | All selected release criteria; unresolved DP items block real-user publication unless explicitly resolved with rationale. |
 
 Cross-cutting conditions apply to every slice: errors must expose the real state or uncertainty, retries must be safe, authorization must hold at the trusted boundary, and affected documentation must be updated.
 
-### Selected slice — VS-01 Account and first private list
+### Selected slice: VS-03 Persistent round and selection
 
-**Selection rationale:** VS-01 was selected as the first implementation slice
-and now delivers the smallest useful private product foundation: a person can
-enter Chucao, establish an account through the confirmed Google flow, create a
-private list, and see that same list again. It activates the trust and privacy
-boundaries needed by every later slice without bundling concepts, rounds, or
-practice behavior. Its local implementation and validation are closed; release
-conditions remain separate.
+**Slice status:** Selected (2026-11-18) as the next implementation slice
+after the validated local VS-02 scope. It preserves the provisional roadmap
+order and activates the first complete study loop without pulling timed
+practice or notes/history views forward. Selection does not mean specified,
+implemented, or validated.
 
-**User outcome:** An individual opens Chucao, signs in with Google, creates a named private list, and sees the list in the responsive application. After reloading or using another supported browser/device with the same account, the list remains available. A different authenticated account cannot read or modify it.
-
-**Capabilities covered:**
-
-- **CAP-01:** Full first-slice scope for Google sign-in, session recognition, and local sign-out.
-- **CAP-02:** Partial scope for creating and viewing a private empty list; rename and delete are deferred.
-- **CAP-08:** Partial scope for the access and list shell in Spanish and English, including translated loading, success, and failure states.
-- **CAP-09:** First responsive and keyboard-usable shell for supported PC and Android browsers.
-- **CAP-10:** Cross-device access to the persisted account-owned list, without active-timer behavior.
-- **CAP-12:** Partial scope for account-level language preference and the shared shell; timer, sound, volume, and reduced-motion preference controls are deferred.
-
-**Included scope:**
-
-- Check the current Supabase session and distinguish loading, unauthenticated, authenticated, and authentication-error states.
-- Continue with Google using the confirmed Supabase Auth/PKCE flow, with duplicate-start prevention and retryable failure.
-- Establish or recognize the authenticated Chucao user by the stable Supabase Auth UUID.
-- Render the first authenticated shell with Spanish/English labels and the account-level language choice needed by this slice.
-- Create a list with the confirmed trimmed name validation, 80-character maximum, and per-user uniqueness rule.
-- Display the authenticated user's private lists, including the empty state and the first created list.
-- Reload the page and read the persisted list again.
-- Enforce ownership at the trusted Supabase/database boundary through the planned RLS and backend validation path.
-- Provide understandable loading, empty, validation, success, unauthorized, session-expired, and recoverable network/error states.
-- Keep the responsive presentation usable on the committed PC and Android browser targets.
-
-**Deferred scope:**
-
-- Concept creation, pasted batches, descriptions, rounds, selection, progress, practice, notes, history, ratings, and timer behavior.
-- List rename, deletion, archive/restore, duplication, search, ordering, and multi-selection.
-- Full Settings and Account views beyond the minimum language/session shell needed here.
-- Chucao timer scenery, flying animation, completion sound, and final identity assets. The owner-created chucao resources remain a visual dependency for the corresponding views, but their absence does not change this functional boundary.
-- Public release, production privacy publication, provider/legal review completion, and production deployment evidence.
-
-**Data and effects:** This slice creates or reads the authenticated user linkage, account-level language preference as needed, and user-owned list records. It must not expose another account's records, infer ownership from email, or create concepts, rounds, or practice data.
-
-**Dependencies and readiness:**
-
-- Existing evidence: Google OAuth configuration, PKCE client, session observation, local sign-in/sign-out proof, Supabase local configuration, React/Vite/Mantine/Comfortaa setup.
-- Implemented work: domain migration for the minimum user/list data, ownership
-  path, RLS policies, trusted validation, frontend shell/list interaction, and
-  Spanish/English resources.
-- The architecture already establishes Supabase PostgreSQL as the source of truth, Auth UUID ownership, deny-by-default authorization intent, versioned migrations, and local Docker development.
-- The repository now contains the VS-01 list schema, domain migration, RLS
-  policy, and list UI; the completed local evidence is the dependency for later
-  slices, not a claim that the broader product is complete.
-- Local development can use synthetic accounts/data. Public registration remains blocked until the privacy notice, provider review, deletion/retention procedure, and release evidence required by the global plan are complete.
-- The requested owner-created chucao assets are not required to specify the private-list behavior, but final identity presentation must wait for the corresponding resources.
-
-**Affected layers and components:** The slice crosses the browser shell and responsive layout, Google/Supabase Auth, session and locale state, list form/display interaction, Supabase API/PostgreSQL persistence, migrations, RLS, and error handling. It reuses the existing `src/lib/supabase.ts`, `src/App.tsx` authentication proof, Mantine provider, Comfortaa setup, and local Supabase configuration. It does not introduce a separate application server or a second client.
-
-**Activated shared criteria and controls:**
-
-- **Q01/Q02:** Loading, empty, success, failure, retry, reload, duplicate-submit, validation, and persistence states must be truthful and must not duplicate lists.
-- **Q03:** Keyboard operation, visible focus, labels, contrast, zoom, touch targets, responsive layouts, and language changes apply to the access and list shell.
-- **Q04:** List reads and writes must remain usable for representative personal-scale data without unbounded client work.
-- **Q05/Q06:** Local setup, migrations, build/lint checks, actionable errors, and documentation alignment are required for slice completion.
-- **SEC01/SEC04:** Client input and direct Supabase requests cannot bypass list limits, ownership, or allowed operations; unauthenticated and cross-user access must be rejected.
-- **SEC05–SEC07:** Google-only registration/session behavior, provider configuration, public-registration exposure, and abuse assumptions must be deliberate before public use.
-- **SEC08/SEC10:** List input/service limits and absence of privileged secrets in the browser must be checked.
-- **WEB02–WEB04:** Direct/deep route behavior, meaningful page language/title/heading metadata, favicon handling, and accessible image identity must be considered; the final chucao asset remains pending.
-- **DP01–DP03 and DP08–DP13:** Account, provider, purpose, notice, privacy, ownership, retention, and deletion boundaries must be represented before real user data or public registration. Local testing uses synthetic data.
-
-**Demonstration scenario:**
-
-1. Start local Vite and Supabase services with a development Google OAuth account configured for the documented callback.
-2. Open Chucao without a session and verify the loading-to-access transition, language selection, privacy link, and retryable Google error state.
-3. Sign in as user A, create a list named `Anatomía`, and verify a confirmed success state followed by the list in the authenticated list view.
-4. Reload the page and verify that user A still sees `Anatomía`; open the app from a second supported browser/device with the same account and verify the same result.
-5. Sign in as user B and verify that user A's list is neither returned nor accessible through a direct request or guessed identifier.
-6. Attempt an empty, over-limit, duplicate, unauthenticated, and repeated submission case and verify understandable rejection without a duplicate or unauthorized record.
-
-The scenario demonstrates persistence and ownership, not only visual rendering. Production provider/legal and full browser-matrix evidence remain publication checks rather than local-slice evidence.
-
-**Closure state and follow-ups:** VS-01 is closed for its validated local
-scope. The complete requirements, task states, validation matrix, and closure
-evidence are recorded in
-`specs/001-account-and-first-private-list/spec.md`,
-`specs/001-account-and-first-private-list/tasks.md`, and
-`temp/evidence/vs-01/evidence.md`. Production configuration, provider/legal
-publication, and real-user activation remain release work and are not implied
-by this closure.
-
-### Selected slice — VS-02 Concept management
-
-**Slice status:** **Closed for validated local VS-02 scope (2026-11-17).**
-Implementation tasks T01–T09 are complete. The local slice delivers persisted
-concept entry, batch review, detail, editing, deletion, localization, privacy
-copy, and ownership controls. My Lists cards show the agreed static
-`0/<active concept count>` indicator; this does not implement practice tracking.
-
-**Validation boundary:** The user accepted a documented local closure exception
-for CHECK-08/NFR-03. A 500-row local database retrieval completed in 1.181 ms
-of database execution time; the workload was selected after implementation,
-and browser rendering measurement was waived. No browser or production
-performance pass is claimed. Details are in
-`specs/002-concept-management/tasks.md`. This exception does not leave VS-02
-pending and does not claim publication readiness.
-
-**Specification:** Closed at `specs/002-concept-management/spec.md` for the
-validated local scope described above.
-
-**User outcome:** An authenticated person opens one of their private lists,
-adds a concept individually or pastes a batch, reviews which entries are
-accepted or rejected, and then sees, edits, or deletes the persisted concepts.
-The list remains usable after reload, and another account cannot read or
-change those concepts.
+**User outcome:** An authenticated person can progress through a private
+list's current round by marking a pending concept seen or drawing one uniformly
+at random, see the selected concept and its order, return it to pending when
+needed, and begin a fresh round while retaining the prior round's appearances.
 
 **Capabilities covered:**
 
-- **CAP-03:** Full concept-management scope for stable concept identity,
-  required title, optional description, individual entry, pasted batch entry,
-  edit, and delete. Round appearance, selection, and practice records remain
-  outside this slice.
-- **CAP-09:** The next responsive and keyboard-usable content-management
-  experience in the supported PC and Android browser targets.
-- **CAP-10:** Partial persistence scope for account-owned concepts across
-  reloads and supported devices; round and practice history are deferred.
+- **CAP-04:** Current-round pending/seen state, manual appearance, random
+  selection, appearance order/origin, return-to-pending, and a new round with
+  history retained.
+- **CAP-10:** Extend account-owned persistence to rounds and appearances so
+  current progress is available after reload and across the same user's
+  supported devices; active timer/session synchronization remains excluded.
 
-**Included scope:**
+**Included scope:** Enter List Detail for an owned list; show empty, pending,
+seen, exhausted, and current-round progress states; manually mark pending
+concepts seen; draw only from pending concepts with equal eligibility; show a
+confirmed draw result with description hidden; return a seen concept to pending
+without erasing prior appearances; confirm or cancel a new round; reset active
+concept progress while preserving closed-round appearance history. Failed,
+repeated, and concurrent operations must not falsely show a result, consume an
+extra concept, or corrupt order/history. Persist only the minimum round and
+appearance data required by these behaviors, privately under the authenticated
+owner. Existing concept management and shared authenticated shell remain
+available.
 
-- Enter List Detail from an owned list and distinguish an empty list from a
-  list containing concepts. Non-empty My Lists cards show a static practiced
-  count of zero over the active concept count until practice tracking exists.
-- Add one concept with a required trimmed title of 1–50 characters and an
-  optional trimmed description of up to 2,000 characters.
-- Paste a bounded batch of lines beginning with `-`; support the optional
-  `- Title : Description` form, preserve input order, and show accepted and
-  omitted lines with understandable reasons before confirmation.
-- Reject empty, malformed, over-limit, and exact case-sensitive duplicate
-  titles within the same list, including duplicates already stored and
-  duplicates within the current paste.
-- Confirm accepted entries atomically enough that a failed save does not report
-  success or silently duplicate concepts; preserve entered content for retry.
-- Display persisted concepts, open a concept for its title and description,
-  edit either field without changing identity, and delete after an explicit
-  explanation/confirmation.
-- Make active concepts begin in the pending state required by VS-03, while
-  keeping the state transition itself outside this slice.
-- Provide truthful loading, empty, processing, success, validation, failure,
-  retry, discard-unsaved-work, and expired-session states in Spanish and
-  English. User-authored titles and descriptions remain unchanged.
-- Enforce title/description limits, ownership, allowed fields, and deletion
-  behavior at the trusted Supabase/database boundary, not only in the browser.
+**Deferred scope:** Timed or independent practice, animation/sound, practice
+notes and history/rating views, list rename/delete and advanced organization,
+bulk mark-as-seen, cross-device active operation/session synchronization,
+publication, and release-wide browser validation. Practice entry may remain a
+future action; this slice does not create a practice record or timer state.
 
-**Deferred scope:** Random or manual selection, appearance order, rounds,
-progress, return-to-pending, bulk mark-as-seen actions, practice, notes,
-history views, ratings, timer behavior, and advanced list organization
-(rename/delete/archive/restore/duplicate/search/order). File import/export,
-HTML rendering, sharing, public content, analytics, and any new service are
-also excluded. The technical mechanism for preserving deleted-concept
-references is deferred to the specification and later history slices; the
-product rule that deleted concepts cannot be practiced and appear as
-“Deleted concept” in historical views remains preserved.
+**Dependencies and readiness:** VS-02 is closed for its validated local scope.
+Its concepts have stable UUIDs, list association, active/deleted tombstone
+state, and initial `pending` state in the local migration and trusted RPCs
+(`supabase/migrations/20261117134700_vs02_concept_management.sql`,
+`src/features/concepts/conceptService.ts`). VS-01 provides authenticated
+ownership, RLS conventions, localization, and the responsive shell. No round,
+appearance, draw, or progress persistence is currently present; the slice must
+add the trusted transactional persistence needed for state changes, with safe
+retry/idempotency and ownership checks. Local demonstration can use synthetic
+accounts with Vite and Supabase/Docker. Real-user publication, production
+provider configuration, and legal/privacy release review remain outside this
+selection. Existing VS-02 tombstones preserve a minimum future-history
+reference; exact appearance snapshots and list-deletion/anonymization effects
+must be reconciled with the existing global retention rules in the spec.
 
-**Data and effects:** The slice creates, reads, updates, and deletes
-account-owned concept records linked to an existing list. New records contain
-the user-authored title and optional description plus the initial pending
-state. No round, appearance, practice, note, telemetry, or cross-user data is
-created. Deletion must follow the established retention/history boundary and
-must not expose deleted content through errors, URLs, logs, or client caches.
-
-**Dependencies and readiness:**
-
-- VS-01 is the required dependency and is closed for its validated local
-  scope: authenticated Supabase session, owned lists, local migration flow,
-  RLS boundary, React/Mantine shell, localization, and responsive patterns
-  are available as evidence.
-- The conceptual architecture establishes PostgreSQL as the source of truth,
-  Auth UUID ownership, deny-by-default RLS, trusted validation, and versioned
-  migrations. A concept migration, policies, and service/UI behavior do not
-  yet exist in the repository and are the work of this slice.
-- Product constraints already confirmed in the global plan and FLOW-03 are
-  sufficient to select the slice: title 1–50, description 2,000, exact
-  case-sensitive duplicate detection, initial pending state, and pasted-line
-  syntax. The maximum batch size/processing budget and the precise
-  delete-versus-tombstone mechanism remain specification-level decisions.
-- Local demonstration can use synthetic authenticated accounts and local
-  Supabase/Docker. Public registration, privacy publication, provider/legal
-  review, and production deployment remain release prerequisites rather than
-  blockers for local specification.
-
-**Affected layers and components:** The vertical path is List Detail →
-Add Concepts/Concept Detail interaction → localized form and batch-review
-states → concept service and typed database model → Supabase PostgreSQL
-migration, constraints, RLS, and trusted write operations → persisted reload
-and ownership/error handling. It reuses the authenticated shell, locale
-provider, Mantine/CSS Modules patterns, `ListDetailView`, `listService`,
-`src/lib/supabase.ts`, and the VS-01 migration/RLS conventions. No separate
-application server or client-side authorization shortcut is introduced.
+**Affected layers:** List Detail and a focused draw/result/confirmation UI;
+localized accessible loading, empty, progress, success, failure, retry, and
+confirmation states; typed round/appearance service operations; PostgreSQL
+migrations, constraints, RLS, and trusted atomic operations. Reuse the VS-01/
+VS-02 authenticated shell, list/concept identities, localization, query/cache
+patterns, and migration conventions. No additional provider or application
+server is anticipated.
 
 **Activated shared criteria and controls:**
 
-- **Q01/Q02:** Loading, empty, validation, accepted/omitted, processing,
-  success, retry, reload, duplicate-submit, duplicate-paste, interruption,
-  edit-conflict, and delete-confirmation states must be truthful and must not
-  duplicate or corrupt concepts.
-- **Q03:** Persistent labels, associated errors, keyboard/focus behavior,
-  accessible batch summaries, contrast, zoom, touch targets, responsive
-  layouts, reduced-motion-safe feedback, and Spanish/English expansion apply
-  to the concept views.
-- **Q04/SEC08:** Pasted input, concept counts, field lengths, and service
-  work require explicit bounded limits suitable for realistic personal-scale
-  data; the exact batch budget must be resolved in the specification.
-- **SEC01–SEC03:** Direct requests cannot bypass allowed fields, lengths,
-  ownership, state initialization, or deletion rules; hostile punctuation and
-  HTML-like user text remain plain stored/rendered text.
-- **DP02/DP03/DP10/DP13/DP14:** The specification must inventory concept
-  content and lifecycle, keep it private to the Auth UUID, prevent auxiliary
-  disclosure, and define active deletion/retention behavior before enabling
-  real user content. Local evidence uses synthetic data.
+- **Q01/Q03:** Every round state and action must be understandable, keyboard
+  operable, responsive, and localized; success is shown only after persistence
+  is confirmed.
+- **Q02/Q04, SEC08:** Concurrent draws, repeated submissions, retries,
+  interruptions, and large personal lists must preserve a valid unique order
+  and bounded operation; define realistic list limits or query/resource bounds
+  in the spec if needed.
+- **SEC01/SEC04, DP10:** State transitions and all round/appearance reads and
+  writes are validated at the trusted boundary and isolated by Auth UUID; a
+  second synthetic account must be unable to access or mutate the data.
+- **SEC02/SEC03:** Titles and historical snapshots remain parameterized data
+  and safely rendered as text.
+- **DP02/DP12â€“DP14/DP16:** Inventory generated round/appearance data and its
+  purpose; keep it private, minimize auxiliary disclosure, define retention
+  when concepts/lists are deleted, and ensure displayed progress/history agrees
+  with persisted events. Verify confidentiality/integrity through the local
+  boundary; deployed transport and operational controls remain publication
+  evidence.
 
-**Demonstration scenario:**
+**Demonstration scenario:** Start local Vite and Supabase, then sign in as
+synthetic user A with a list containing three named concepts. Draw until the
+round is exhausted; verify each appears once in persisted appearance order,
+only after a confirmed operation, and reload to confirm seen/pending state and
+history remain. Return one seen concept to pending and verify a subsequent draw
+can select it without deleting the earlier appearance. Cancel a new-round
+confirmation and verify nothing changes; confirm it and verify the old round's
+appearances remain while active concepts become pending in the new round. Retry
+or overlap a draw and verify it cannot consume a second concept; sign in as
+synthetic user B and verify direct reads/writes for A's list/round are rejected.
+The local scenario demonstrates persistence and trusted ownership, not
+production transport or the full supported-browser matrix; those remain
+publication checks.
 
-1. Start local Vite and Supabase services and sign in as synthetic user A.
-2. Open an empty owned list and verify the add-concepts action. Add
-   `Anatomía : órganos y sistemas` individually, reload, and verify the
-   title/description and pending initial state persist.
-3. Paste a batch containing valid lines, a blank/malformed line, an overlong
-   title, an exact duplicate of `Anatomía`, and two duplicate lines in the
-   same block. Verify the review identifies accepted entries and every
-   omission reason before confirmation.
-4. Confirm the batch, verify input order and a success summary, edit one
-   persisted concept, reload, and verify the changed description without a
-   new identity.
-5. Attempt deletion, cancel once, then confirm and verify the concept is no
-   longer active. Trigger a failed/retried save or delete and verify no false
-   success or duplicate record is shown.
-6. Sign in as synthetic user B and verify user A's concepts are absent from
-   list reads and rejected through direct requests or guessed identifiers.
-
-The scenario verifies persisted content and trusted ownership, not only
-rendering. Cross-device and full browser-matrix checks remain publication
-evidence; future history verification must confirm the established deleted
-concept representation once VS-03/VS-05 exist.
-
-**Closure record:** The behavioral decisions are recorded in the closed VS-02
-specification: the batch is limited to 100 lines and 20,000 characters
-including line breaks, stale edits are rejected with a reload-current-version
-path, and deletion uses a logical tombstone that preserves only the minimum
-future-history reference. Technical implementation and local validation
-evidence are recorded in its plan and task matrix. The accepted CHECK-08
-exception is local-only and does not assert browser rendering or production
-performance readiness.
+**Open decisions and readiness for specification:** The selection is ready
+for specification. The spec must resolve transaction/idempotency boundaries
+for ambiguous network outcomes, exact randomization and ordering representation,
+how return-to-pending is represented without rewriting appearances, what a
+new round does to deleted/tombstoned concepts, and how list deletion and
+retention/anonymization interact with appearance snapshots. These are technical
+and lifecycle details bounded by the confirmed FLOW-04 behavior and do not
+block selecting the slice.
 
 ## 9. Proposals and open questions
 
@@ -434,4 +288,6 @@ The following remain proposals rather than approvals: hidden-by-default descript
 | 2026-11-16 | Selected VS-01, Account and first private list, as the first implementation slice. | Delivers the smallest demonstrable private product foundation while activating identity, ownership, persistence, responsive access, and required controls for later slices. |
 | 2026-11-17 | Selected VS-02 Concept management as the next implementation slice. | Extends the validated private-list foundation to a complete persisted concept-management journey while keeping rounds, selection, practice, and history separate. |
 | 2026-11-17 | Closed VS-02 for its validated local scope and aligned the spec, flow, design, and validation evidence with the static `0/active concept count` card indicator. | Records completed local concept management and the user-accepted CHECK-08 browser-measurement exception without claiming publication readiness. |
+| 2026-11-18 | Closed the T10 authenticated-shell extension for local scope after user-confirmed manual review; recorded the shared navigation/preferences, toast, responsive list/concept presentation, and list-create dialog. | Completes the authenticated local UI extension without implying deployment, publication, account deletion, later study views, or release-wide browser conformance. |
+| 2026-11-18 | Selected VS-03 Persistent round and selection as the next implementation slice after VS-02 closure. | Delivers the first persisted study-round journey while keeping timed practice and practice history as separate increments. |
 

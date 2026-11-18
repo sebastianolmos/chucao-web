@@ -7,6 +7,13 @@
   background: var(--chucao-cream);
 }
 
+.footer {
+  margin: 2rem auto 0;
+  color: var(--chucao-brown);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
 .accessShell {
   display: grid;
   align-content: center;
