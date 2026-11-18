@@ -88,9 +88,9 @@
 }
 
 .conceptRow {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: 0.75rem;
   min-width: 0;
   padding: 0.55rem 0.2rem;
@@ -98,7 +98,6 @@
 }
 
 .conceptName {
-  flex: 1 1 auto;
   min-width: 0;
   color: var(--chucao-brown);
   overflow-wrap: anywhere;
@@ -115,6 +114,60 @@
   --button-color: var(--chucao-brown) !important;
   --button-hover-color: var(--chucao-brown) !important;
   --button-bd: 2px solid var(--chucao-brown) !important;
+}
+
+.conceptInfo {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.conceptState {
+  width: fit-content;
+  min-width: 6rem;
+  max-width: 100%;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid var(--chucao-brown);
+  border-radius: 999px;
+  background: var(--chucao-yellow);
+  color: var(--chucao-brown);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.conceptSeen {
+  background: var(--chucao-green);
+}
+
+.conceptActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.markSeenButton,
+.returnPendingButton {
+  min-width: 3.5rem;
+  min-height: 2.75rem;
+  padding-inline: 0.7rem;
+  --button-color: var(--chucao-brown) !important;
+  --button-hover-color: var(--chucao-brown) !important;
+  --button-bd: 2px solid var(--chucao-brown) !important;
+}
+
+.markSeenButton {
+  --button-bg: var(--chucao-green) !important;
+  --button-hover: #b5ed9a !important;
+}
+
+.returnPendingButton {
+  --button-bg: var(--chucao-yellow) !important;
+  --button-hover: #f3ec82 !important;
 }
 
 .addConceptsButton {
@@ -293,7 +346,18 @@
   }
 
   .conceptRow {
+    grid-template-columns: minmax(0, 1fr);
     gap: 0.5rem;
+  }
+
+  .conceptActions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .markSeenButton,
+  .returnPendingButton {
+    flex: 1 1 auto;
   }
 
   .viewConceptButton {

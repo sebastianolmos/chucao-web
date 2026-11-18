@@ -122,7 +122,7 @@ export async function getOwnedLists(userId: string): Promise<ListRow[]> {
 export async function getOwnedConceptCounts(
   userId: string,
   listIds: string[],
-): Promise<Record<string, number>> {
+): Promise<Record<string, { practiced: number; total: number }>> {
   await assertCurrentUser(userId);
 
   if (listIds.length === 0) {
@@ -131,7 +131,7 @@ export async function getOwnedConceptCounts(
 
   const { data, error } = await supabase
     .from('concepts')
-    .select('list_id')
+    .select('list_id, state')
     .in('list_id', listIds)
     .is('deleted_at', null);
 
@@ -139,8 +139,11 @@ export async function getOwnedConceptCounts(
     throw mapSupabaseError(error);
   }
 
-  return data.reduce<Record<string, number>>((counts, concept) => {
-    counts[concept.list_id] = (counts[concept.list_id] ?? 0) + 1;
+  return data.reduce<Record<string, { practiced: number; total: number }>>((counts, concept) => {
+    const progress = counts[concept.list_id] ?? { practiced: 0, total: 0 };
+    progress.total += 1;
+    if (concept.state === 'seen') progress.practiced += 1;
+    counts[concept.list_id] = progress;
     return counts;
   }, {});
 }

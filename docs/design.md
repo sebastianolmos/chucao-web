@@ -162,12 +162,14 @@ The functional behavior and transitions belong to [`docs/app-flow.md`](./app-flo
 | `VIEW-03` List Detail | Short Back control at upper left, centered list title, a bordered scrollable list of concept names with right-aligned View actions, and one Add Concepts action below. |
 | `VIEW-04` Add Concepts | Dialog matching the supplied desktop reference, with Individual/By Batch modes, persistent labels, pasted-batch review, accepted/omitted summary, and clear confirm/cancel hierarchy. |
 | `VIEW-05` Concept Detail | One upper-left Back action to the collection, centered title, aligned description/edit form, centered Edit above Delete actions, and a destructive confirmation dialog; long unspaced text wraps without clipping. |
-| `VIEW-06` Draw Result | Cream dialog over a warm darkened backdrop; concept centered; lilac “Practice” and secondary “Back to list” actions. |
+| `VIEW-06` Draw Result | Cream dialog over a warm darkened backdrop; concept centered; at VS-03 show the secondary “Back to list” action, then add the lilac “Practice” action when VS-04 is delivered. |
 | `VIEW-07` Practice | Concept, forest scene, and clock are dominant. Mobile stacks navigation, scene, concept, clock, controls, and revealable description; PC may place description/notes in a side panel. |
 | `VIEW-08` Practice Closure | Preserve concept context; show satisfaction selector, optional note, save status, and a clear completion action. Independent practice includes an optional free-text concept label before rating/note. |
 | `VIEW-09` History | Practices and rounds sections, visible filters with reset, stacked mobile entries, aligned desktop columns, and explicit distinction between `0` and `Unrated`. |
 | `VIEW-10` Settings | Group language, default duration, sound/volume, reduced motion, and credits/licences by purpose; immediate changes show their result and save state. |
 | `VIEW-11` Account | Show available name/email and “Signed in with Google”; separate sign-out from account deletion; do not show password controls. |
+
+VS-04 adds only timer controls and a concise Credits and Licenses section to the existing authenticated Preferences dialog. It does not introduce the full `VIEW-10` Settings surface; keep the credit content readable, localized, and consistent with the dialog's established visual treatment.
 
 The timer design must reflect the confirmed behavior: duration is configured before starting, time cannot be added after starting, and reload/navigation/abandonment does not recover the active timer.
 
@@ -214,9 +216,9 @@ Resource dependencies:
 |---|---|---|
 | Chucao main/access illustration | Implemented for VS-01 as `src/assets/stand.png` | Reuse for Access and authenticated identity shell; confirm final artwork/rights before publication |
 | Chucao favicon artwork | Implemented for VS-01 as `src/assets/icono.ico` | Reconfirm approved derivative, dimensions, and usage permission before publication |
-| Chucao resting/flight frames | Not confirmed in the web project | Request original transparent frames before implementing animated timer scene |
-| Trunk and forest elements | Existing/source-dependent | Locate Chucao Desktop resources and confirm reuse/credits before implementation |
-| Completion audio | Planned optional resource | Confirm source, licence/credit, loading failure behavior, and reduced-motion independence |
+| Chucao flight frames | `src/assets/fly1.png` and `src/assets/fly2.png`, owner-created and approved for VS-04 (confirmed 2026-11-18) | Use for the timer scene; no separate asset credit required |
+| Trunk/forest element | `src/assets/tronco.png`, owner-created and approved for VS-04 (confirmed 2026-11-18) | Use in the timer scene; no separate asset credit required |
+| Completion audio | `src/assets/chucao.wav`; user-confirmed source: Gabriel Morales, XC870902/xeno-canto, CC BY-NC-SA 4.0; noise reduction and fragment trimming | Include source/license attribution in README and Preferences before distribution; keep sound optional and independent of reduced motion |
 
 ## 7. Accessibility and interaction constraints
 
@@ -246,8 +248,7 @@ library's component styles do not restore the default blue/white treatment.
 |---|---|---|
 | Which exact color variants pass contrast for text, controls, disabled states, and focus indicators? | Determines final semantic tokens and accessible component variants. | Resolve during the design-system/specification pass and verify before UI release. |
 | Does Comfortaa remain readable for long descriptions and notes in both languages? | May require a complementary reading font or adjusted measure/line height. | Resolve with representative content before implementing long-form views. |
-| Which owner-created chucao files are the approved main, favicon, resting, and flight resources? | Blocks final identity, browser icon, and timer animation implementation. | Request and record assets before each dependent view is built. |
-| Which forest/trunk/audio resources may be reused and under what credits? | Affects implementation and public-release readiness. | Resolve before packaging those resources into the web application. |
+| Which owner-created assets are approved for the main/access illustration and favicon? | Affects the existing identity art and browser icon; timer frames and trunk for VS-04 have been confirmed. | Resolve before publication of the affected identity resources. |
 | What exact responsive breakpoints or layout thresholds are needed? | Affects when cards, buttons, panels, and navigation reflow. | Resolve through implementation prototypes and PC/Android checks; do not predefine unnecessary breakpoints now. |
 | Should a complementary icon set be selected if Mantine defaults do not fit the illustrated identity? | Affects consistency of menus, status, and action affordances. | Resolve before building reusable action menus and icon-only controls. |
 | What final compact representation should be used for `0`, `Unrated`, pending, seen, archived, and deleted historical content? | Affects scanability and language clarity across History and list views. | Resolve in the history and concept specifications while preserving the agreed semantics. |
@@ -258,6 +259,7 @@ The following are not open product-behavior decisions here: responsive PC/Androi
 
 | Date | Change | Rationale |
 |---|---|---|
+| 2026-11-18 | Updated VIEW-06 to stage its actions: Return to List at VS-03 and Practice when VS-04 is delivered. | Keeps the visual action hierarchy aligned with the selected slice boundaries without showing an inactive control. |
 | 2026-11-18 | Recorded the validated VS-02/T10 shared navbar, Preferences and list-creation dialogs, list/concept layouts, progress count, footer, and semantic action/hover colors. | Carries reusable visual decisions into future views while keeping later study screens planned and accessibility/release conformance unclaimed. |
 | 2026-11-16 | Created the visual design baseline from `temp/design.md`, the global plan, application flow, quality criteria, and existing Mantine/Comfortaa evidence. | Establishes a shared visual direction without implementing the interface or claiming validation. |
 | 2026-11-16 | Recorded the owner-created chucao asset request for the main presentation, favicon, and flying animation resources. | Prevents placeholder or invented artwork from becoming an unapproved product identity and identifies the assets that block dependent views. |

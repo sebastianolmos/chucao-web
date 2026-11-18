@@ -1,9 +1,10 @@
 import { MantineProvider } from '@mantine/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ListRow } from '../../lib/database.types';
 import i18n from '../../i18n/i18n';
+import { ToastProvider } from '../../app/toasts/ToastProvider';
 import { MyListsView } from './MyListsView';
 import { getOwnedConceptCounts, getOwnedLists } from './listService';
 
@@ -14,16 +15,23 @@ vi.mock('./listService', () => ({
   createPrivateList: vi.fn(),
 }));
 
-const emptyList = { id: 'empty-list', name: 'Vacía' } as ListRow;
-const populatedList = { id: 'full-list', name: 'Biología' } as ListRow;
+const emptyList = { id: 'empty-list', name: 'Empty list' } as ListRow;
+const populatedList = { id: 'full-list', name: 'Biology' } as ListRow;
 
-function renderView(lists: ListRow[], counts: Record<string, number>) {
+function renderView(
+  lists: ListRow[],
+  counts: Record<string, { practiced: number; total: number }>,
+) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   vi.mocked(getOwnedLists).mockResolvedValue(lists);
   vi.mocked(getOwnedConceptCounts).mockResolvedValue(counts);
   return render(
     <QueryClientProvider client={client}>
-      <MantineProvider><MyListsView userId="user-a" onOpenList={vi.fn()} /></MantineProvider>
+      <ToastProvider>
+        <MantineProvider>
+          <MyListsView userId="user-a" onOpenList={vi.fn()} />
+        </MantineProvider>
+      </ToastProvider>
     </QueryClientProvider>,
   );
 }
@@ -33,11 +41,26 @@ describe('MyListsView concept progress', () => {
     await i18n.changeLanguage('es');
   });
 
-  it('shows an empty label only for lists without active concepts', async () => {
-    renderView([emptyList, populatedList], { [emptyList.id]: 0, [populatedList.id]: 4 });
+  it('shows total active concepts and zero progress for an empty list', async () => {
+    renderView([emptyList, populatedList], {
+      [emptyList.id]: { practiced: 0, total: 0 },
+      [populatedList.id]: { practiced: 0, total: 4 },
+    });
 
-    expect(await screen.findByRole('button', { name: /Vacía/ })).toHaveTextContent('Lista vacía');
-    expect((await screen.findByRole('button', { name: /Biología/ })).textContent).toBe('BiologíaConceptos practicados 0/4');
-    expect(screen.getByRole('button', { name: /Biología/ })).not.toHaveTextContent('Lista vacía');
+    expect(await screen.findByRole('button', { name: /Empty list/ }))
+      .toHaveTextContent('Conceptos practicados 0/0');
+    expect(await screen.findByRole('button', { name: /Biology/ }))
+      .toHaveTextContent('Conceptos practicados 0/4');
+  });
+
+  it('shows practiced concepts in the list card progress', async () => {
+    renderView([populatedList], {
+      [populatedList.id]: { practiced: 2, total: 4 },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Biology/ }))
+        .toHaveTextContent('Conceptos practicados 2/4');
+    });
   });
 });

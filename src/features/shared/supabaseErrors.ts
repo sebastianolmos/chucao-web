@@ -13,6 +13,7 @@ export type DomainErrorCode =
   | 'concept_batch_empty'
   | 'concept_conflict'
   | 'concept_not_found'
+  | 'round_action_rejected'
   | 'unresolved'
   | 'unavailable'
   | 'unknown';

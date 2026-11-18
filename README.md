@@ -39,8 +39,12 @@ cuando esté preparada la base del proyecto.
 
 ## Licencia y créditos
 
-El código se distribuye bajo la licencia MIT.
+El proyecto fue creado y desarrollado por **Sebastian Olmos**. El código se distribuye bajo la licencia MIT, con las excepciones indicadas a continuación.
 
-Los recursos de terceros conservan sus respectivas licencias.
-Los recursos gráficos, tipográficos y de audio incorporados se documentarán
-con su autoría, licencia y modificaciones.
+**Tipografía:** Comfortaa © 2011 The Comfortaa Project Authors, bajo la [SIL Open Font License 1.1](https://openfontlicense.org/open-font-license-official-text/).
+
+**Sonido del chucao:** Gabriel Morales — [XC870902, xeno-canto](https://xeno-canto.org/870902), bajo [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+
+**Modificaciones del audio:** reducción de ruido y recorte de fragmentos.
+
+El audio editado y la secuencia audiovisual del temporizador se distribuyen bajo CC BY-NC-SA 4.0 y quedan excluidos de la licencia MIT.

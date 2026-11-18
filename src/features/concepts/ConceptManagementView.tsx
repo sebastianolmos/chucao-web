@@ -1,8 +1,21 @@
 import { Alert, Button, Modal, Text, Title } from '@mantine/core';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ListRow } from '../../lib/database.types';
+import type { RoundCommandResult } from '../rounds/roundService';
+import {
+  drawPendingConcept,
+  loadCurrentRound,
+  markConceptSeen,
+  returnConceptToPending,
+  retryUnresolvedRoundOperation,
+  roundQueryKey,
+  startNewRound,
+} from '../rounds/roundService';
+import { RoundProgressPanel } from '../rounds/RoundProgressPanel';
+import { DrawResultModal } from '../rounds/DrawResultModal';
+import roundStyles from '../rounds/rounds.module.css';
 import { queryClient } from '../../lib/queryClient';
 import { listQueryKey } from '../lists/listService';
 import { DomainServiceError } from '../shared/supabaseErrors';
@@ -30,6 +43,19 @@ function errorKey(error: unknown): string {
   }
 }
 
+function roundErrorKey(error: unknown, context: 'load' | 'action' = 'action'): string {
+  if (!(error instanceof DomainServiceError)) return 'rounds.unavailable';
+  switch (error.code) {
+    case 'unauthenticated': return 'rounds.sessionExpired';
+    case 'unauthorized': return 'rounds.unauthorized';
+    case 'unresolved': return 'rounds.unresolved';
+    case 'round_action_rejected': return 'rounds.actionRejected';
+    case 'unavailable':
+    case 'unknown': return context === 'load' ? 'rounds.unavailable' : 'rounds.actionUnavailable';
+    default: return context === 'load' ? 'rounds.unavailable' : 'rounds.actionUnavailable';
+  }
+}
+
 export function ConceptManagementView({ userId, list, onBack }: Props) {
   const { t } = useTranslation();
   const [mode, setMode] = useState<EntryMode>('individual');
@@ -42,6 +68,118 @@ export function ConceptManagementView({ userId, list, onBack }: Props) {
   const { notify } = useToast();
   const key = conceptQueryKey(userId, list.id);
   const conceptsQuery = useQuery({ queryKey: key, queryFn: () => getOwnedConcepts(userId, list.id) });
+  const roundKey = roundQueryKey(userId, list.id);
+  const roundQuery = useQuery({
+    queryKey: roundKey,
+    queryFn: () => loadCurrentRound(list.id),
+  });
+  const [roundActionError, setRoundActionError] = useState<string | null>(null);
+  const [roundActionStatus, setRoundActionStatus] = useState<string | null>(null);
+  const [roundOperationUnresolved, setRoundOperationUnresolved] = useState(false);
+  const [newRoundOpen, setNewRoundOpen] = useState(false);
+  const [drawResult, setDrawResult] = useState<{ title: string; appearanceOrder: number } | null>(null);
+  const roundFlowBusyRef = useRef(false);
+
+  function handleRoundResult(result: RoundCommandResult) {
+    if (result.status === 'confirmed') {
+      setRoundOperationUnresolved(false);
+      setRoundActionError(null);
+      setRoundActionStatus('rounds.actionSaved');
+    } else if (result.status === 'rejected') {
+      setRoundOperationUnresolved(false);
+      setRoundActionStatus(null);
+      setRoundActionError(roundErrorKey(result.error));
+    } else {
+      setRoundOperationUnresolved(true);
+      setRoundActionStatus(null);
+      setRoundActionError('rounds.unresolved');
+    }
+  }
+
+  const roundActionMutation = useMutation({
+    mutationFn: ({ action, conceptId }: { action: 'mark_seen' | 'return_pending'; conceptId: string }) =>
+      action === 'mark_seen'
+        ? markConceptSeen(list.id, conceptId)
+        : returnConceptToPending(list.id, conceptId),
+    onMutate: () => {
+      setRoundActionError(null);
+      setRoundActionStatus(null);
+    },
+    onSuccess: handleRoundResult,
+    onError: (error) => {
+      setRoundOperationUnresolved(true);
+      setRoundActionStatus(null);
+      setRoundActionError(roundErrorKey(error));
+    },
+  });
+  const roundRetryMutation = useMutation({
+    mutationFn: () => retryUnresolvedRoundOperation(list.id),
+    onSuccess: handleRoundFlowResult,
+    onError: (error) => {
+      setRoundOperationUnresolved(true);
+      setRoundActionStatus(null);
+      setRoundActionError(roundErrorKey(error));
+    },
+    onSettled: () => { roundFlowBusyRef.current = false; },
+  });
+  const roundFlowMutation = useMutation({
+    mutationFn: (action: 'draw' | 'new_round') => action === 'draw'
+      ? drawPendingConcept(list.id)
+      : startNewRound(list.id),
+    onMutate: () => {
+      setRoundActionError(null);
+      setRoundActionStatus(null);
+    },
+    onSuccess: handleRoundFlowResult,
+    onError: (error) => {
+      setRoundOperationUnresolved(true);
+      setRoundActionStatus(null);
+      setRoundActionError(roundErrorKey(error));
+    },
+    onSettled: () => { roundFlowBusyRef.current = false; },
+  });
+  const roundActionsBusy = roundActionMutation.isPending
+    || roundRetryMutation.isPending
+    || roundFlowMutation.isPending;
+
+  function handleRoundFlowResult(result: RoundCommandResult) {
+    handleRoundResult(result);
+    if (result.status !== 'confirmed') return;
+
+    if (result.result.action === 'draw') {
+      if (result.result.outcome === 'applied'
+        && result.result.title !== null
+        && result.result.appearance_order !== null) {
+        setDrawResult({
+          title: result.result.title,
+          appearanceOrder: result.result.appearance_order,
+        });
+      } else if (result.result.outcome === 'exhausted') {
+        setRoundActionStatus('rounds.exhausted');
+      } else if (result.result.outcome === 'applied') {
+        setRoundActionStatus(null);
+        setRoundActionError('rounds.resultUnavailable');
+      }
+      return;
+    }
+
+    if (result.result.action === 'new_round' && result.result.outcome === 'applied') {
+      setNewRoundOpen(false);
+      setRoundActionStatus('rounds.newRoundSaved');
+    }
+  }
+
+  function runRoundFlowAction(action: 'draw' | 'new_round') {
+    if (roundFlowBusyRef.current || roundOperationUnresolved) return;
+    roundFlowBusyRef.current = true;
+    roundFlowMutation.mutate(action);
+  }
+
+  function retryRoundFlowAction() {
+    if (roundFlowBusyRef.current) return;
+    roundFlowBusyRef.current = true;
+    roundRetryMutation.mutate();
+  }
   const createMutation = useMutation({
     mutationFn: createConcept,
     onSuccess: async (result) => {
@@ -129,6 +267,85 @@ export function ConceptManagementView({ userId, list, onBack }: Props) {
             </Button>
             <Title className={styles.listTitle} order={1} id="concept-list-title">{list.name}</Title>
           </header>
+          <RoundProgressPanel
+            pendingCount={conceptsQuery.data.filter((concept) => concept.state === 'pending').length}
+            seenCount={conceptsQuery.data.filter((concept) => concept.state === 'seen').length}
+            isLoading={roundQuery.isPending || roundQuery.isFetching}
+            loadingError={roundQuery.isError ? t(roundErrorKey(roundQuery.error, 'load')) : null}
+            actionError={roundActionError ? t(roundActionError) : null}
+            actionStatus={roundActionStatus ? t(roundActionStatus) : null}
+            busy={roundActionsBusy}
+            unresolved={roundOperationUnresolved}
+            onRetryLoad={() => { void roundQuery.refetch(); }}
+            onRetryAction={retryRoundFlowAction}
+          >
+            <div className={roundStyles.roundActions}>
+              <Button
+                className={roundStyles.drawButton}
+                disabled={!roundQuery.data || roundQuery.isFetching || roundActionsBusy || roundOperationUnresolved
+                  || conceptsQuery.data.every((concept) => concept.state !== 'pending')}
+                onClick={() => runRoundFlowAction('draw')}
+                type="button"
+              >
+                {t('rounds.drawConcept')}
+              </Button>
+              <Button
+                className={roundStyles.newRoundButton}
+                disabled={!roundQuery.data || roundQuery.isFetching || roundActionsBusy || roundOperationUnresolved
+                  || conceptsQuery.data.length === 0}
+                onClick={() => setNewRoundOpen(true)}
+                type="button"
+              >
+                {t('rounds.newRound')}
+              </Button>
+            </div>
+          </RoundProgressPanel>
+          <DrawResultModal
+            appearanceOrder={drawResult?.appearanceOrder ?? 0}
+            onReturn={() => setDrawResult(null)}
+            opened={drawResult !== null}
+            title={drawResult?.title ?? ''}
+          />
+          <Modal
+            centered
+            closeOnClickOutside={false}
+            closeOnEscape={false}
+            onClose={() => setNewRoundOpen(false)}
+            opened={newRoundOpen}
+            withCloseButton={false}
+            title={t('rounds.newRoundTitle')}
+            classNames={{
+              content: roundStyles.roundModalContent,
+              header: roundStyles.roundModalHeader,
+              title: roundStyles.roundModalTitle,
+              body: roundStyles.roundModalBody,
+            }}
+            overlayProps={{ className: roundStyles.roundModalOverlay }}
+          >
+            <div className={roundStyles.newRoundConfirmation}>
+              <Text className={roundStyles.newRoundDescription}>
+                {t('rounds.newRoundDescription')}
+              </Text>
+              <div className={roundStyles.newRoundActions}>
+                <Button
+                  className={roundStyles.newRoundCancelButton}
+                  disabled={roundFlowMutation.isPending || roundOperationUnresolved}
+                  onClick={() => setNewRoundOpen(false)}
+                  type="button"
+                >
+                  {t('rounds.cancelNewRound')}
+                </Button>
+                <Button
+                  className={roundStyles.newRoundConfirmButton}
+                  disabled={roundFlowMutation.isPending || roundOperationUnresolved}
+                  onClick={() => runRoundFlowAction('new_round')}
+                  type="button"
+                >
+                  {t('rounds.confirmNewRound')}
+                </Button>
+              </div>
+            </div>
+          </Modal>
           <div
             aria-label={t('concepts.list')}
             className={styles.conceptScroller}
@@ -141,14 +358,46 @@ export function ConceptManagementView({ userId, list, onBack }: Props) {
               <ul className={styles.conceptList}>
                 {conceptsQuery.data.map((concept) => (
                   <li className={styles.conceptRow} key={concept.id}>
-                    <span className={styles.conceptName}>{concept.title}</span>
-                    <Button
-                      className={styles.viewConceptButton}
-                      onClick={() => setSelectedConceptId(concept.id)}
-                      type="button"
-                    >
-                      {t('concepts.viewOne')}
-                    </Button>
+                    <div className={styles.conceptInfo}>
+                      <span className={styles.conceptName}>{concept.title}</span>
+                      <Text
+                        className={`${styles.conceptState} ${concept.state === 'seen' ? styles.conceptSeen : ''}`}
+                        data-round-state
+                      >
+                        {concept.state === 'pending' ? t('rounds.pending') : t('rounds.seen')}
+                      </Text>
+                    </div>
+                    <div className={styles.conceptActions}>
+                      <Button
+                        aria-label={t('conceptDetail.viewConcept', { title: concept.title })}
+                        className={styles.viewConceptButton}
+                        onClick={() => setSelectedConceptId(concept.id)}
+                        type="button"
+                      >
+                        {t('concepts.viewOne')}
+                      </Button>
+                      {concept.state === 'pending' ? (
+                        <Button
+                          aria-label={t('rounds.markSeenForConcept', { title: concept.title })}
+                          className={styles.markSeenButton}
+                          disabled={!roundQuery.data || roundActionsBusy || roundOperationUnresolved}
+                          onClick={() => roundActionMutation.mutate({ action: 'mark_seen', conceptId: concept.id })}
+                          type="button"
+                        >
+                          {t('rounds.markSeen')}
+                        </Button>
+                      ) : (
+                        <Button
+                          aria-label={t('rounds.returnToPendingForConcept', { title: concept.title })}
+                          className={styles.returnPendingButton}
+                          disabled={!roundQuery.data || roundActionsBusy || roundOperationUnresolved}
+                          onClick={() => roundActionMutation.mutate({ action: 'return_pending', conceptId: concept.id })}
+                          type="button"
+                        >
+                          {t('rounds.returnToPending')}
+                        </Button>
+                      )}
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -162,6 +411,7 @@ export function ConceptManagementView({ userId, list, onBack }: Props) {
             centered
             closeOnClickOutside={false}
             closeOnEscape={false}
+            transitionProps={{ duration: 0 }}
             onClose={closeAddDialog}
             opened={addOpen}
             classNames={{

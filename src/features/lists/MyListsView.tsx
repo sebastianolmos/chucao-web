@@ -160,8 +160,8 @@ export function MyListsView({ userId, onOpenList }: MyListsViewProps) {
                   <span className={styles.cardName}>{list.name}</span>
                   <span className={styles.cardProgress}>
                     {t('lists.practiceProgress', {
-                      practiced: 0,
-                      total: conceptCountsQuery.data?.[list.id] ?? 0,
+                      practiced: conceptCountsQuery.data?.[list.id]?.practiced ?? 0,
+                      total: conceptCountsQuery.data?.[list.id]?.total ?? 0,
                     })}
                   </span>
                 </Card>

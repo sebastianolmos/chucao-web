@@ -7,7 +7,7 @@
 **Scope:** General navigation, main user journeys, observable states, transitions, and recovery behavior for the MVP and explicitly described later flows.
 
 **Definition state:** Requirements from the global plan are marked **confirmed**. Additions from `temp/flow.md` that are not in the global plan are marked **proposed** or **open**.  
-**Implementation state:** VS-01 and VS-02 are implemented and validated for local scope, including the T10 authenticated-shell extension. The remaining study journeys below are planned unless explicitly marked otherwise.
+**Implementation state:** VS-01 and VS-02 are implemented and validated for local scope, including the T10 authenticated-shell extension. VS-03 is closed for local scope after T01–T07 implementation and validation within the owner-accepted Chrome/Brave PC and mobile review scope (CL-06); broader release browser review remains VS-07. Later study journeys are planned unless explicitly marked otherwise.
 
 **Sources**
 
@@ -37,14 +37,14 @@ Entry conditions:
 |---|---|---|---|
 | VIEW-01 | Access | Explain Chucao, continue with Google, change language, open privacy information | VS-01 implemented locally; no authenticated navbar |
 | VIEW-02 | My Lists | Shared authenticated navbar; centered title/context, shadowed list cards with practiced/total counts in a scrollable panel, centered Add List action opening a dialog with the list-name form, and developer footer | VS-02 implemented locally; advanced list actions remain planned |
-| VIEW-03 | List Detail | Shared authenticated navbar; short Back action, centered list title, scrollable concept-name rows with View buttons, and one add action | VS-02 implemented locally; draw and round behavior remain planned |
+| VIEW-03 | List Detail | Shared authenticated navbar; short Back action, centered list title, scrollable concept-name rows showing both pending and practiced (seen) concepts with a state label and available state action, View buttons, round progress, and one add action | VS-03 closed locally; status filters remain deferred to VS-06 |
 | VIEW-04 | Add Concepts | Dialog with Individual and By Batch modes, batch review, confirm or cancel | VS-02 implemented and locally validated |
 | VIEW-05 | Concept Detail | One Back action to the concept collection; view, edit, or delete a concept with confirmation and conflict handling | VS-02 implemented and locally validated |
-| VIEW-06 | Draw Result | Show the saved selected concept, practice it, or return to the list | Planned |
+| VIEW-06 | Draw Result | At VS-03 show the confirmed selected concept and appearance order, keep its description hidden, and return to the list; add Practice when VS-04 is delivered | VS-03 closed locally; user-confirmed walkthrough is recorded under CL-06 |
 | VIEW-07 | Practice | Practice with a selected or independent timer, reveal description, pause/resume/restart, adjust pre-start duration, and finish | Planned |
 | VIEW-08 | Practice Closure | Save a completed practice, optional note, and 0–5 satisfaction rating; return, repeat, or draw another | Planned |
 | VIEW-09 | History | Browse practices and rounds, filter, and inspect read-only details | Planned |
-| VIEW-10 | Settings | Change language, default duration, sound, volume, and reduced motion; view credits/licenses | Planned; VS-02 adds a Preferences dialog for identity, sign-out, and Privacy |
+| VIEW-10 | Settings | Change language, default duration, sound, volume, and reduced motion; view credits/licenses | Full Settings view remains planned; VS-02 adds the existing Preferences dialog for identity, sign-out, and Privacy, and VS-04 adds timer controls plus a minimal Credits and Licenses section there |
 | VIEW-11 | Account | View Google identity, sign out, or delete the Chucao account | Planned |
 
 Dialogs, confirmations, batch summaries, and expanded notes are interaction states within these views, not separate destinations.
@@ -64,7 +64,7 @@ flowchart TD
     DETAIL -->|Add concepts| ADD[VIEW-04 Add Concepts]
     DETAIL -->|Open concept| CONCEPT[VIEW-05 Concept Detail]
     DETAIL -->|Draw| RESULT[VIEW-06 Draw Result]
-    RESULT -->|Practice| PRACTICE
+    RESULT -->|Practice (VS-04)| PRACTICE
     RESULT -->|Return| DETAIL
     PRACTICE -->|Finish| CLOSE[VIEW-08 Practice Closure]
     CLOSE -->|Save and return| DETAIL
@@ -148,7 +148,7 @@ Navigation changes destination; saving, drawing, marking, deleting, and changing
 
 **Entry:** The person is in List Detail.
 
-1. List Detail shows a scrollable collection of concept names with a View action; Add Concepts opens a dialog with Individual and By Batch modes.
+1. List Detail shows all active concepts in a scrollable collection, including both pending and practiced (seen) concepts. Each row shows its state and available mark/return action alongside View; Add Concepts opens a dialog with Individual and By Batch modes.
 2. Individual accepts a required 1–50 character title and optional description.
 3. By Batch accepts pasted lines beginning with `-`; the optional `- Title : Description` form extracts the description.
 4. Before confirmation, the batch view shows accepted concepts and omitted lines with reasons.
@@ -189,13 +189,17 @@ Navigation changes destination; saving, drawing, marking, deleting, and changing
 3. The trusted operation selects one eligible concept uniformly and records its appearance atomically.
 4. The interface shows a pending state and prevents another draw from the same flow.
 5. On confirmed success, Draw Result shows the concept title with its description hidden.
-6. The person chooses Practice or Return to List.
+6. In VS-03, the person chooses Return to List. Practice becomes available from Draw Result when VS-04 is delivered.
 7. Returning without practicing leaves the concept seen.
 
 **Manual path**
 
 - Marking a pending concept as seen records a manual appearance and moves it to Seen.
+- Practiced/seen concepts remain visible in the same collection, visibly labeled Seen, and are excluded from the pending pool for random draws. My Lists shows practiced/active-concept counts; practicing a concept updates that count.
 - Returning a seen concept to Pending enables it for future draws while preserving previous appearances.
+- A concept added while a round is open joins that round as pending.
+- Concurrent state-changing actions for one list are processed in order against the state current when each is processed; a same-intent retry does not create another appearance.
+- Filtering this collection to All, Pending, or Practiced is deferred to VS-06 Advanced organization; VS-03 does not hide seen concepts by default.
 
 **New-round path**
 
@@ -285,8 +289,9 @@ An incomplete independent timer is never saved. Reloading or leaving it abandons
 
 **Concept and deletion behavior**
 
-- Historical appearances preserve the title snapshot used at the time.
-- Deleted concepts appear as “Deleted concept” and cannot be practiced.
+- Historical appearances preserve the title snapshot used at the time, unless the concept is deleted.
+- When a concept is deleted, replace its displayable historical title with a deletion marker. Historical views show the localized equivalent of “Deleted concept” while preserving appearance order and origin; the deleted title is not disclosed.
+- Deleted concepts cannot be practiced or returned to active rounds.
 - Permanently deleted lists retain only anonymized historical records.
 - A concept manually marked as seen may have no practice.
 
@@ -304,16 +309,19 @@ interface language while retaining the current view. Preferences opens a
 dialog showing the signed-in email, a Privacy entry, and local sign-out.
 Privacy returns to Preferences; sign-out ends the Chucao session and returns
 to Access. Access retains its language and Privacy controls without the
-authenticated navbar. Timer and audio preference controls below remain future
-scope.
+authenticated navbar. VS-04 adds timer controls and a Credits and Licenses
+section to this existing Preferences dialog; it does not add the full Settings
+view.
 
-**Future timer and audio settings (planned)**
+**VS-04 timer and audio preferences**
 
-1. The person opens Settings from private navigation.
-2. Language, default duration, volume, sound, and reduced motion can be changed.
-3. Language changes immediately and preserves the current form, selection, notes, and practice context.
-4. Preferences are saved at account level and are available on supported devices.
-5. Saving shows pending and confirmed states; a failed remote save does not claim success.
+1. The person opens the existing Preferences dialog.
+2. The timer default duration, sound enabled state, volume, and reduced-motion preference can be changed; a 0–100 volume slider uses the agreed logarithmic decibel output scale and a button previews the current sound.
+3. With no saved account preference, the timer defaults to one minute and sound enabled. Reduced motion follows the system preference when available; otherwise the full animation runs.
+4. Preferences are saved at account level and are available on the user's supported devices. An explicit account reduced-motion preference overrides the system value.
+5. Preference changes are saved immediately but apply only to timer sessions entered after the change; they do not change an open timer session.
+6. Saving shows pending and confirmed states; a failed remote save does not claim success. Sound preview does not alter the sound-enabled preference or timer state.
+7. Credits and Licenses presents project, font, and timer-media attribution and links from Preferences.
 
 **Account**
 
@@ -381,6 +389,8 @@ The following are later-scope journeys and should not be treated as MVP commitme
 
 | Date | Change | Rationale |
 |---|---|---|
+| 2026-11-18 | Closed the local VS-03 flow after validation. | Records the implemented list/round/result states while retaining filters for VS-06, Practice for VS-04, and release-wide browser checks for VS-07. |
+| 2026-11-18 | Clarified VS-03 flow: concepts added during an open round join as pending, list mutations are ordered, and Draw Result offers Practice only after VS-04. | Aligns FLOW-04 and VIEW-06 with the selected slice boundary and accepted product decisions. |
 | 2026-11-18 | Closed the local VS-02/T10 flow: list creation opens a name dialog; authenticated navigation, Preferences, Privacy return, locale switching, concept add/view/edit/delete, and toast feedback are recorded as implemented. | Aligns the flow with the user-confirmed local UI while leaving rounds, practice, history, and publication journeys planned. |
 | 2026-11-16 | Created the application-flow baseline from `temp/flow.md`, `docs/global-plan.md`, `docs/architecture.md`, and current authentication evidence. | Establishes navigable MVP journeys without treating every supplied proposal as confirmed. |
 | 2026-11-16 | Reconciled the supplied flow with the current architecture by marking timer interruption/reload recovery and satisfaction ratings as unresolved or proposed where they conflict with confirmed decisions. | Prevents the flow document from silently changing persistence or practice-history scope. |
