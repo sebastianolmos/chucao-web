@@ -1,5 +1,5 @@
 import { MantineProvider } from '@mantine/core';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { I18nextProvider } from 'react-i18next';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Session } from '@supabase/supabase-js';
@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   saveCompletedPractice: vi.fn(),
   loadCurrentRound: vi.fn(),
   authChangeCallback: null as ((event: string, session: Session | null) => void) | null,
+  getSession: vi.fn(),
   locale: {
     locale: 'es' as 'es' | 'en',
     preferenceSyncStatus: 'idle',
@@ -57,10 +58,7 @@ vi.mock('./lib/supabase', () => ({
         mocks.authChangeCallback = callback;
         return { data: { subscription: { unsubscribe: vi.fn() } } };
       },
-      getSession: vi.fn(async () => ({
-        data: { session: { user: { id: 'user-a', email: 'person@example.com' } } },
-        error: null,
-      })),
+      getSession: mocks.getSession,
       signOut: vi.fn(async () => ({ error: null })),
     },
   },
@@ -129,6 +127,10 @@ describe('VIEW-07 application journeys', () => {
     vi.clearAllMocks();
     mocks.locale.locale = 'es';
     mocks.ensureProfile.mockResolvedValue({});
+    mocks.getSession.mockResolvedValue({
+      data: { session: { user: { id: 'user-a', email: 'person@example.com' } } },
+      error: null,
+    });
     mocks.getTimerPreferences.mockResolvedValue({
       defaultDurationMinutes: 1,
       completionSoundEnabled: false,
@@ -144,6 +146,65 @@ describe('VIEW-07 application journeys', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it('opens the About page from authenticated navigation beside History and returns to lists', async () => {
+    renderApp();
+    expect(await screen.findByText('My Lists test fixture')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Acerca de' }));
+    expect(await screen.findByRole('heading', { name: '¿Qué es Chucao?' })).toBeInTheDocument();
+    expect(within(screen.getByRole('navigation', { name: 'Navegación principal' }))
+      .getByRole('button', { name: 'Ir a Mis listas' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Historial' })).toBeInTheDocument();
+    expect(screen.queryByText(/inicia sesi.n con google/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/duplicar una lista copia/i)).toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Navegación principal' }))
+      .getByRole('button', { name: 'Ir a Mis listas' }));
+    expect(await screen.findByText('My Lists test fixture')).toBeInTheDocument();
+  });
+
+  it('shows the translated About content to signed-out visitors without sign-in instructions', async () => {
+    mocks.getSession.mockResolvedValue({ data: { session: null }, error: null });
+    renderApp();
+    fireEvent.click(await screen.findByRole('button', { name: '¿Qué es Chucao?' }));
+    expect(await screen.findByRole('heading', { name: '¿Qué es Chucao?' })).toBeInTheDocument();
+    expect(screen.getByText(/no evalúa si una explicación es correcta/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Continuar con Google' })).not.toBeInTheDocument();
+    expect(screen.getByText(/inicia sesi.n con google/i)).toBeInTheDocument();
+    await act(async () => { await i18n.changeLanguage('en'); });
+    expect(screen.getByRole('heading', { name: 'What is Chucao?' })).toBeInTheDocument();
+    expect(screen.getByText(/does not evaluate whether an explanation is correct/i)).toBeInTheDocument();
+    expect(screen.getByText(/sign in with google/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    expect(await screen.findByRole('button', { name: 'Continue with Google' })).toBeInTheDocument();
+  });
+
+  it('lets signed-out visitors preview and configure the timer without a practice closure or save', async () => {
+    mocks.getSession.mockResolvedValue({ data: { session: null }, error: null });
+    renderApp();
+    fireEvent.click(await screen.findByRole('button', { name: 'Probar temporizador' }));
+    expect(await screen.findByRole('heading', { name: 'Práctica independiente' })).toBeInTheDocument();
+    expect(screen.getByText(/no guarda prácticas, notas ni historial/i)).toBeInTheDocument();
+    expect(screen.queryByRole('spinbutton', { name: 'Duración (minutos)' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Agregar nota y calificación' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /cambiar duración/i }));
+    const duration = screen.getByRole('spinbutton', { name: 'Duración (minutos)' });
+    expect(duration).toHaveValue(1);
+    fireEvent.change(duration, { target: { value: '2' } });
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByRole('button', { name: 'Comenzar' }));
+    expect(screen.getByLabelText('Tiempo restante')).toHaveTextContent('02:00');
+
+    act(() => {
+      vi.setSystemTime(Date.now() + 120_000);
+      vi.advanceTimersByTime(100);
+    });
+    expect(screen.getByRole('status', { name: 'Práctica finalizada' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Agregar nota y calificación' })).not.toBeInTheDocument();
+    expect(mocks.saveCompletedPractice).not.toHaveBeenCalled();
+    fireEvent.click(within(screen.getByRole('region', { name: 'Práctica independiente' }))
+      .getByRole('button', { name: 'Volver' }));
+    expect(screen.getByRole('button', { name: 'Continuar con Google' })).toBeInTheDocument();
   });
 
   it('starts the independent timer and stays or confirms abandonment from active navigation', async () => {

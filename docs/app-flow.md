@@ -37,7 +37,7 @@ Entry conditions:
 
 | ID | Interaction point | Purpose and main actions | State |
 |---|---|---|---|
-| VIEW-01 | Access | Explain Chucao, continue with Google, change language, open privacy information | VS-01 implemented locally; no authenticated navbar |
+| VIEW-01 | Access | Continue with Google, change language, open privacy information, read the Chucao introduction, or try a guest timer | Implemented locally; guest timer is transient and has no save/closure path |
 | VIEW-02 | My Lists | Shared authenticated navbar; centered title/context, Active/Archived collections, localized list search and ordering, shadowed list cards with practiced/total counts in a scrollable panel, list action menu, and Add List action | Implemented locally: core list actions plus VS-06 collections, search/order, rename, duplicate, archive, restore, and confirmed permanent delete |
 | VIEW-03 | List Detail | Shared authenticated navbar; short Back action, centered list title, All/Pending/Practiced filters, scrollable concept rows, round progress, selection and bulk actions. Archived mode shows an archived status and Restore action and is read-only. | Implemented locally: active filters and recoverable bulk actions; archived detail is inspectable and read-only until restore |
 | VIEW-04 | Add Concepts | Dialog with Individual and By Batch modes, batch review, confirm or cancel | VS-02 implemented and locally validated |
@@ -48,6 +48,7 @@ Entry conditions:
 | VIEW-09 | History | Browse/filter read-only practice and round records; opening an independent practice leads to its separate detail state for note maintenance | Implemented locally in VS-05; T11 evidence and accepted verification gap are recorded in its task log |
 | VIEW-10 | Settings | Change language, default duration, sound, volume, and reduced motion; view credits/licenses | Full Settings view remains planned; VS-02 adds the existing Preferences dialog for identity, sign-out, and Privacy, and VS-04 adds timer controls plus a minimal Credits and Licenses section there |
 | VIEW-11 | Account | View Google identity, sign out, or delete the Chucao account | Planned |
+| VIEW-12 | About Chucao | Read what Chucao is for, how to use it, its main features, limits, and private-data model | Implemented locally in VS-06.5; full-page view, bilingual |
 
 Dialogs, confirmations, batch summaries, and expanded notes are interaction states within these views, not separate destinations.
 
@@ -59,6 +60,10 @@ flowchart TD
     SESSION -->|No| ACCESS[VIEW-01 Access]
     SESSION -->|Yes| LISTS[VIEW-02 My Lists]
     ACCESS -->|Continue with Google| AUTH[Google/Supabase Auth]
+    ACCESS -->|What is Chucao?| ABOUT[VIEW-12 About Chucao]
+    ACCESS -->|Try timer| GUEST_TIMER[VIEW-07 guest preview]
+    ABOUT -->|Back| ACCESS
+    GUEST_TIMER -->|Return| ACCESS
     AUTH -->|Success| LISTS
     AUTH -->|Cancel or failure| ACCESS
     LISTS -->|Open list| DETAIL[VIEW-03 List Detail]
@@ -71,6 +76,7 @@ flowchart TD
     PRACTICE -->|Finish| CLOSE[VIEW-08 Practice Closure]
     CLOSE -->|Save and return| DETAIL
     LISTS -->|History| HISTORY[VIEW-09 History]
+    LISTS -->|About| ABOUT
     LISTS -->|Preferences| SETTINGS[VS-02 Preferences dialog]
     SETTINGS -->|Privacy| PRIVACY[Authenticated Privacy]
     LISTS -->|Account/sign out| ACCOUNT[VIEW-11 Account]
@@ -107,6 +113,19 @@ Navigation changes destination; saving, drawing, marking, deleting, and changing
 - No Chucao views exist for password creation, email confirmation, or password recovery.
 
 **Constraints:** SEC05, SEC06, SEC10, DP08, DP09, DP11. The Google account remains separate from the Chucao account lifecycle.
+
+### FLOW-09 — Read About Chucao or preview the timer
+
+**Capability:** CAP-08, CAP-09; reuses CAP-05/CAP-06 timer behavior.
+
+**State:** Implemented locally as the VS-06.5 extra; not a new formal slice.
+
+- On Access, two centered secondary actions sit between Continue with Google and Privacy: **¿Qué es Chucao? / What is Chucao?** and **Probar temporizador / Try the timer**.
+- About opens a full-page explanation in the selected interface language. It describes the product, main study flow, available features, privacy boundary, and timer/session limits. The Access version starts its usage steps with Google sign-in; the authenticated version omits that step and adds detail about independent practice, history, duplication, and archiving. Back returns to the originating safe entry point.
+- Timer preview opens the existing VIEW-07 timer with the default initial duration. The visitor can edit duration before starting and use existing pause, resume, restart, and return controls. Completion remains a transient timer state. No account preferences, concepts, notes, practice closure, save operation, or history are read or written. Return discards the in-memory preview and returns to Access.
+- The view content follows the current interface language. In authenticated navigation, changing language preserves the About destination. Private application views continue to require a valid session.
+
+**Constraints:** Q01/Q03, WEB03/WEB04, and existing DP10 privacy boundary. Guest preview adds no user data processing or persisted state.
 
 ### FLOW-02 — Create and organize a list
 
@@ -417,6 +436,7 @@ The following are later-scope journeys and should not be treated as MVP commitme
 
 | Date | Change | Rationale |
 |---|---|---|
+| 2026-11-19 | Recorded VS-06.5 Access/About and guest timer preview, plus authenticated About navigation before History. | Documents the user-authorized extra as local behavior while keeping guest timer state transient and release-wide browser review in VS-07. |
 | 2026-11-19 | Recorded VS-06 Active/Archived collection actions, read-only restoration flow, concept-state filters, and recoverable bulk outcomes as implemented locally; linked task evidence. | Aligns the flow with T01–T10 local implementation while keeping separate spec validation and release checks visible. |
 | 2026-11-18 | Closed the local VS-03 flow after validation. | Records the implemented list/round/result states while retaining filters for VS-06, Practice for VS-04, and release-wide browser checks for VS-07. |
 | 2026-11-18 | Clarified VS-03 flow: concepts added during an open round join as pending, list mutations are ordered, and Draw Result offers Practice only after VS-04. | Aligns FLOW-04 and VIEW-06 with the selected slice boundary and accepted product decisions. |

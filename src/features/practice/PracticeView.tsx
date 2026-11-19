@@ -28,6 +28,7 @@ export type PracticeViewProps = {
   onStatusChange?: (status: TimerSnapshot['status']) => void;
   onCompleted?: (completion: { id: string; durationMinutes: number; completedAt: string }) => void;
   onContinueToClosure?: () => void;
+  returnLabel?: string;
 };
 
 function readSystemReducedMotion() {
@@ -51,6 +52,7 @@ export function PracticeView({
   onStatusChange,
   onCompleted,
   onContinueToClosure,
+  returnLabel,
 }: PracticeViewProps) {
   const { t } = useTranslation();
   const [snapshotPreferences] = useState(() => ({
@@ -189,7 +191,7 @@ export function PracticeView({
           type="button"
           variant="default"
         >
-          {concept ? t('rounds.returnToList') : t('practice.returnToLists')}
+          {returnLabel ?? (concept ? t('rounds.returnToList') : t('practice.returnToLists'))}
         </Button>
         <h1 id="practice-title">{concept?.title ?? t('practice.title')}</h1>
       </header>

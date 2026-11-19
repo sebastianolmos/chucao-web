@@ -23,6 +23,7 @@ import { PracticeClosureView, type PracticeCompletion } from './features/practic
 import type { PracticePostSaveActions, PracticeRoundAction } from './features/practice/PracticeClosureView';
 import { loadCurrentRound } from './features/rounds/roundService';
 import { HistoryView } from './features/history/HistoryView';
+import { AboutView } from './features/about/AboutView';
 import type { TimerSnapshot } from './features/practice/timerModel';
 import stand from './assets/stand.png';
 import styles from './app/app.module.css';
@@ -52,7 +53,7 @@ type PracticeSession = {
   concept?: Pick<ActiveConceptRow, 'title' | 'description'>;
 };
 
-type AppDestination = 'lists' | 'detail' | 'history' | 'privacy' | 'credits' | 'signOut';
+type AppDestination = 'lists' | 'detail' | 'history' | 'about' | 'privacy' | 'credits' | 'signOut';
 
 function readOAuthError() {
   const url = new URL(window.location.href);
@@ -142,6 +143,9 @@ export default function App() {
   const [authStatus, setAuthStatus] = useState<AuthStatus>('checking_session');
   const [busy, setBusy] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
+  const [guestTimerOpen, setGuestTimerOpen] = useState(false);
+  const [accessAboutOpen, setAccessAboutOpen] = useState(false);
   const [creditsOpen, setCreditsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [preferencesOpen, setPreferencesOpen] = useState(false);
@@ -171,16 +175,18 @@ export default function App() {
   useEffect(() => {
     document.title = t(
       authStatus !== 'authenticated'
-        ? 'app.title'
-        : selectedList
-          ? practiceSession
+        ? accessAboutOpen ? 'app.aboutTitle' : guestTimerOpen ? 'app.practiceTitle' : 'app.title'
+        : aboutOpen
+          ? 'app.aboutTitle'
+          : selectedList
+            ? practiceSession
+              ? 'app.practiceTitle'
+              : 'app.listTitle'
+            : practiceSession
             ? 'app.practiceTitle'
-            : 'app.listTitle'
-          : practiceSession
-            ? 'app.practiceTitle'
-          : 'app.authenticatedTitle',
+            : 'app.authenticatedTitle',
     );
-  }, [authStatus, practiceSession, selectedList, t]);
+  }, [aboutOpen, accessAboutOpen, authStatus, guestTimerOpen, practiceSession, selectedList, t]);
 
   const synchronizeSession = useCallback(async (nextSession: Session | null) => {
     const requestId = syncRequestRef.current + 1;
@@ -188,7 +194,10 @@ export default function App() {
     const nextUserId = nextSession?.user.id ?? null;
     const previousUserId = currentUserIdRef.current;
 
-    if (previousUserId !== null && previousUserId !== nextUserId) {
+    if (previousUserId !== nextUserId) {
+      setGuestTimerOpen(false);
+      setAccessAboutOpen(false);
+      setAboutOpen(false);
       practiceEntryRequestRef.current += 1;
       setPracticeSession(null);
       setPracticeCompletion(null);
@@ -349,6 +358,7 @@ export default function App() {
     setPendingDestination(null);
     setPreferencesOpen(false);
     setPrivacyOpen(destination === 'privacy');
+    setAboutOpen(destination === 'about');
     setCreditsOpen(destination === 'credits');
     setHistoryOpen(destination === 'history');
     if (destination === 'lists') setSelectedList(null);
@@ -599,6 +609,34 @@ export default function App() {
     );
   }
 
+  if (accessAboutOpen && authStatus === 'access') {
+    return (
+      <main className={`${styles.shell} ${styles.privacy}`}>
+        <AboutView onBack={() => setAccessAboutOpen(false)} showSignInStep />
+        <AppFooter />
+      </main>
+    );
+  }
+
+  if (guestTimerOpen && authStatus === 'access') {
+    return (
+      <main className={`${styles.shell} ${styles.privacy}`}>
+        <div className={styles.authenticatedContent}>
+          <p>{t('practice.guestPreview')}</p>
+          <PracticeView
+            initialDurationMinutes={DEFAULT_TIMER_PREFERENCES.defaultDurationMinutes}
+            onReturn={() => setGuestTimerOpen(false)}
+            returnLabel={t('access.backToAccess')}
+            reducedMotion={DEFAULT_TIMER_PREFERENCES.reducedMotion}
+            soundEnabled={DEFAULT_TIMER_PREFERENCES.completionSoundEnabled}
+            soundVolume={DEFAULT_TIMER_PREFERENCES.soundVolume}
+          />
+        </div>
+        <AppFooter />
+      </main>
+    );
+  }
+
   if (authStatus === 'access') {
     return (
       <main className={`${styles.shell} ${styles.accessShell}`}>
@@ -634,9 +672,13 @@ export default function App() {
               {t('access.english')}
             </button>
           </div>
-          <button disabled={busy} onClick={signIn}>
+          <button className={styles.accessGoogleButton} disabled={busy} onClick={signIn}>
             {busy ? t('access.connecting') : t('access.continueWithGoogle')}
           </button>
+          <div className={styles.accessSecondaryActions}>
+            <button onClick={() => setAccessAboutOpen(true)} type="button">{t('access.aboutButton')}</button>
+            <button onClick={() => setGuestTimerOpen(true)} type="button">{t('access.timerPreview')}</button>
+          </div>
           <p>
             <a
               href="#privacy"
@@ -670,6 +712,9 @@ export default function App() {
           <span>Chucao</span>
         </button>
         <nav aria-label={t('navigation.label')} className={styles.navActions}>
+          <button type="button" onClick={() => requestDestination(aboutOpen ? 'lists' : 'about')}>
+            {aboutOpen ? t('navigation.goToLists') : t('about.navTitle')}
+          </button>
           <button type="button" onClick={() => requestDestination(historyOpen ? 'lists' : 'history')}>{historyOpen ? t('navigation.goToLists') : t('navigation.history')}</button>
           <button
             aria-label={t('navigation.changeLanguage')}
@@ -700,7 +745,9 @@ export default function App() {
           </div>
         )}
         {practiceLoading && <p role="status">{t('practice.contextLoading')}</p>}
-        {practiceSession ? practiceCompletion && closureOpen ? (
+        {aboutOpen ? (
+          <AboutView onBack={() => requestDestination('lists')} detailed />
+        ) : practiceSession ? practiceCompletion && closureOpen ? (
           <PracticeClosureView
             completion={practiceCompletion}
             context={practiceSession.concept ? {

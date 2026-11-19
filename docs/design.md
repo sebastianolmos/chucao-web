@@ -47,6 +47,9 @@ Shared visual characteristics:
 - Add List uses the lilac action treatment; View and Edit use cyan. These
   actions use coffee-brown text and a stronger same-hue hover. Destructive
   actions use red tones and remain separately labelled.
+- On Access, Continue with Google uses cyan, the timer preview uses lilac, and
+  the selected language is marked with light orange. Keep these color cues
+  secondary to button labels and the language buttons' pressed state.
 - Rounded typography and generous reading space.
 - Cards that make grouping and progress easy to scan.
 - Nature illustrations used deliberately in access, empty states, and timed practice.
@@ -127,7 +130,7 @@ The request must occur before implementing each dependent view or animation. Do 
 
 ### 4.1. Shared shell
 
-After authentication, every current authenticated view uses a shared navbar. It has the Chucao bird and title at left, which return to My Lists, and a single destination-language toggle plus Preferences button at right. The navbar uses `#fdeab7`, defined by `--chucao-navbar` in `src/index.css`. Preferences opens a dialog with the signed-in email, sign-out, and Privacy entry. Access remains separate and keeps its existing language and privacy controls.
+After authentication, every current authenticated view uses a shared navbar. It has the Chucao bird and title at left, which return to My Lists, an About destination immediately left of History, a destination-language toggle, and Preferences. The navbar uses `#fdeab7`, defined by `--chucao-navbar` in `src/index.css`. Preferences opens a dialog with the signed-in email, sign-out, and Privacy entry. Access remains separate and keeps its existing language and privacy controls.
 
 Keep the authenticated navbar compact on mobile. The Access language selector
 and Privacy entry are centered. Preferences uses a centered bold title, a
@@ -163,7 +166,7 @@ Within `VIEW-05`, place the shared past-practice notes panel directly below the 
 
 | Flow view | Visual composition |
 |---|---|
-| `VIEW-01` Access | Cream surface, chucao identity art, application name, short explanation, one prominent “Continue with Google” action, centered language selector, centered privacy link, and the developer footer. Access remains outside the authenticated navbar. |
+| `VIEW-01` Access | Cream surface, chucao identity art, application name, short explanation, one prominent cyan “Continue with Google” action, then two centered secondary buttons (“¿Qué es Chucao?” and lilac “Probar temporizador” / English equivalents) with clear separation from sign-in, centered privacy link, and developer footer. Mark the selected language button in light orange. Access remains outside the authenticated navbar. |
 | `VIEW-02` My Lists | Shared authenticated navbar above one bordered panel containing centered title/context, Active/Archived collection control, labeled search and sort controls, shadowed list cards with practiced/total counts in an independently scrollable area, card-level less-frequent actions (including duplicate from either collection), and Add List. Preserve existing list card, dialog, and action treatments. |
 | `VIEW-03` List Detail | Short Back control at upper left, centered list title, All/Pending/Practiced filters, a bordered scrollable concept list with visible state and selection indicators, existing View actions, and filter-appropriate bulk actions. Archived mode adds a clear archived status and Restore action; content remains inspectable in read-only mode, with mutation/study actions absent until restore. |
 | `VIEW-04` Add Concepts | Dialog matching the supplied desktop reference, with Individual/By Batch modes, persistent labels, pasted-batch review, accepted/omitted summary, and clear confirm/cancel hierarchy. |
@@ -174,10 +177,13 @@ Within `VIEW-05`, place the shared past-practice notes panel directly below the 
 | `VIEW-09` History | Practices and rounds sections, visible resettable filters (active criteria combine with AND; date range uses inclusive local dates), stacked mobile entries, aligned desktop columns, and explicit distinction between `0` and `Unrated`. History rows and ratings are read-only; deleted concepts retain their historical title with a localized deleted status. Opening an independent practice row leads to a distinct detail state using the same Chucao form/card treatment for note editing/deletion; its rating remains read-only. Legacy null title snapshots use the agreed localized unavailable-title fallback; anonymous round totals are not shown in private History. Implemented locally in VS-05. |
 | `VIEW-10` Settings | Group language, default duration, sound/volume, reduced motion, and credits/licences by purpose; immediate changes show their result and save state. |
 | `VIEW-11` Account | Show available name/email and “Signed in with Google”; separate sign-out from account deletion; do not show password controls. |
+| `VIEW-12` About Chucao | Full-page, readable text surface using established cream/panel colors, brown borders, and responsive reading width; present purpose, how-to steps, feature groups, limits, and privacy. Access includes sign-in as its first usage step; the authenticated version omits that step and adds detail. Guest timer preview reuses VIEW-07 and has no closure/save action. |
 
 VS-04 adds timer controls and a concise Credits and Licenses section to the existing authenticated Preferences dialog. It does not introduce the full `VIEW-10` Settings surface; the credit content remains localized and consistent with the dialog's established visual treatment.
 
 VS-06 implements the VIEW-02 and VIEW-03 extensions in the existing Chucao palette, Comfortaa typography, cream/panel surfaces, coffee-brown borders and offset shadows, card/row actions, modal hierarchy, focus treatment, and mobile stacking. Delivered states include Active/Archived collections, search and sort, filtered empty results, selected concepts and per-item bulk outcomes, and archived read-only detail with Restore. The restore-at-limit message reuses the existing list-limit/error treatment and leaves the archived list unchanged. Focused tests and user-confirmed integrated UI flows are recorded in [`specs/006-advanced-organization/tasks.md`](../specs/006-advanced-organization/tasks.md); this does not claim release-wide accessibility or browser conformance.
+
+The VS-06.5 extra places About and guest timer actions on Access and adds About to the authenticated navbar before History. The informational page reuses the established reading surface; the guest timer reuses VIEW-07's responsive scene and controls while omitting practice-closure actions. This does not claim release-wide browser or accessibility conformance.
 
 The implemented timer design reflects the confirmed behavior: duration is configured before starting, time cannot be added after starting, and reload/navigation/abandonment does not recover the active timer. The forest bird turns at each support and moves continuously between frames; its shadow appears only while flying and sits on the ground, and arrival call marks are brief.
 
@@ -266,6 +272,8 @@ The following are not open product-behavior decisions here: responsive PC/Androi
 
 | Date | Change | Rationale |
 |---|---|---|
+| 2026-11-19 | Set Access action colors to cyan for Google, lilac for timer preview, and light orange for the selected language. | Gives the primary and preview actions distinct cues while preserving text labels and selected-state semantics. |
+| 2026-11-19 | Recorded VS-06.5 Access secondary actions, responsive About reading surface, and authenticated About navigation before History. | Aligns the visual reference with the user-authorized extra while keeping accessibility and browser conformance review in VS-07. |
 | 2026-11-18 | Recorded VIEW-07's implemented timer/forest presentation and closed VS-04 visual decisions, including inline duration editing, the unraised clock affordance, continuous bird travel, support turns, grounded flight shadow, and brief arrival cue. | Documents the delivered local design while retaining broad accessibility and release conformance review for VS-07. |
 | 2026-11-18 | Defined the planned VS-05 closure and History presentation: explicit save with no automatic redirect, context-aware next actions, read-only History rows/ratings, and a separate independent-practice detail state for note actions. | Extends the implemented Chucao design language to the accepted practice/history journey without changing existing screens. |
 | 2026-11-19 | Recorded VIEW-08/09 and associated/deleted-concept note panels as implemented locally in VS-05. The user confirmed manual app review; browser runtime privacy inspection was omitted by user decision and remains unverified. | Aligns design status with the delivered local views while keeping accessibility and release validation distinct. |
