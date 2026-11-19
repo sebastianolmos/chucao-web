@@ -2,7 +2,7 @@
 
 ## 1. Status, scope, and references
 
-**Status:** Visual baseline and VS-01–VS-05 views implemented for local scope; release-wide visual/accessibility review remains pending
+**Status:** Visual baseline and VS-01–VS-06 views implemented for local scope; release-wide visual/accessibility review remains pending
 **Date:** 2026-11-19
 **Scope:** Shared visual direction, foundations, interface composition, reusable components, interaction states, accessibility constraints, and visual resources for the MVP study journey.
 
@@ -164,8 +164,8 @@ Within `VIEW-05`, place the shared past-practice notes panel directly below the 
 | Flow view | Visual composition |
 |---|---|
 | `VIEW-01` Access | Cream surface, chucao identity art, application name, short explanation, one prominent “Continue with Google” action, centered language selector, centered privacy link, and the developer footer. Access remains outside the authenticated navbar. |
-| `VIEW-02` My Lists | Shared authenticated navbar above one bordered panel containing centered title/context, shadowed list-name cards with practiced/total counts in an independently scrollable area, and a centered Add List action that opens a dialog styled like Add Concepts. A simple developer credit appears in the app footer. |
-| `VIEW-03` List Detail | Short Back control at upper left, centered list title, a bordered scrollable list of concept names with right-aligned View actions, and one Add Concepts action below. |
+| `VIEW-02` My Lists | Shared authenticated navbar above one bordered panel containing centered title/context, Active/Archived collection control, labeled search and sort controls, shadowed list cards with practiced/total counts in an independently scrollable area, card-level less-frequent actions (including duplicate from either collection), and Add List. Preserve existing list card, dialog, and action treatments. |
+| `VIEW-03` List Detail | Short Back control at upper left, centered list title, All/Pending/Practiced filters, a bordered scrollable concept list with visible state and selection indicators, existing View actions, and filter-appropriate bulk actions. Archived mode adds a clear archived status and Restore action; content remains inspectable in read-only mode, with mutation/study actions absent until restore. |
 | `VIEW-04` Add Concepts | Dialog matching the supplied desktop reference, with Individual/By Batch modes, persistent labels, pasted-batch review, accepted/omitted summary, and clear confirm/cancel hierarchy. |
 | `VIEW-05` Concept Detail | One upper-left Back action to the collection, centered title, aligned description/edit form, centered Edit above Delete actions, and a destructive confirmation dialog; long unspaced text wraps without clipping. |
 | `VIEW-06` Draw Result | Cream dialog over a warm darkened backdrop; concept centered; show the secondary “Back to list” action and lilac “Practice” action to open associated VIEW-07. |
@@ -176,6 +176,8 @@ Within `VIEW-05`, place the shared past-practice notes panel directly below the 
 | `VIEW-11` Account | Show available name/email and “Signed in with Google”; separate sign-out from account deletion; do not show password controls. |
 
 VS-04 adds timer controls and a concise Credits and Licenses section to the existing authenticated Preferences dialog. It does not introduce the full `VIEW-10` Settings surface; the credit content remains localized and consistent with the dialog's established visual treatment.
+
+VS-06 implements the VIEW-02 and VIEW-03 extensions in the existing Chucao palette, Comfortaa typography, cream/panel surfaces, coffee-brown borders and offset shadows, card/row actions, modal hierarchy, focus treatment, and mobile stacking. Delivered states include Active/Archived collections, search and sort, filtered empty results, selected concepts and per-item bulk outcomes, and archived read-only detail with Restore. The restore-at-limit message reuses the existing list-limit/error treatment and leaves the archived list unchanged. Focused tests and user-confirmed integrated UI flows are recorded in [`specs/006-advanced-organization/tasks.md`](../specs/006-advanced-organization/tasks.md); this does not claim release-wide accessibility or browser conformance.
 
 The implemented timer design reflects the confirmed behavior: duration is configured before starting, time cannot be added after starting, and reload/navigation/abandonment does not recover the active timer. The forest bird turns at each support and moves continuously between frames; its shadow appears only while flying and sits on the ground, and arrival call marks are brief.
 
@@ -267,6 +269,7 @@ The following are not open product-behavior decisions here: responsive PC/Androi
 | 2026-11-18 | Recorded VIEW-07's implemented timer/forest presentation and closed VS-04 visual decisions, including inline duration editing, the unraised clock affordance, continuous bird travel, support turns, grounded flight shadow, and brief arrival cue. | Documents the delivered local design while retaining broad accessibility and release conformance review for VS-07. |
 | 2026-11-18 | Defined the planned VS-05 closure and History presentation: explicit save with no automatic redirect, context-aware next actions, read-only History rows/ratings, and a separate independent-practice detail state for note actions. | Extends the implemented Chucao design language to the accepted practice/history journey without changing existing screens. |
 | 2026-11-19 | Recorded VIEW-08/09 and associated/deleted-concept note panels as implemented locally in VS-05. The user confirmed manual app review; browser runtime privacy inspection was omitted by user decision and remains unverified. | Aligns design status with the delivered local views while keeping accessibility and release validation distinct. |
+| 2026-11-19 | Recorded VS-06 VIEW-02/03 organization states as implemented locally and linked the task evidence. | Aligns the design reference with delivered collection actions, archived read-only detail, filters, and recoverable bulk feedback while keeping release accessibility/browser review separate. |
 | 2026-11-18 | Updated VIEW-06 to stage its actions: Return to List at VS-03 and Practice when VS-04 is delivered. | Keeps the visual action hierarchy aligned with the selected slice boundaries without showing an inactive control. |
 | 2026-11-18 | Recorded the validated VS-02/T10 shared navbar, Preferences and list-creation dialogs, list/concept layouts, progress count, footer, and semantic action/hover colors. | Carries reusable visual decisions into future views while keeping later study screens planned and accessibility/release conformance unclaimed. |
 | 2026-11-16 | Created the visual design baseline from `temp/design.md`, the global plan, application flow, quality criteria, and existing Mantine/Comfortaa evidence. | Establishes a shared visual direction without implementing the interface or claiming validation. |

@@ -27,6 +27,7 @@ import { queryClient } from '../../lib/queryClient';
 import {
   drawPendingConcept,
   getRoundRecoveryStorageKey,
+  loadCurrentRoundReadOnly,
   retryUnresolvedRoundOperation,
 } from './roundService';
 
@@ -64,6 +65,27 @@ describe('roundService recovery envelope', () => {
       error: null,
     } as never);
     vi.stubGlobal('crypto', { randomUUID: vi.fn(() => OPERATION_ID) });
+  });
+
+  it('reads the current round without creating one when the list has no open round', async () => {
+    vi.mocked(supabase.rpc).mockResolvedValue({ data: [], error: null } as never);
+
+    await expect(loadCurrentRoundReadOnly(LIST_ID)).resolves.toBeNull();
+
+    expect(supabase.rpc).toHaveBeenCalledWith('get_current_round_readonly', {
+      p_list_id: LIST_ID,
+    });
+  });
+
+  it('returns the existing open round from the read-only RPC', async () => {
+    const currentRound = {
+      id: 'round-a', list_id: LIST_ID, status: 'open' as const,
+      opened_at: '2026-01-01T12:00:00.000Z', closed_at: null,
+      anonymous_appearance_total: null, created_at: '2026-01-01T12:00:00.000Z',
+    };
+    vi.mocked(supabase.rpc).mockResolvedValue({ data: [currentRound], error: null } as never);
+
+    await expect(loadCurrentRoundReadOnly(LIST_ID)).resolves.toEqual(currentRound);
   });
 
   it('retries a timed out draw with the same UUID and clears the envelope after confirmation', async () => {

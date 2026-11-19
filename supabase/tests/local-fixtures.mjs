@@ -17,20 +17,6 @@ export function requireCondition(condition, message) {
   if (!condition) throw new VerificationError(message)
 }
 
-function deleteSyntheticList(listId) {
-  requireCondition(/^[0-9a-f-]{36}$/i.test(listId), 'Invalid synthetic list identifier')
-  const cli = fileURLToPath(new URL('../../node_modules/supabase/dist/supabase.js', import.meta.url))
-  try {
-    execFileSync(process.execPath, [cli, 'db', 'query', '--output-format', 'json',
-      `delete from public.lists where id = '${listId}'::uuid`], {
-      cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 30_000,
-    })
-  } catch (error) {
-    const code = /\b(?:235\d\d|23\d{3}|42\d{3})\b/.exec(`${error.stderr || ''}\n${error.stdout || ''}`)?.[0]
-    throw new VerificationError(`Synthetic list deletion through local database CLI failed${code ? ` (${code})` : ' (details suppressed)'}`)
-  }
-}
-
 export function inspectPracticeHistoryPagePlan(ownerId) {
   requireCondition(/^[0-9a-f-]{36}$/i.test(ownerId), 'Invalid synthetic history owner identifier')
   const cli = fileURLToPath(new URL('../../node_modules/supabase/dist/supabase.js', import.meta.url))
@@ -154,11 +140,67 @@ export async function withLocalFixtures(run) {
         id, owner_id: users[0], name: `History workload ${index}`, name_normalized: `history workload ${index}`,
       }), 'History workload list fixture')
     }
+    const collectionFixtures = [
+      { key: 'biologyOne', name: 'Biología molecular', created: '2026-01-01T00:00:00Z', updated: '2026-01-03T00:00:00Z' },
+      { key: 'biologyTwo', name: 'BIOLOGIA avanzada', created: '2026-01-01T00:00:00Z', updated: '2026-01-04T00:00:00Z' },
+      { key: 'biologyArchived', name: 'Biología archivada', archived: true, created: '2026-01-01T00:00:00Z', updated: '2026-01-05T00:00:00Z' },
+      { key: 'sortAlpha', name: 'Sort Alpha', created: '2026-01-01T00:00:00Z', updated: '2026-01-03T00:00:00Z' },
+      { key: 'sortBravo', name: 'Sort Bravo', created: '2026-01-01T00:00:00Z', updated: '2026-01-04T00:00:00Z' },
+      { key: 'sortCharlie', name: 'Sort Charlie', created: '2026-01-02T00:00:00Z', updated: '2026-01-03T00:00:00Z' },
+      { key: 'literalSearch', name: "Literal %_ ' OR true --", created: '2026-01-06T00:00:00Z', updated: '2026-01-06T00:00:00Z' },
+    ]
+    const collectionListIds = Object.fromEntries(collectionFixtures.map(({ key }) => [key, randomUUID()]))
+    listIds.push(...Object.values(collectionListIds))
+    requireResult(await admin.from('lists').insert(collectionFixtures.map((fixture) => ({
+      id: collectionListIds[fixture.key], owner_id: users[0], name: fixture.name,
+      name_normalized: fixture.name.trim().toLowerCase(),
+      created_at: fixture.created, updated_at: fixture.updated,
+      archived_at: fixture.archived ? '2026-01-07T00:00:00Z' : null,
+    }))), 'List collection fixtures')
+    const trustedSearchFixture = requireResult(await sessions[0].rpc('create_private_list', {
+      p_name: `Trusted Biología ${runId.slice(0, 8)}`,
+    }), 'Trusted search-key list fixture')
+    listIds.push(trustedSearchFixture.id)
+    requireCondition(trustedSearchFixture.name_search_key === `trusted biologia ${runId.slice(0, 8)}`
+      && trustedSearchFixture.archived_at === null, 'Create RPC did not derive active search state')
+    const archivedCollectionRows = Array.from({ length: 999 }, (_, index) => {
+      const id = randomUUID()
+      listIds.push(id)
+      return {
+        id, owner_id: users[0], name: `Archived workload ${String(index).padStart(4, '0')}`,
+        name_normalized: `archived workload ${String(index).padStart(4, '0')}`,
+        created_at: '2026-01-08T00:00:00Z', updated_at: '2026-01-08T00:00:00Z',
+        archived_at: '2026-01-09T00:00:00Z',
+      }
+    })
+    for (let offset = 0; offset < archivedCollectionRows.length; offset += 200) {
+      requireResult(await admin.from('lists').insert(archivedCollectionRows.slice(offset, offset + 200)), 'Archived list workload fixtures')
+    }
+    const addActiveCapacityFixtures = async () => {
+      const current = requireResult(await admin.from('lists').select('id')
+        .eq('owner_id', users[0]).is('archived_at', null), 'Active capacity count')
+      const remaining = 100 - current.length
+      requireCondition(remaining >= 0, 'Synthetic owner already exceeds the active-list capacity')
+      const rows = Array.from({ length: remaining }, (_, index) => {
+        const id = randomUUID()
+        listIds.push(id)
+        return {
+          id, owner_id: users[0], name: `Active capacity ${String(index).padStart(3, '0')} ${id.slice(0, 8)}`,
+          name_normalized: `active capacity ${String(index).padStart(3, '0')} ${id.slice(0, 8)}`,
+        }
+      })
+      for (let offset = 0; offset < rows.length; offset += 200) {
+        requireResult(await admin.from('lists').insert(rows.slice(offset, offset + 200)), 'Active capacity fixtures')
+      }
+      const verified = requireResult(await admin.from('lists').select('id')
+        .eq('owner_id', users[0]).is('archived_at', null), 'Active capacity readback')
+      requireCondition(verified.length === 100, 'Synthetic active-list fixtures did not reach exactly 100')
+    }
     const activeConceptId = randomUUID()
     const deletedConceptId = randomUUID()
     conceptIds.push(activeConceptId, deletedConceptId)
     requireResult(await admin.from('concepts').insert([
-      { id: activeConceptId, list_id: listIds[0], title: 'Synthetic concept', description: '', state: 'seen', position: 1, deleted_at: null },
+      { id: activeConceptId, list_id: listIds[0], title: 'Synthetic concept', description: 'Synthetic source description', state: 'seen', position: 1, deleted_at: null },
       { id: deletedConceptId, list_id: listIds[0], title: null, description: null, state: 'pending', position: 2, deleted_at: '2026-01-02T12:00:00Z' },
     ]), 'Concept fixtures')
     const workloadConceptIds = [activeConceptId]
@@ -189,6 +231,11 @@ export async function withLocalFixtures(run) {
       { id: activeAppearanceId, round_id: roundId, concept_id: activeConceptId, appearance_order: 1, origin: 'draw', title_snapshot: 'Synthetic concept', concept_deleted: false },
       { id: legacyAppearanceId, round_id: roundId, concept_id: deletedConceptId, appearance_order: 2, origin: 'manual', title_snapshot: null, concept_deleted: true },
     ]), 'Appearance fixtures')
+    requireResult(await admin.from('round_operations').insert({
+      list_id: listIds[0], operation_id: randomUUID(), round_id: roundId,
+      action: 'mark_seen', outcome: 'applied', appearance_id: activeAppearanceId,
+      concept_id: activeConceptId, result_state: 'seen',
+    }), 'Round operation fixture')
     const practiceId = randomUUID()
     practiceIds.push(practiceId)
     requireResult(await admin.from('practices').insert({
@@ -255,13 +302,16 @@ export async function withLocalFixtures(run) {
     }), 'Second owner appearance fixture')
 
     await run({
-      admin, deleteList: deleteSyntheticList,
+      admin,
+      trackList: (id) => listIds.push(id), addActiveCapacityFixtures,
       owner: sessions[0], other: sessions[1], anonymous: client(config.url, config.anonKey),
-      ids: { owner: users[0], other: users[1], list: listIds[0], otherList: listIds[1],
+      ids: { owner: users[0], other: users[1], run: runId, list: listIds[0], otherList: listIds[1],
         round: roundId, otherRound: otherRoundId, activeConcept: activeConceptId, deletedConcept: deletedConceptId,
         tiedRound: tiedRoundId,
         practice: practiceId, otherPractice: otherPracticeId,
         workloadLists: workloadListIds, workloadConcepts: workloadConceptIds,
+        collectionLists: collectionListIds,
+        trustedSearchList: trustedSearchFixture.id,
         activeAppearance: activeAppearanceId, legacyAppearance: legacyAppearanceId },
     })
   } catch (error) {
@@ -283,7 +333,8 @@ export async function withLocalFixtures(run) {
       } catch { cleanupFailed = true; cleanupFailures.push('tracked account deletion failed') }
     }
     for (const [table, column, ids] of [
-      ['profiles', 'id', users], ['lists', 'id', listIds], ['concepts', 'id', conceptIds],
+      ['profiles', 'id', users], ['lists', 'id', listIds], ['list_duplicate_operations', 'owner_id', users],
+      ['concepts', 'id', conceptIds],
       ['practices', 'id', practiceIds], ['practice_notes', 'practice_id', practiceIds],
       ['practice_note_operations', 'practice_id', practiceIds], ['rounds', 'id', roundIds],
       ['round_appearances', 'id', appearanceIds],

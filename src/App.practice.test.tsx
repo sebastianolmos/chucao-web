@@ -79,6 +79,7 @@ vi.mock('./features/lists/MyListsView', () => ({
       <button onClick={() => onOpenList({
         id: 'list-a', owner_id: 'user-a', name: 'Biología', name_normalized: 'biología',
         created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z',
+        archived_at: null,
       })} type="button">Open List fixture</button>
     </div>
   ),
@@ -102,6 +103,7 @@ vi.mock('./features/lists/ListDetailView', () => ({
 const list = {
   id: 'list-a', owner_id: 'user-a', name: 'Biología', name_normalized: 'biología',
   created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z',
+  archived_at: null,
 } as ListRow;
 const concept = {
   id: 'concept-a', list_id: list.id, title: 'Fotosíntesis', description: 'Proceso de las plantas',

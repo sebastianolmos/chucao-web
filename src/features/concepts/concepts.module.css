@@ -103,6 +103,29 @@
   border-bottom: 1px solid rgb(92 45 0 / 70%);
 }
 
+.studyFilters,
+.bulkActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+}
+
+.studyFilters button[aria-pressed='true'] {
+  background: var(--chucao-cyan);
+  box-shadow: 2px 3px 0 var(--chucao-brown);
+  font-weight: 800;
+}
+
+.studyFilters button,
+.bulkActions button {
+  min-height: 2.6rem;
+  border: 2px solid var(--chucao-brown);
+  color: var(--chucao-brown);
+}
+
+
 .conceptName {
   min-width: 0;
   color: var(--chucao-brown);

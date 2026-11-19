@@ -19,7 +19,21 @@ export type ListRow = {
   name_normalized: string;
   created_at: string;
   updated_at: string;
+  archived_at: string | null;
 };
+
+export type ListTableRow = ListRow & {
+  name_search_key: string;
+};
+
+export type ListCollection = 'active' | 'archived';
+
+export type ListSort =
+  | 'name_asc'
+  | 'name_desc'
+  | 'created_newest'
+  | 'created_oldest'
+  | 'modified_newest';
 
 export type ConceptState = 'pending' | 'seen';
 
@@ -191,22 +205,53 @@ export type Database = {
         Relationships: [];
       };
       lists: {
-        Row: ListRow;
+        Row: ListTableRow;
         Insert: {
           id?: string;
           owner_id: string;
           name: string;
           name_normalized: string;
+          name_search_key?: string;
           created_at?: string;
           updated_at?: string;
+          archived_at?: string | null;
         };
         Update: {
           id?: string;
           owner_id?: string;
           name?: string;
           name_normalized?: string;
+          name_search_key?: string;
           created_at?: string;
           updated_at?: string;
+          archived_at?: string | null;
+        };
+        Relationships: [];
+      };
+      list_duplicate_operations: {
+        Row: {
+          owner_id: string;
+          operation_id: string;
+          source_list_id: string;
+          request_fingerprint: string;
+          result_list_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          owner_id: string;
+          operation_id: string;
+          source_list_id: string;
+          request_fingerprint: string;
+          result_list_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          owner_id?: string;
+          operation_id?: string;
+          source_list_id?: string;
+          request_fingerprint?: string;
+          result_list_id?: string | null;
+          created_at?: string;
         };
         Relationships: [];
       };
@@ -375,6 +420,10 @@ export type Database = {
         Args: { p_list_id: string };
         Returns: RoundRow;
       };
+        get_current_round_readonly: {
+          Args: { p_list_id: string };
+          Returns: RoundRow[];
+        };
       save_completed_practice: {
         Args: {
           p_id: string;
@@ -465,7 +514,53 @@ export type Database = {
         Args: {
           p_name: string;
         };
-        Returns: ListRow;
+        Returns: ListTableRow;
+      };
+        rename_private_list: {
+          Args: {
+            p_list_id: string;
+            p_name: string;
+          };
+          Returns: ListTableRow;
+        };
+        archive_private_list: {
+          Args: {
+            p_list_id: string;
+          };
+          Returns: ListTableRow;
+        };
+        restore_private_list: {
+          Args: {
+            p_list_id: string;
+          };
+          Returns: ListTableRow;
+        };
+      duplicate_private_list: {
+        Args: {
+          p_source_list_id: string;
+          p_operation_id: string;
+          p_name: string;
+        };
+        Returns: ListTableRow;
+      };
+      delete_private_list: {
+        Args: {
+          p_list_id: string;
+        };
+        Returns: string;
+      };
+      list_owned_lists: {
+        Args: {
+          p_collection: ListCollection;
+          p_search?: string | null;
+          p_sort?: ListSort;
+          p_cursor_name?: string | null;
+          p_cursor_created_at?: string | null;
+          p_cursor_updated_at?: string | null;
+          p_cursor_id?: string | null;
+          p_page_size?: number;
+        };
+        Returns: ListRow[];
       };
       create_concept: {
         Args: {

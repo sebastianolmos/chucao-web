@@ -10,12 +10,14 @@ type FormValues = {
 
 type ListNameFormProps = {
   disabled: boolean;
+  initialName?: string;
   onSubmit: (rawName: string) => Promise<boolean>;
   onCancel: () => void;
 };
 
 export function ListNameForm({
   disabled,
+  initialName = '',
   onSubmit,
   onCancel,
 }: ListNameFormProps) {
@@ -27,7 +29,7 @@ export function ListNameForm({
     setError,
     formState: { errors },
   } = useForm<FormValues>({
-    defaultValues: { name: '' },
+    defaultValues: { name: initialName },
     mode: 'onSubmit',
   });
 

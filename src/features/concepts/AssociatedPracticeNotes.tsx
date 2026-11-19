@@ -6,9 +6,9 @@ import { listPracticeHistory, type HistoryCursor } from '../history/historyServi
 import { PracticeNoteEditor } from '../practice/PracticeNoteEditor';
 import styles from './concepts.module.css';
 
-type Props = { userId: string; listId: string; activeConceptIds?: string[]; conceptId?: string; deletedConcepts?: boolean };
+type Props = { userId: string; listId: string; activeConceptIds?: string[]; conceptId?: string; deletedConcepts?: boolean; readOnly?: boolean };
 
-export function AssociatedPracticeNotes({ userId, listId, activeConceptIds = [], conceptId, deletedConcepts = false }: Props) {
+export function AssociatedPracticeNotes({ userId, listId, activeConceptIds = [], conceptId, deletedConcepts = false, readOnly = false }: Props) {
   const { t, i18n } = useTranslation();
   const [cursor, setCursor] = useState<HistoryCursor | null>(null);
   const [selectedPracticeId, setSelectedPracticeId] = useState<string | null>(null);
@@ -36,12 +36,12 @@ export function AssociatedPracticeNotes({ userId, listId, activeConceptIds = [],
               {deletedConcepts && <Text className={styles.associatedNoteDeleted}>{t('history.conceptDeleted')}</Text>}
               <Text>{new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium' }).format(new Date(item.completedAt))}</Text>
             </div>
-            <Button className={styles.manageNoteButton} onClick={() => setSelectedPracticeId(item.id)}>{t('practiceNote.manage')}</Button>
+            {!readOnly && <Button className={styles.manageNoteButton} onClick={() => setSelectedPracticeId(item.id)}>{t('practiceNote.manage')}</Button>}
           </li>;
         })}
       </ul>}
       {query.data.hasMore && <Button variant="default" onClick={() => setCursor(query.data.nextCursor)}>{t('history.more')}</Button>}
-      {selectedPracticeId && <PracticeNoteEditor userId={userId} practiceId={selectedPracticeId} onClose={() => setSelectedPracticeId(null)} />}
+      {!readOnly && selectedPracticeId && <PracticeNoteEditor userId={userId} practiceId={selectedPracticeId} onClose={() => setSelectedPracticeId(null)} />}
     </section>
   );
 }

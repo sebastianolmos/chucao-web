@@ -1,8 +1,8 @@
-import { Alert, Button, Modal, Text, Title } from '@mantine/core';
+import { Alert, Button, Checkbox, Modal, Text, Title } from '@mantine/core';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { ListRow } from '../../lib/database.types';
+import type { ActiveConceptRow, ListRow } from '../../lib/database.types';
 import type { RoundActionRequest } from '../lists/ListDetailView';
 import type { RoundCommandResult } from '../rounds/roundService';
 import {
@@ -20,7 +20,7 @@ import roundStyles from '../rounds/rounds.module.css';
 import { queryClient } from '../../lib/queryClient';
 import { listQueryKey } from '../lists/listService';
 import { DomainServiceError } from '../shared/supabaseErrors';
-import { createConcept, createConceptBatch, conceptQueryKey, getOwnedConcepts } from './conceptService';
+import { createConcept, createConceptBatch, conceptQueryKey, deleteConcept, getOwnedConcepts } from './conceptService';
 import { parseConceptBatch, type BatchReview } from './conceptParser';
 import { ConceptEntryForm, type EntryMode } from './ConceptEntryForm';
 import { ConceptBatchReview } from './ConceptBatchReview';
@@ -36,7 +36,19 @@ type Props = {
   onStartPractice: (conceptId: string, roundId?: string | null, appearanceId?: string | null) => void;
   pendingRoundAction?: RoundActionRequest | null;
   onRoundActionRequestHandled?: (requestId: number) => void;
+  archived?: boolean;
 };
+
+type StudyFilter = 'all' | 'pending' | 'practiced';
+type BulkAction = 'delete' | 'mark_seen' | 'return_pending';
+type BulkOutcome = 'completed' | 'failed' | 'changed';
+type BulkItemResult = { id: string; title: string; outcome: BulkOutcome };
+const BULK_TOAST_DURATION_MS = 10_000;
+
+function matchesStudyFilter(concept: ActiveConceptRow, filter: StudyFilter): boolean {
+  return filter === 'all'
+    || (filter === 'pending' ? concept.state === 'pending' : concept.state === 'seen');
+}
 
 function errorKey(error: unknown): string {
   if (!(error instanceof DomainServiceError)) return 'concepts.unavailable';
@@ -65,7 +77,7 @@ function roundErrorKey(error: unknown, context: 'load' | 'action' = 'action'): s
   }
 }
 
-export function ConceptManagementView({ userId, list, onBack, onStartPractice, pendingRoundAction, onRoundActionRequestHandled }: Props) {
+export function ConceptManagementView({ userId, list, onBack, onStartPractice, pendingRoundAction, onRoundActionRequestHandled, archived = false }: Props) {
   const { t } = useTranslation();
   const [mode, setMode] = useState<EntryMode>('individual');
   const [review, setReview] = useState<BatchReview | null>(null);
@@ -75,6 +87,11 @@ export function ConceptManagementView({ userId, list, onBack, onStartPractice, p
   const [selectedConceptId, setSelectedConceptId] = useState<string | null>(null);
   const [showDeletedConceptNotes, setShowDeletedConceptNotes] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [studyFilter, setStudyFilter] = useState<StudyFilter>('all');
+  const [selectedConceptIds, setSelectedConceptIds] = useState<string[]>([]);
+  const [selectionCleared, setSelectionCleared] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [deleteSelection, setDeleteSelection] = useState<string[] | null>(null);
   const { notify } = useToast();
   const key = conceptQueryKey(userId, list.id);
   const conceptsQuery = useQuery({ queryKey: key, queryFn: () => getOwnedConcepts(userId, list.id) });
@@ -82,6 +99,7 @@ export function ConceptManagementView({ userId, list, onBack, onStartPractice, p
   const roundQuery = useQuery({
     queryKey: roundKey,
     queryFn: () => loadCurrentRound(list.id),
+    enabled: !archived,
   });
   const [roundActionError, setRoundActionError] = useState<string | null>(null);
   const [roundActionStatus, setRoundActionStatus] = useState<string | null>(null);
@@ -198,7 +216,7 @@ export function ConceptManagementView({ userId, list, onBack, onStartPractice, p
   }
 
   useEffect(() => {
-    if (!pendingRoundAction || pendingRoundAction.listId !== list.id
+    if (archived || !pendingRoundAction || pendingRoundAction.listId !== list.id
       || handledPostSaveActionRef.current === pendingRoundAction.id
       || conceptsQuery.isPending || conceptsQuery.isFetching
       || roundQuery.isPending || roundQuery.isFetching) return;
@@ -218,6 +236,7 @@ export function ConceptManagementView({ userId, list, onBack, onStartPractice, p
     else setRoundActionStatus('rounds.empty');
   }, [
     conceptsQuery.data,
+    archived,
     conceptsQuery.isError,
     conceptsQuery.isFetching,
     conceptsQuery.isPending,
@@ -256,6 +275,107 @@ export function ConceptManagementView({ userId, list, onBack, onStartPractice, p
     onError: (error) => setBatchError(errorKey(error)),
   });
   const busy = createMutation.isPending || batchMutation.isPending;
+
+  function notifyBulkResults(results: BulkItemResult[]) {
+    for (const result of results) {
+      const outcomeKey = `concepts.bulkOutcome${result.outcome[0].toUpperCase()}${result.outcome.slice(1)}`;
+      const kind = result.outcome === 'failed' ? 'error' : result.outcome === 'changed' ? 'info' : 'success';
+      notify(`${result.title}: ${t(outcomeKey)}`, kind, BULK_TOAST_DURATION_MS);
+    }
+  }
+
+  async function runBulkAction(action: BulkAction, requestedIds?: string[]) {
+    const targetIds = requestedIds ?? (conceptsQuery.data ?? [])
+      .filter((concept) => matchesStudyFilter(concept, studyFilter) && selectedConceptIds.includes(concept.id))
+      .map((concept) => concept.id);
+    if (bulkBusy || targetIds.length === 0) return;
+    setBulkBusy(true);
+    const results: BulkItemResult[] = [];
+    const failedIds: string[] = [];
+    let changed = false;
+    let concepts: ActiveConceptRow[];
+    try {
+      // Refresh from the owner-checked service before each action/retry.
+      concepts = await getOwnedConcepts(userId, list.id);
+    } catch {
+      const failures = targetIds.map((id) => ({ id, title: conceptsQuery.data?.find((item) => item.id === id)?.title ?? '', outcome: 'failed' as const }));
+      notifyBulkResults(failures);
+      setSelectedConceptIds(targetIds);
+      setBulkBusy(false);
+      return;
+    }
+    const current = new Map(concepts.map((concept) => [concept.id, concept]));
+    for (let index = 0; index < targetIds.length; index += 1) {
+      const id = targetIds[index];
+      const concept = current.get(id);
+      const title = concept?.title ?? conceptsQuery.data?.find((item) => item.id === id)?.title ?? '';
+      if (!concept) {
+        results.push({ id, title, outcome: 'changed' });
+        continue;
+      }
+      if ((action === 'mark_seen' && concept.state === 'seen')
+        || (action === 'return_pending' && concept.state === 'pending')) {
+        results.push({ id, title, outcome: 'changed' });
+        continue;
+      }
+      if (action === 'delete') {
+        changed = true;
+        try {
+          const result = await deleteConcept({ userId, listId: list.id, conceptId: id, expectedUpdatedAt: concept.updated_at });
+          if (result.status === 'deleted' || result.status === 'reconciled') results.push({ id, title, outcome: 'completed' });
+          else if (result.status === 'unresolved') {
+            const reconciled = await getOwnedConcepts(userId, list.id).catch(() => null);
+            if (reconciled && !reconciled.some((item) => item.id === id)) results.push({ id, title, outcome: 'completed' });
+            else {
+              results.push({ id, title, outcome: 'failed' }); failedIds.push(id);
+              if (!reconciled) {
+                for (const remainingId of targetIds.slice(index + 1)) {
+                  failedIds.push(remainingId);
+                  results.push({ id: remainingId, title: current.get(remainingId)?.title ?? '', outcome: 'failed' });
+                }
+                break;
+              }
+            }
+          } else { results.push({ id, title, outcome: 'failed' }); failedIds.push(id); }
+        } catch {
+          results.push({ id, title, outcome: 'failed' }); failedIds.push(id);
+        }
+        continue;
+      }
+      changed = true;
+      const command = action === 'mark_seen' ? markConceptSeen : returnConceptToPending;
+      let result: RoundCommandResult;
+      try {
+        result = await command(list.id, id);
+        if (result.status === 'unresolved') result = await retryUnresolvedRoundOperation(list.id);
+      } catch {
+        result = { status: 'unresolved', error: new DomainServiceError('unresolved', 'unresolved') };
+      }
+      if (result.status === 'confirmed' && result.result.outcome === 'applied') {
+        results.push({ id, title, outcome: 'completed' });
+        current.set(id, { ...concept, state: action === 'mark_seen' ? 'seen' : 'pending' });
+      } else {
+        results.push({ id, title, outcome: 'failed' });
+        failedIds.push(id);
+        if (result.status === 'unresolved') {
+          // Do not submit later items until this operation has been reconciled.
+          for (const remainingId of targetIds.slice(index + 1)) {
+            failedIds.push(remainingId);
+            results.push({ id: remainingId, title: current.get(remainingId)?.title ?? '', outcome: 'failed' });
+          }
+          break;
+        }
+      }
+    }
+    notifyBulkResults(results);
+    setSelectedConceptIds(failedIds);
+    setSelectionCleared(false);
+    if (changed) await Promise.all([
+      conceptsQuery.refetch(),
+      queryClient.invalidateQueries({ queryKey: listQueryKey(userId) }),
+    ]);
+    setBulkBusy(false);
+  }
 
   function openAddDialog() {
     setReview(null);
@@ -298,64 +418,89 @@ export function ConceptManagementView({ userId, list, onBack, onStartPractice, p
   if (conceptsQuery.isError) return <section className={styles.view}><Alert color="red" role="alert">{t(errorKey(conceptsQuery.error))}</Alert><Button onClick={() => void conceptsQuery.refetch()}>{t('concepts.retry')}</Button></section>;
 
   const selectedConcept = conceptsQuery.data.find((concept) => concept.id === selectedConceptId) ?? null;
+  const visibleConcepts = conceptsQuery.data.filter((concept) => matchesStudyFilter(concept, studyFilter));
+  const visibleSelectedCount = visibleConcepts.filter((concept) => selectedConceptIds.includes(concept.id)).length;
   async function reloadSelectedConcept() {
     const result = await conceptsQuery.refetch();
     return result.isError ? null : result.data?.find((concept) => concept.id === selectedConceptId) ?? null;
   }
 
   return (
-    <section aria-busy={busy} className={styles.view}>
+    <section aria-busy={busy || bulkBusy} className={styles.view}>
       {selectedConcept ? (
-        <ConceptDetailView userId={userId} listId={list.id} concept={selectedConcept}
+        <ConceptDetailView userId={userId} listId={list.id} concept={selectedConcept} readOnly={archived}
           onClose={() => setSelectedConceptId(null)} onReload={reloadSelectedConcept}
           onDeleted={() => { setSelectedConceptId(null); notify(t('conceptDetail.deleteSuccess')); }} />
       ) : (
         <>
           <header className={styles.listHeader}>
-            <Button className={styles.backButton} variant="default" onClick={onBack}>
+            <Button className={styles.backButton} variant="default" disabled={bulkBusy} onClick={onBack}>
               {t('detail.backShort')}
             </Button>
-            <Button className={styles.deletedNotesButton} variant="default" onClick={() => setShowDeletedConceptNotes((value) => !value)}>
+            <Button className={styles.deletedNotesButton} variant="default" disabled={bulkBusy} onClick={() => setShowDeletedConceptNotes((value) => !value)}>
               {t(showDeletedConceptNotes ? 'practiceNote.backToList' : 'practiceNote.deletedConceptsShort')}
             </Button>
             <Title className={styles.listTitle} order={1} id="concept-list-title">{list.name}</Title>
           </header>
           {showDeletedConceptNotes ? (
-            <AssociatedPracticeNotes userId={userId} listId={list.id} activeConceptIds={conceptsQuery.data.map((concept) => concept.id)} deletedConcepts />
+            <AssociatedPracticeNotes userId={userId} listId={list.id} activeConceptIds={conceptsQuery.data.map((concept) => concept.id)} deletedConcepts readOnly={archived} />
           ) : <>
-          <RoundProgressPanel
+          {!archived && <RoundProgressPanel
             pendingCount={conceptsQuery.data.filter((concept) => concept.state === 'pending').length}
             seenCount={conceptsQuery.data.filter((concept) => concept.state === 'seen').length}
             isLoading={roundQuery.isPending || roundQuery.isFetching}
             loadingError={roundQuery.isError ? t(roundErrorKey(roundQuery.error, 'load')) : null}
-            actionError={roundActionError ? t(roundActionError) : null}
-            actionStatus={roundActionStatus ? t(roundActionStatus) : null}
+            actionError={!archived && roundActionError ? t(roundActionError) : null}
+            actionStatus={!archived && roundActionStatus ? t(roundActionStatus) : null}
             busy={roundActionsBusy}
-            unresolved={roundOperationUnresolved}
+            unresolved={!archived && roundOperationUnresolved}
             onRetryLoad={() => { void roundQuery.refetch(); }}
             onRetryAction={retryRoundFlowAction}
           >
             <div className={roundStyles.roundActions}>
-              <Button
+              {!archived && <Button
                 className={roundStyles.drawButton}
-                disabled={!roundQuery.data || roundQuery.isFetching || roundActionsBusy || roundOperationUnresolved
+                disabled={!roundQuery.data || roundQuery.isFetching || roundActionsBusy || roundOperationUnresolved || bulkBusy
                   || conceptsQuery.data.every((concept) => concept.state !== 'pending')}
                 onClick={() => runRoundFlowAction('draw')}
                 type="button"
               >
                 {t('rounds.drawConcept')}
-              </Button>
-              <Button
+              </Button>}
+              {!archived && <Button
                 className={roundStyles.newRoundButton}
-                disabled={!roundQuery.data || roundQuery.isFetching || roundActionsBusy || roundOperationUnresolved
+                disabled={!roundQuery.data || roundQuery.isFetching || roundActionsBusy || roundOperationUnresolved || bulkBusy
                   || conceptsQuery.data.length === 0}
                 onClick={() => setNewRoundOpen(true)}
                 type="button"
               >
                 {t('rounds.newRound')}
-              </Button>
+              </Button>}
             </div>
-          </RoundProgressPanel>
+          </RoundProgressPanel>}
+          {!archived && <>
+            <div aria-label={t('concepts.studyFilters')} className={styles.studyFilters} role="group">
+              {(['all', 'pending', 'practiced'] as const).map((filter) => (
+                <Button key={filter} aria-pressed={studyFilter === filter} disabled={bulkBusy} variant="default"
+                  onClick={() => {
+                    if (filter !== studyFilter) {
+                      setStudyFilter(filter);
+                      if (selectedConceptIds.length > 0) setSelectionCleared(true);
+                      setSelectedConceptIds([]);
+                    }
+                  }}
+                >{t(`concepts.filter${filter[0].toUpperCase()}${filter.slice(1)}`)}</Button>
+              ))}
+            </div>
+            {visibleSelectedCount > 0 && <div aria-label={t('concepts.bulkActions')} className={styles.bulkActions} role="group">
+              <Text>{t('concepts.selectedCount', { count: visibleSelectedCount })}</Text>
+              <Button className={styles.markSeenButton} disabled={bulkBusy} onClick={() => void runBulkAction('mark_seen')}>{t('concepts.bulkMarkSeen')}</Button>
+              <Button className={styles.returnPendingButton} disabled={bulkBusy} onClick={() => void runBulkAction('return_pending')}>{t('concepts.bulkReturnPending')}</Button>
+              <Button className={styles.deleteConceptButton} disabled={bulkBusy} onClick={() => setDeleteSelection(visibleConcepts.filter((concept) => selectedConceptIds.includes(concept.id)).map((concept) => concept.id))}>{t('concepts.bulkDelete')}</Button>
+            </div>}
+            {selectionCleared && <Text aria-live="polite" role="status">{t('concepts.selectionCleared')}</Text>}
+            {bulkBusy && <Text role="status">{t('concepts.bulkProcessing')}</Text>}
+          </>}
           <DrawResultModal
             appearanceOrder={drawResult?.appearanceOrder ?? 0}
             onReturn={() => setDrawResult(null)}
@@ -390,7 +535,7 @@ export function ConceptManagementView({ userId, list, onBack, onStartPractice, p
               <div className={roundStyles.newRoundActions}>
                 <Button
                   className={roundStyles.newRoundCancelButton}
-                  disabled={roundFlowMutation.isPending || roundOperationUnresolved}
+                  disabled={roundFlowMutation.isPending || roundOperationUnresolved || bulkBusy}
                   onClick={() => setNewRoundOpen(false)}
                   type="button"
                 >
@@ -398,7 +543,7 @@ export function ConceptManagementView({ userId, list, onBack, onStartPractice, p
                 </Button>
                 <Button
                   className={roundStyles.newRoundConfirmButton}
-                  disabled={roundFlowMutation.isPending || roundOperationUnresolved}
+                  disabled={roundFlowMutation.isPending || roundOperationUnresolved || bulkBusy}
                   onClick={() => runRoundFlowAction('new_round')}
                   type="button"
                 >
@@ -415,9 +560,11 @@ export function ConceptManagementView({ userId, list, onBack, onStartPractice, p
           >
             {conceptsQuery.data.length === 0 ? (
               <div className={styles.empty}><Text>{t('concepts.empty')}</Text></div>
+            ) : visibleConcepts.length === 0 ? (
+              <div className={styles.empty}><Text role="status">{t('concepts.filterEmpty', { filter: t(`concepts.filter${studyFilter[0].toUpperCase()}${studyFilter.slice(1)}`) })}</Text></div>
             ) : (
               <ul className={styles.conceptList}>
-                {conceptsQuery.data.map((concept) => (
+                {visibleConcepts.map((concept) => (
                   <li className={styles.conceptRow} key={concept.id}>
                     <div className={styles.conceptInfo}>
                       <span className={styles.conceptName}>{concept.title}</span>
@@ -432,16 +579,17 @@ export function ConceptManagementView({ userId, list, onBack, onStartPractice, p
                       <Button
                         aria-label={t('conceptDetail.viewConcept', { title: concept.title })}
                         className={styles.viewConceptButton}
+                        disabled={bulkBusy}
                         onClick={() => setSelectedConceptId(concept.id)}
                         type="button"
                       >
                         {t('concepts.viewOne')}
                       </Button>
-                      {concept.state === 'pending' ? (
+                      {!archived && (concept.state === 'pending' ? (
                         <Button
                           aria-label={t('rounds.markSeenForConcept', { title: concept.title })}
                           className={styles.markSeenButton}
-                          disabled={!roundQuery.data || roundActionsBusy || roundOperationUnresolved}
+                          disabled={!roundQuery.data || roundActionsBusy || roundOperationUnresolved || bulkBusy}
                           onClick={() => roundActionMutation.mutate({ action: 'mark_seen', conceptId: concept.id })}
                           type="button"
                         >
@@ -451,25 +599,32 @@ export function ConceptManagementView({ userId, list, onBack, onStartPractice, p
                         <Button
                           aria-label={t('rounds.returnToPendingForConcept', { title: concept.title })}
                           className={styles.returnPendingButton}
-                          disabled={!roundQuery.data || roundActionsBusy || roundOperationUnresolved}
+                          disabled={!roundQuery.data || roundActionsBusy || roundOperationUnresolved || bulkBusy}
                           onClick={() => roundActionMutation.mutate({ action: 'return_pending', conceptId: concept.id })}
                           type="button"
                         >
                           {t('rounds.returnToPending')}
                         </Button>
-                      )}
+                      ))}
+                      {!archived && <Checkbox aria-label={t('concepts.selectConcept', { title: concept.title })}
+                        checked={selectedConceptIds.includes(concept.id)} disabled={bulkBusy}
+                        onChange={(event) => {
+                          const checked = event.currentTarget.checked;
+                          setSelectedConceptIds((ids) => checked ? [...ids, concept.id] : ids.filter((id) => id !== concept.id));
+                          setSelectionCleared(false);
+                        }} />}
                     </div>
                   </li>
                 ))}
               </ul>
             )}
           </div>
-          <Button className={styles.addConceptsButton} onClick={openAddDialog} type="button">
+          {!archived && <Button className={styles.addConceptsButton} disabled={bulkBusy} onClick={openAddDialog} type="button">
             {t('concepts.addTitle')}
-          </Button>
+          </Button>}
           </>}
 
-          <Modal
+          {!archived && <Modal
             centered
             closeOnClickOutside={false}
             closeOnEscape={false}
@@ -520,7 +675,21 @@ export function ConceptManagementView({ userId, list, onBack, onStartPractice, p
                 onCancel={closeAddDialog}
               />
             )}
-          </Modal>
+          </Modal>}
+          {!archived && <Modal centered closeOnClickOutside={!bulkBusy} closeOnEscape={!bulkBusy}
+            onClose={() => { if (!bulkBusy) setDeleteSelection(null); }} opened={deleteSelection !== null}
+            classNames={{ content: styles.deleteModalContent, header: styles.deleteModalHeader, title: styles.deleteModalTitle, body: styles.deleteModalBody }}
+            overlayProps={{ className: styles.conceptModalOverlay }} title={t('concepts.confirmBulkDeleteTitle')}>
+            <Text>{t('concepts.confirmBulkDeleteDescription', { count: deleteSelection?.length ?? 0 })}</Text>
+            <div className={styles.modalActions}>
+              <Button className={styles.modalSecondaryButton} variant="default" disabled={bulkBusy} onClick={() => setDeleteSelection(null)}>{t('concepts.cancelBulkDelete')}</Button>
+              <Button className={styles.deleteConfirmButton} disabled={bulkBusy} onClick={() => {
+                const targets = deleteSelection ?? [];
+                setDeleteSelection(null);
+                void runBulkAction('delete', targets);
+              }}>{t('concepts.confirmBulkDelete')}</Button>
+            </div>
+          </Modal>}
         </>
       )}
       {busy && <Text role="status">{t('concepts.processing')}</Text>}

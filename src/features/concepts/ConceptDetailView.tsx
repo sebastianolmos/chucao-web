@@ -32,6 +32,7 @@ type Props = {
   onClose: () => void;
   onReload: () => Promise<ActiveConceptRow | null>;
   onDeleted: () => void;
+  readOnly?: boolean;
 };
 
 function errorKey(error: unknown): string {
@@ -49,7 +50,7 @@ function errorKey(error: unknown): string {
   }
 }
 
-export function ConceptDetailView({ userId, listId, concept, onClose, onReload, onDeleted }: Props) {
+export function ConceptDetailView({ userId, listId, concept, onClose, onReload, onDeleted, readOnly = false }: Props) {
   const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(concept.title);
@@ -199,17 +200,17 @@ export function ConceptDetailView({ userId, listId, concept, onClose, onReload, 
             <Text>{description || t('conceptDetail.noDescription')}</Text>
           </div>
           <Stack className={styles.detailActions} align="center" gap="sm">
-            <Button className={styles.editConceptButton} onClick={beginEdit}>{t('conceptDetail.editConcept')}</Button>
-            <Button className={styles.deleteConceptButton} disabled={saving || deleting} onClick={() => { setDeleteError(null); setDeleteOpen(true); }}>
+            {!readOnly && <Button className={styles.editConceptButton} onClick={beginEdit}>{t('conceptDetail.editConcept')}</Button>}
+            {!readOnly && <Button className={styles.deleteConceptButton} disabled={saving || deleting} onClick={() => { setDeleteError(null); setDeleteOpen(true); }}>
               {t('conceptDetail.deleteConcept')}
-            </Button>
+            </Button>}
           </Stack>
         </Stack>
       )}
 
-      <AssociatedPracticeNotes userId={userId} listId={listId} conceptId={concept.id} />
+      <AssociatedPracticeNotes userId={userId} listId={listId} conceptId={concept.id} readOnly={readOnly} />
 
-      <Modal
+      {!readOnly && <Modal
         opened={deleteOpen}
         onClose={() => { if (!deleting) { setDeleteOpen(false); setDeleteError(null); } }}
         title={t('conceptDetail.deleteConfirmTitle')}
@@ -231,7 +232,7 @@ export function ConceptDetailView({ userId, listId, concept, onClose, onReload, 
             <Button className={styles.deleteConfirmButton} loading={deleting} disabled={deleting} onClick={() => void confirmDelete()}>{t('conceptDetail.confirmDelete')}</Button>
           </Group>
         </Stack>
-      </Modal>
+      </Modal>}
     </section>
   );
 }

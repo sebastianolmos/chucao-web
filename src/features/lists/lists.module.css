@@ -5,6 +5,16 @@
   margin: 0 auto;
 }
 
+.detailRestore {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+  width: min(100%, 56rem);
+  margin: 0 auto 1rem;
+}
+
 .panel {
   display: grid;
   gap: 1.25rem;
@@ -37,23 +47,111 @@
 .listGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  grid-auto-rows: 8rem;
   gap: 1.25rem;
 }
 
-.listCard {
+.collectionControls {
   display: grid;
-  min-height: 6rem;
+  grid-template-columns: minmax(0, 2fr) minmax(12rem, 1fr);
+  gap: 1rem;
+  align-items: end;
+}
+
+.collectionButton {
+  min-height: 2.65rem;
+  border: 2px solid var(--chucao-brown) !important;
+  color: var(--chucao-brown) !important;
+}
+
+.collectionButton[data-selected='true'] {
+  background: var(--chucao-cyan) !important;
+  box-shadow: 3px 3px 0 var(--chucao-brown);
+}
+
+.collectionButton[data-selected='false'] {
+  background: var(--chucao-cream) !important;
+}
+
+.collectionControls input,
+.collectionControls select {
+  border-color: var(--chucao-brown);
+  background: var(--chucao-yellow);
+  color: var(--chucao-brown);
+}
+
+.listCardWrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 1fr;
+  min-width: 0;
+  height: 100%;
+}
+
+.listCard {
+  grid-column: 1;
+  grid-row: 1;
+  display: grid;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
   align-content: center;
   justify-items: center;
   min-width: 0;
-  padding: 1.1rem;
-  border: 2px solid var(--chucao-brown);
+  padding: 2rem 1.1rem 1rem;
+  border: 1.5px solid var(--chucao-brown);
   border-radius: 0.9rem;
   background: var(--chucao-cyan);
-  box-shadow: 4px 5px 0 var(--chucao-brown);
+  box-shadow: none;
   cursor: pointer;
   text-align: center;
   overflow-wrap: anywhere;
+}
+
+.listActionsButton {
+  width: 2rem;
+  height: 2rem;
+  border: 0.75px solid var(--chucao-brown) !important;
+  border-radius: 999px;
+  background: var(--chucao-cream) !important;
+  color: var(--chucao-brown) !important;
+  box-shadow: none !important;
+}
+
+.listActionsOverlay {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: start;
+  justify-self: end;
+  z-index: 2;
+  margin: 0.4rem;
+}
+
+.listActionsButton:hover {
+  background: #f2dfb7 !important;
+}
+
+.actionMenuDropdown {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.4rem;
+  border: 1.5px solid var(--chucao-brown);
+  border-radius: 0.75rem;
+  background: var(--chucao-panel);
+}
+
+.actionMenuDropdown [role='menuitem'] {
+  min-height: 2.25rem;
+  border: 1px solid var(--chucao-brown);
+  border-radius: 0.45rem;
+  color: var(--chucao-brown) !important;
+}
+
+.actionMenuDropdown [role='menuitem']:hover,
+.actionMenuDropdown [role='menuitem']:focus-visible {
+  background: var(--chucao-yellow) !important;
+  color: var(--chucao-brown) !important;
 }
 
 .listCard:hover {
@@ -61,14 +159,20 @@
 }
 
 .cardName {
+  display: -webkit-box;
+  overflow: hidden;
   font-weight: 600;
   overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  transform: translateY(0.35rem);
 }
 
 .cardProgress {
   margin-top: 0.4rem;
   color: var(--chucao-brown);
   font-size: 0.9rem;
+  transform: translateY(0.35rem);
 }
 
 .empty {
@@ -152,7 +256,60 @@
 .createModalTitle {
   color: var(--chucao-brown) !important;
   font-size: 1.35rem;
-  font-weight: 700;
+  font-weight: 800 !important;
+}
+
+.confirmActions {
+  flex-wrap: wrap;
+}
+
+.dialogCancelButton,
+.archiveConfirmButton,
+.deleteConfirmButton,
+.archiveInsteadButton {
+  min-height: 2.5rem;
+  border: 2px solid var(--chucao-brown) !important;
+  color: var(--chucao-brown) !important;
+  font-weight: 600;
+  --button-color: var(--chucao-brown) !important;
+  --button-hover-color: var(--chucao-brown) !important;
+  --button-bd: 2px solid var(--chucao-brown) !important;
+}
+
+.dialogCancelButton {
+  --button-bg: var(--chucao-cream) !important;
+  --button-hover: #f2dfb7 !important;
+}
+
+.dialogCancelButton:hover {
+  background: #f2dfb7 !important;
+}
+
+.archiveConfirmButton {
+  --button-bg: var(--chucao-green) !important;
+  --button-hover: #a9df78 !important;
+}
+
+.archiveConfirmButton:hover {
+  background: #a9df78 !important;
+}
+
+.deleteConfirmButton {
+  --button-bg: var(--chucao-pink) !important;
+  --button-hover: #f5a7a7 !important;
+}
+
+.deleteConfirmButton:hover {
+  background: #f5a7a7 !important;
+}
+
+.archiveInsteadButton {
+  --button-bg: var(--chucao-cyan) !important;
+  --button-hover: #9cecf3 !important;
+}
+
+.archiveInsteadButton:hover {
+  background: #9cecf3 !important;
 }
 
 .createModalBody {
@@ -192,6 +349,10 @@
   }
 
   .listGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .collectionControls {
     grid-template-columns: 1fr;
   }
 }

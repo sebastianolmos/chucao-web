@@ -2,12 +2,12 @@
 
 ## 1. Status, scope, and references
 
-**Status:** Confirmed flow; VS-01–VS-04 implemented for local scope
+**Status:** Confirmed flow; VS-01–VS-06 implemented for local scope
 **Date:** 2026-11-19
 **Scope:** General navigation, main user journeys, observable states, transitions, and recovery behavior for the MVP and explicitly described later flows.
 
 **Definition state:** Requirements from the global plan are marked **confirmed**. Additions from `temp/flow.md` that are not in the global plan are marked **proposed** or **open**.  
-**Implementation state:** VS-01–VS-05 are implemented locally. VS-05 includes explicit practice save, note management, and Practices/Rounds history; its T11 automated/local database evidence and user-confirmed MV-01 review are recorded in [`specs/005-notes-and-history/tasks.md`](../specs/005-notes-and-history/tasks.md). VS-05 is closed for validated local scope. MV-02 runtime browser storage/URL/cache/diagnostic inspection remains unverified by user decision and is not claimed as passed. Broader browser, accessibility, provider, and publication checks remain VS-07.
+**Implementation state:** VS-01–VS-06 are implemented locally. VS-05 includes explicit practice save, note management, and Practices/Rounds history; its T11 automated/local database evidence and user-confirmed MV-01 review are recorded in [`specs/005-notes-and-history/tasks.md`](../specs/005-notes-and-history/tasks.md). VS-06 adds list collection search/order and actions, archived read-only detail with restoration, study-state filters, and recoverable concept bulk actions. Its tasks record focused tests, local database evidence, and user-confirmed integrated UI flows in [`specs/006-advanced-organization/tasks.md`](../specs/006-advanced-organization/tasks.md). VS-06 is closed for validated local scope; this is not release readiness. MV-02 runtime browser storage/URL/cache/diagnostic inspection remains unverified; broader browser, accessibility, provider, and publication checks remain VS-07.
 
 The VS-04 completion and evidence boundary is recorded in [`specs/004-timed-practice-journey/tasks.md`](../specs/004-timed-practice-journey/tasks.md); this local closure does not claim VS-07 release-wide browser or accessibility validation.
 
@@ -38,8 +38,8 @@ Entry conditions:
 | ID | Interaction point | Purpose and main actions | State |
 |---|---|---|---|
 | VIEW-01 | Access | Explain Chucao, continue with Google, change language, open privacy information | VS-01 implemented locally; no authenticated navbar |
-| VIEW-02 | My Lists | Shared authenticated navbar; centered title/context, shadowed list cards with practiced/total counts in a scrollable panel, centered Add List action opening a dialog with the list-name form, and developer footer | VS-02 implemented locally; advanced list actions remain planned |
-| VIEW-03 | List Detail | Shared authenticated navbar; short Back action, centered list title, scrollable concept-name rows showing both pending and practiced (seen) concepts with a state label and available state action, View buttons, round progress, and one add action | VS-03 closed locally; status filters remain deferred to VS-06 |
+| VIEW-02 | My Lists | Shared authenticated navbar; centered title/context, Active/Archived collections, localized list search and ordering, shadowed list cards with practiced/total counts in a scrollable panel, list action menu, and Add List action | Implemented locally: core list actions plus VS-06 collections, search/order, rename, duplicate, archive, restore, and confirmed permanent delete |
+| VIEW-03 | List Detail | Shared authenticated navbar; short Back action, centered list title, All/Pending/Practiced filters, scrollable concept rows, round progress, selection and bulk actions. Archived mode shows an archived status and Restore action and is read-only. | Implemented locally: active filters and recoverable bulk actions; archived detail is inspectable and read-only until restore |
 | VIEW-04 | Add Concepts | Dialog with Individual and By Batch modes, batch review, confirm or cancel | VS-02 implemented and locally validated |
 | VIEW-05 | Concept Detail | One Back action to the concept collection; view, edit, or delete a concept with confirmation and conflict handling | VS-02 implemented and locally validated |
 | VIEW-06 | Draw Result | Show the confirmed selected concept and appearance order, keep its description hidden, and return to the list; Practice opens the associated VIEW-07 timer | VS-03/VS-04 closed locally; walkthrough evidence is recorded under CL-06 and the VS-04 task record |
@@ -111,8 +111,8 @@ Navigation changes destination; saving, drawing, marking, deleting, and changing
 ### FLOW-02 — Create and organize a list
 
 **Capabilities:** CAP-02, CAP-10, CAP-12  
-**Scope:** Core list management is MVP; advanced organization is later.  
-**State:** Confirmed for create/view/rename/delete; archive, restore, duplicate, search, and ordering are later-slice behavior.
+**Scope:** Core list management is MVP; advanced organization is defined in VS-06.
+**State:** Core create/view/rename/delete and VS-06 advanced organization are implemented locally. Integrated local evidence is in [`specs/006-advanced-organization/tasks.md`](../specs/006-advanced-organization/tasks.md); broader publication checks remain VS-07.
 
 **Entry:** An authenticated person is in My Lists.
 
@@ -123,14 +123,24 @@ Navigation changes destination; saving, drawing, marking, deleting, and changing
 5. A validation or persistence failure remains visible in the dialog; the person may correct the name, retry, or cancel.
 6. Selecting a persisted list opens List Detail.
 
+**VS-06 collection behavior**
+
+- Active and Archived are separate collections. Search matches a partial list name, ignoring case and diacritics, within the currently selected collection. Clearing the query restores that collection.
+- List order options are name A–Z/Z–A, recently/oldest created, and recently modified. The selected order applies to either collection and remains selected when switching between them; a fresh visit/reload defaults to name A–Z. Equal timestamps sort by name A–Z then stable list identity; alphabetical ties sort by stable identity.
+- Rename preserves identity and contents and enforces the existing trimmed 1–80-character, per-owner case-folded-unique name rule.
+- Duplicate creates a new list with a user-chosen name, fresh identities for copied concepts, copied titles/descriptions, reset progress, and no copied rounds, practices, notes, or history. The source is unchanged. An archived list may be duplicated from its card action; its detail remains read-only.
+- Archive removes a list from Active while preserving the list, concepts, round state, practices, notes, and history. It can be opened from Archived for read-only inspection; Restore returns it to Active if fewer than 100 lists are active. At 100 active lists, restore is rejected without changing the archived list, and the person is asked to free a slot first. Editing concepts, adding concepts, changing round state, or starting practice requires restoring first.
+- Permanent-delete confirmation describes its effects and offers Archive instead. Permanent deletion remains an explicit separate confirmation and preserves only the documented round totals.
+- List search/order, collection state, and current UI work remain in memory; order defaults to A–Z after reload. Language changes preserve the current collection, query, order, concept filter, and selection.
+
 **List actions**
 
 - Open a card to view List Detail.
 - Rename through a form while preserving its identity and contents.
-- Archive to remove it from active lists while preserving its contents and history.
-- Restore from Archived lists.
-- Duplicate with a chosen name; the copy contains concepts/descriptions but starts with new progress and no copied history.
-- Delete through an explicit confirmation; permanent deletion removes active content and preserves only anonymized historical records.
+- Archive to remove it from active lists while preserving its contents and history; archived detail is read-only and exposes Restore.
+- Restore from Archived lists; at 100 active lists, reject restore and preserve the archived list until a slot is freed.
+- Duplicate with a chosen name; copy concepts/descriptions with fresh progress and no copied history.
+- Delete through an explicit confirmation that offers Archive instead; confirmed permanent deletion removes active content and preserves only the specified aggregate round data.
 
 **Alternatives and recovery**
 
@@ -149,6 +159,13 @@ Navigation changes destination; saving, drawing, marking, deleting, and changing
 **State:** Confirmed.
 
 **Entry:** The person is in List Detail.
+
+**VS-06 study-state filters and bulk actions:**
+
+- All, Pending, and Practiced filters show active concepts without changing state or appearance order. Empty filtered results differ from an empty list and an exhausted round.
+- The person may select visible concepts and bulk Delete, Mark as seen, or Return to pending. Delete alone requires confirmation. Changing the filter or leaving List Detail clears selection; the interface announces clearing. A locale change preserves selection.
+- Results report each concept's outcome. Completed changes remain completed; failed items alone may be retried after the system checks current state and owner. Rejected or unresolved operations do not repeat appearances or affect unselected concepts.
+- Archived List Detail permits concept/history inspection only. Mutation, round actions, add, and practice require restoration.
 
 1. List Detail shows all active concepts in a scrollable collection, including both pending and practiced (seen) concepts. Each row shows its state and available mark/return action alongside View; Add Concepts opens a dialog with Individual and By Batch modes.
 2. Individual accepts a required 1–50 character title and optional description.
@@ -201,7 +218,7 @@ Navigation changes destination; saving, drawing, marking, deleting, and changing
 - Returning a seen concept to Pending enables it for future draws while preserving previous appearances.
 - A concept added while a round is open joins that round as pending.
 - Concurrent state-changing actions for one list are processed in order against the state current when each is processed; a same-intent retry does not create another appearance.
-- Filtering this collection to All, Pending, or Practiced is deferred to VS-06 Advanced organization; VS-03 does not hide seen concepts by default.
+- VS-03 does not hide seen concepts by default. All/Pending/Practiced filtering was delivered in VS-06 Advanced organization; see FLOW-03 and `specs/006-advanced-organization/tasks.md`.
 
 **New-round path**
 
@@ -400,6 +417,7 @@ The following are later-scope journeys and should not be treated as MVP commitme
 
 | Date | Change | Rationale |
 |---|---|---|
+| 2026-11-19 | Recorded VS-06 Active/Archived collection actions, read-only restoration flow, concept-state filters, and recoverable bulk outcomes as implemented locally; linked task evidence. | Aligns the flow with T01–T10 local implementation while keeping separate spec validation and release checks visible. |
 | 2026-11-18 | Closed the local VS-03 flow after validation. | Records the implemented list/round/result states while retaining filters for VS-06, Practice for VS-04, and release-wide browser checks for VS-07. |
 | 2026-11-18 | Clarified VS-03 flow: concepts added during an open round join as pending, list mutations are ordered, and Draw Result offers Practice only after VS-04. | Aligns FLOW-04 and VIEW-06 with the selected slice boundary and accepted product decisions. |
 | 2026-11-19 | Recorded VS-05 practice closure, associated/deleted-concept note panels, independent-note detail, and Practices/Rounds history as implemented locally; documented the legacy-null title fallback and anonymous-total exclusion. | Aligns current flow status with implementation while recording the user-accepted omission of browser runtime privacy inspection separately from release validation. |

@@ -4,6 +4,7 @@ export type DomainErrorCode =
   | 'invalid_name'
   | 'duplicate_name'
   | 'list_limit'
+  | 'list_archived'
   | 'profile_not_initialized'
   | 'concept_title_invalid'
   | 'concept_description_invalid'
@@ -52,6 +53,8 @@ function messageCode(message: string): DomainErrorCode | null {
       return 'duplicate_name';
     case 'list_limit_reached':
       return 'list_limit';
+    case 'list_archived_read_only':
+      return 'list_archived';
     case 'concept_not_authenticated':
       return 'unauthenticated';
     case 'concept_unauthorized':

@@ -102,6 +102,23 @@ export async function loadCurrentRound(listId: string): Promise<RoundRow> {
   return data;
 }
 
+export async function loadCurrentRoundReadOnly(
+  listId: string,
+): Promise<RoundRow | null> {
+  await getCurrentUserId();
+  const { data, error } = await supabase.rpc('get_current_round_readonly', {
+    p_list_id: listId,
+  });
+  if (error) throw mapSupabaseError(error);
+
+  const rounds = data ?? [];
+  if (rounds.length === 0) return null;
+  if (rounds.length !== 1 || !isRoundRow(rounds[0], listId)) {
+    throw new DomainServiceError('unresolved', 'unresolved');
+  }
+  return rounds[0];
+}
+
 function recoveryError(error: unknown): DomainServiceError {
   return error instanceof DomainServiceError
     ? error

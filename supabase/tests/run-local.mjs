@@ -1,4 +1,18 @@
+import { randomUUID } from 'node:crypto'
 import { withLocalFixtures, requireCondition, requireResult, inspectPracticeHistoryPagePlan, VerificationError } from './local-fixtures.mjs'
+
+function listPageArgs(collection, search = null, sort = 'name_asc', pageSize = 101, cursor = null) {
+  return {
+    p_collection: collection,
+    p_search: search,
+    p_sort: sort,
+    p_cursor_name: cursor?.name_normalized ?? null,
+    p_cursor_created_at: cursor?.created_at ?? null,
+    p_cursor_updated_at: cursor?.updated_at ?? null,
+    p_cursor_id: cursor?.id ?? null,
+    p_page_size: pageSize,
+  }
+}
 
 const args = process.argv.slice(2)
 if (args.some((arg) => arg !== '--prove-failure') || args.length > 1) {
@@ -17,10 +31,315 @@ if (args.some((arg) => arg !== '--prove-failure') || args.length > 1) {
   }
 
   try {
-    await withLocalFixtures(async ({ admin, deleteList, owner, other, anonymous, ids }) => {
+    await withLocalFixtures(async ({ admin, owner, other, anonymous, ids, trackList, addActiveCapacityFixtures }) => {
       await check('owner reads its existing list', async () => {
         const rows = requireResult(await owner.from('lists').select('id').eq('id', ids.list), 'Owner read')
         requireCondition(rows.length === 1 && rows[0].id === ids.list, 'Owner list read mismatch')
+      })
+      await check('rename validates names and enforces the authenticated owner', async () => {
+        const renamed = requireResult(await owner.rpc('rename_private_list', {
+          p_list_id: ids.collectionLists.biologyOne, p_name: '  Biología renovada  ',
+        }), 'Owner rename')
+        requireCondition(renamed.id === ids.collectionLists.biologyOne
+          && renamed.owner_id === ids.owner && renamed.name === 'Biología renovada'
+          && renamed.name_normalized === 'biología renovada', 'Rename changed identity or ignored trimming')
+
+        for (const name of ['', ' '.repeat(2), 'x'.repeat(81)]) {
+          const invalid = await owner.rpc('rename_private_list', {
+            p_list_id: ids.collectionLists.biologyOne, p_name: name,
+          })
+          requireCondition(invalid.error?.code === '22023', 'Invalid name was accepted')
+        }
+        for (const name of ['BIOLOGIA avanzada', '  BIOLOGIA AVANZADA  ']) {
+          const duplicate = await owner.rpc('rename_private_list', {
+            p_list_id: ids.collectionLists.biologyOne, p_name: name,
+          })
+          requireCondition(duplicate.error?.code === '23505', 'Case-folded duplicate name was accepted')
+        }
+        const crossOwner = await other.rpc('rename_private_list', {
+          p_list_id: ids.collectionLists.biologyOne, p_name: 'Cross owner',
+        })
+        const anonymousResult = await anonymous.rpc('rename_private_list', {
+          p_list_id: ids.collectionLists.biologyOne, p_name: 'Anonymous',
+        })
+        requireCondition(Boolean(crossOwner.error) && Boolean(anonymousResult.error),
+          'Unauthorized rename unexpectedly succeeded')
+        const unchanged = requireResult(await owner.from('lists').select('name').eq('id', ids.collectionLists.biologyOne).single(), 'Rename readback')
+        requireCondition(unchanged.name === 'Biología renovada', 'Rejected rename changed the stored name')
+      })
+      await check('create counts only active rows despite a large archive', async () => {
+        const created = requireResult(await owner.rpc('create_private_list', { p_name: `Active with archive ${ids.run}` }), 'Create with archived workload')
+        ids.createdWithArchive = created.id
+        trackList(created.id)
+        requireCondition(created.owner_id === ids.owner && created.archived_at === null,
+          'Create with archived workload did not return a new active owned list')
+      })
+      await check('archive and restore preserve linked content and history', async () => {
+        const before = {
+          concepts: requireResult(await owner.from('concepts').select('id,title,description,state,position,deleted_at').eq('list_id', ids.list).order('id'), 'Concept snapshot'),
+          rounds: requireResult(await owner.from('rounds').select('id,status,opened_at,closed_at').eq('list_id', ids.list).order('id'), 'Round snapshot'),
+          practices: requireResult(await owner.from('practices').select('id,kind,list_id,concept_id,round_id,appearance_id,title_snapshot,duration_minutes,completed_at,rating').eq('list_id', ids.list).order('id'), 'Practice snapshot'),
+          notes: requireResult(await owner.from('practice_notes').select('practice_id,body,revision').eq('practice_id', ids.practice), 'Note snapshot'),
+          noteOperations: requireResult(await admin.from('practice_note_operations').select('owner_id,practice_id,operation_id,operation_kind,expected_revision,resulting_revision,outcome').eq('practice_id', ids.practice), 'Note operation snapshot'),
+          appearances: requireResult(await owner.from('round_appearances').select('id,round_id,concept_id,appearance_order,origin,title_snapshot,concept_deleted').eq('round_id', ids.round).order('appearance_order'), 'History snapshot'),
+          roundOperations: requireResult(await admin.from('round_operations').select('list_id,operation_id,round_id,action,outcome,appearance_id,concept_id,result_state').eq('list_id', ids.list), 'Round operation snapshot'),
+        }
+        const crossOwnerArchive = await other.rpc('archive_private_list', { p_list_id: ids.list })
+        const anonymousArchive = await anonymous.rpc('archive_private_list', { p_list_id: ids.list })
+        requireCondition(Boolean(crossOwnerArchive.error) && Boolean(anonymousArchive.error),
+          'Unauthorized archive unexpectedly succeeded')
+        const stillActive = requireResult(await owner.from('lists').select('archived_at').eq('id', ids.list).single(), 'Unauthorized archive readback')
+        requireCondition(stillActive.archived_at === null, 'Unauthorized archive changed list state')
+        const archived = requireResult(await owner.rpc('archive_private_list', { p_list_id: ids.list }), 'Archive list')
+        requireCondition(archived.archived_at !== null && archived.id === ids.list, 'Archive did not mark the owned list')
+        const archiveReplay = requireResult(await owner.rpc('archive_private_list', { p_list_id: ids.list }), 'Archive replay')
+        requireCondition(archiveReplay.archived_at === archived.archived_at, 'Archive replay created another transition')
+        const crossOwnerRestore = await other.rpc('restore_private_list', { p_list_id: ids.list })
+        const anonymousRestore = await anonymous.rpc('restore_private_list', { p_list_id: ids.list })
+        requireCondition(Boolean(crossOwnerRestore.error) && Boolean(anonymousRestore.error),
+          'Unauthorized restore unexpectedly succeeded')
+        const stillArchived = requireResult(await owner.from('lists').select('archived_at').eq('id', ids.list).single(), 'Unauthorized restore readback')
+        requireCondition(stillArchived.archived_at !== null, 'Unauthorized restore changed list state')
+        const restored = requireResult(await owner.rpc('restore_private_list', { p_list_id: ids.list }), 'Restore below capacity')
+        requireCondition(restored.archived_at === null && restored.id === ids.list, 'Restore below capacity failed')
+        const restoreReplay = requireResult(await owner.rpc('restore_private_list', { p_list_id: ids.list }), 'Restore replay')
+        requireCondition(restoreReplay.updated_at === restored.updated_at, 'Restore replay created another transition')
+        const after = {
+          concepts: requireResult(await owner.from('concepts').select('id,title,description,state,position,deleted_at').eq('list_id', ids.list).order('id'), 'Concept readback'),
+          rounds: requireResult(await owner.from('rounds').select('id,status,opened_at,closed_at').eq('list_id', ids.list).order('id'), 'Round readback'),
+          practices: requireResult(await owner.from('practices').select('id,kind,list_id,concept_id,round_id,appearance_id,title_snapshot,duration_minutes,completed_at,rating').eq('list_id', ids.list).order('id'), 'Practice readback'),
+          notes: requireResult(await owner.from('practice_notes').select('practice_id,body,revision').eq('practice_id', ids.practice), 'Note readback'),
+          noteOperations: requireResult(await admin.from('practice_note_operations').select('owner_id,practice_id,operation_id,operation_kind,expected_revision,resulting_revision,outcome').eq('practice_id', ids.practice), 'Note operation readback'),
+          appearances: requireResult(await owner.from('round_appearances').select('id,round_id,concept_id,appearance_order,origin,title_snapshot,concept_deleted').eq('round_id', ids.round).order('appearance_order'), 'History readback'),
+          roundOperations: requireResult(await admin.from('round_operations').select('list_id,operation_id,round_id,action,outcome,appearance_id,concept_id,result_state').eq('list_id', ids.list), 'Round operation readback'),
+        }
+        requireCondition(JSON.stringify(after) === JSON.stringify(before), 'Archive/restore changed linked list content or history')
+      })
+      await check('restore at 100 active lists rejects atomically and create uses the same cap', async () => {
+        await addActiveCapacityFixtures()
+        const archived = requireResult(await owner.rpc('archive_private_list', { p_list_id: ids.list }), 'Archive capacity target')
+        requireCondition(archived.archived_at !== null, 'Capacity target was not archived')
+        const fillSlot = requireResult(await owner.rpc('create_private_list', { p_name: `Cap replacement ${ids.run}` }), 'Create into freed slot')
+        trackList(fillSlot.id)
+        const before = requireResult(await owner.from('lists').select('id,owner_id,name,name_normalized,archived_at').eq('id', ids.list).single(), 'At-cap archived list snapshot')
+        const linkedBefore = {
+          concepts: requireResult(await owner.from('concepts').select('id,title,description,state,position,deleted_at').eq('list_id', ids.list).order('id'), 'At-cap concept snapshot'),
+          rounds: requireResult(await owner.from('rounds').select('id,status,opened_at,closed_at').eq('list_id', ids.list).order('id'), 'At-cap round snapshot'),
+          practices: requireResult(await owner.from('practices').select('id,kind,list_id,concept_id,round_id,appearance_id,title_snapshot,duration_minutes,completed_at,rating').eq('list_id', ids.list).order('id'), 'At-cap practice snapshot'),
+          notes: requireResult(await owner.from('practice_notes').select('practice_id,body,revision').eq('practice_id', ids.practice), 'At-cap note snapshot'),
+          noteOperations: requireResult(await admin.from('practice_note_operations').select('owner_id,practice_id,operation_id,operation_kind,expected_revision,resulting_revision,outcome').eq('practice_id', ids.practice), 'At-cap note operation snapshot'),
+          appearances: requireResult(await owner.from('round_appearances').select('id,round_id,concept_id,appearance_order,origin,title_snapshot,concept_deleted').eq('round_id', ids.round).order('appearance_order'), 'At-cap appearance snapshot'),
+          roundOperations: requireResult(await admin.from('round_operations').select('list_id,operation_id,round_id,action,outcome,appearance_id,concept_id,result_state').eq('list_id', ids.list), 'At-cap round operation snapshot'),
+        }
+        const rejected = await owner.rpc('restore_private_list', { p_list_id: ids.list })
+        requireCondition(rejected.error?.message?.includes('list_limit_reached'), 'Restore at capacity was not rejected by the active-list limit')
+        const after = requireResult(await owner.from('lists').select('id,owner_id,name,name_normalized,archived_at').eq('id', ids.list).single(), 'At-cap list readback')
+        const linkedAfter = {
+          concepts: requireResult(await owner.from('concepts').select('id,title,description,state,position,deleted_at').eq('list_id', ids.list).order('id'), 'At-cap concept readback'),
+          rounds: requireResult(await owner.from('rounds').select('id,status,opened_at,closed_at').eq('list_id', ids.list).order('id'), 'At-cap round readback'),
+          practices: requireResult(await owner.from('practices').select('id,kind,list_id,concept_id,round_id,appearance_id,title_snapshot,duration_minutes,completed_at,rating').eq('list_id', ids.list).order('id'), 'At-cap practice readback'),
+          notes: requireResult(await owner.from('practice_notes').select('practice_id,body,revision').eq('practice_id', ids.practice), 'At-cap note readback'),
+          noteOperations: requireResult(await admin.from('practice_note_operations').select('owner_id,practice_id,operation_id,operation_kind,expected_revision,resulting_revision,outcome').eq('practice_id', ids.practice), 'At-cap note operation readback'),
+          appearances: requireResult(await owner.from('round_appearances').select('id,round_id,concept_id,appearance_order,origin,title_snapshot,concept_deleted').eq('round_id', ids.round).order('appearance_order'), 'At-cap appearance readback'),
+          roundOperations: requireResult(await admin.from('round_operations').select('list_id,operation_id,round_id,action,outcome,appearance_id,concept_id,result_state').eq('list_id', ids.list), 'At-cap round operation readback'),
+        }
+        requireCondition(JSON.stringify(after) === JSON.stringify(before) && JSON.stringify(linkedAfter) === JSON.stringify(linkedBefore),
+          'Rejected restore changed the archived list or linked data')
+        const createAtCap = await owner.rpc('create_private_list', { p_name: `Beyond cap ${ids.run}` })
+        requireCondition(createAtCap.error?.message?.includes('list_limit_reached'), 'Create at 100 active lists was accepted')
+
+        const freed = requireResult(await owner.rpc('archive_private_list', { p_list_id: ids.workloadLists[1] }), 'Free concurrent restore slot')
+        requireCondition(freed.archived_at !== null, 'Could not prepare concurrent restore scenario')
+        const [restoreMain, restoreCollection] = await Promise.all([
+          owner.rpc('restore_private_list', { p_list_id: ids.list }),
+          owner.rpc('restore_private_list', { p_list_id: ids.collectionLists.biologyArchived }),
+        ])
+        const outcomes = [restoreMain, restoreCollection]
+        requireCondition(outcomes.filter((result) => !result.error).length === 1
+          && outcomes.filter((result) => result.error?.message?.includes('list_limit_reached')).length === 1,
+        'Concurrent restores did not serialize at the active-list capacity')
+        const activeAfterRace = requireResult(await admin.from('lists').select('id')
+          .eq('owner_id', ids.owner).is('archived_at', null), 'Concurrent restore active count')
+        requireCondition(activeAfterRace.length === 100, 'Concurrent restore exceeded or underfilled the active-list limit')
+      })
+      await check('duplicate copies only active content with fresh progress and reconciles retries', async () => {
+        const source = requireResult(await owner.rpc('archive_private_list', { p_list_id: ids.list }), 'Archive duplicate source')
+        requireCondition(source.archived_at !== null, 'Duplicate source was not archived')
+        await addActiveCapacityFixtures()
+        const atCapacityName = `Duplicate rejected at cap ${ids.run}`
+        const atCapacityOperationId = randomUUID()
+        const atCapacity = await owner.rpc('duplicate_private_list', {
+          p_source_list_id: ids.list, p_operation_id: atCapacityOperationId, p_name: atCapacityName,
+        })
+        requireCondition(atCapacity.error?.message?.includes('list_limit_reached'),
+          'Duplicate at capacity did not return the active-list limit rejection')
+        const absentAtCapacity = requireResult(await owner.from('lists').select('id').eq('owner_id', ids.owner).eq('name', atCapacityName), 'Rejected duplicate readback')
+        const absentReceipt = requireResult(await admin.from('list_duplicate_operations').select('operation_id')
+          .eq('owner_id', ids.owner).eq('operation_id', atCapacityOperationId), 'Rejected duplicate receipt readback')
+        requireCondition(absentAtCapacity.length === 0 && absentReceipt.length === 0,
+          'Rejected duplicate created a partial list or retry receipt')
+
+        const freed = requireResult(await owner.rpc('archive_private_list', { p_list_id: ids.workloadLists[2] }), 'Free duplicate capacity slot')
+        requireCondition(freed.archived_at !== null, 'Could not prepare duplicate capacity scenario')
+        const name = `Synthetic copied source ${ids.run.slice(0, 8)}`
+        const operationId = randomUUID()
+        const sourceBefore = {
+          list: requireResult(await owner.from('lists').select('id,owner_id,name,name_normalized,archived_at').eq('id', ids.list).single(), 'Duplicate source snapshot'),
+          concepts: requireResult(await owner.from('concepts').select('id,title,description,state,position,deleted_at').eq('list_id', ids.list).order('position,id'), 'Duplicate source concepts'),
+          rounds: requireResult(await owner.from('rounds').select('id,list_id,status,opened_at,closed_at').eq('list_id', ids.list).order('id'), 'Duplicate source rounds'),
+          practices: requireResult(await owner.from('practices').select('id,kind,list_id,concept_id,round_id,appearance_id,title_snapshot,duration_minutes,completed_at,rating').eq('list_id', ids.list).order('id'), 'Duplicate source practices'),
+          notes: requireResult(await owner.from('practice_notes').select('practice_id,body,revision').eq('practice_id', ids.practice), 'Duplicate source note'),
+          appearances: requireResult(await owner.from('round_appearances').select('id,round_id,concept_id,appearance_order,origin,title_snapshot,concept_deleted').eq('round_id', ids.round).order('appearance_order'), 'Duplicate source history'),
+        }
+        const [crossOwner, anonymousResult] = await Promise.all([
+          other.rpc('duplicate_private_list', { p_source_list_id: ids.list, p_operation_id: operationId, p_name: name }),
+          anonymous.rpc('duplicate_private_list', { p_source_list_id: ids.list, p_operation_id: operationId, p_name: name }),
+        ])
+        requireCondition(Boolean(crossOwner.error) && Boolean(anonymousResult.error), 'Unauthorized duplicate unexpectedly succeeded')
+
+        for (const invalidName of ['', ' '.repeat(2), 'x'.repeat(81)]) {
+          const invalid = await owner.rpc('duplicate_private_list', {
+            p_source_list_id: ids.list, p_operation_id: randomUUID(), p_name: invalidName,
+          })
+          requireCondition(invalid.error?.code === '22023', 'Invalid copy name was not rejected by name validation')
+        }
+        for (const duplicateName of ['fixture 0', '  FIXTURE 0  ']) {
+          const duplicate = await owner.rpc('duplicate_private_list', {
+            p_source_list_id: ids.list, p_operation_id: randomUUID(), p_name: duplicateName,
+          })
+          requireCondition(duplicate.error?.code === '23505', 'Case-folded duplicate copy name was accepted')
+        }
+        const first = requireResult(await owner.rpc('duplicate_private_list', {
+          p_source_list_id: ids.list, p_operation_id: operationId, p_name: `  ${name}  `,
+        }), 'Duplicate archived source')
+        trackList(first.id)
+        const retry = requireResult(await owner.rpc('duplicate_private_list', {
+          p_source_list_id: ids.list, p_operation_id: operationId, p_name: name,
+        }), 'Duplicate retry reconciliation')
+        requireCondition(first.id !== ids.list && first.owner_id === ids.owner && first.name === name
+          && retry.id === first.id, 'Duplicate retry created a second list or changed the result identity')
+        ids.duplicateListId = first.id
+        const changedRequest = await owner.rpc('duplicate_private_list', {
+          p_source_list_id: ids.list, p_operation_id: operationId, p_name: `${name} changed`,
+        })
+        requireCondition(changedRequest.error?.message?.includes('duplicate_operation_conflict'),
+          'Reused operation identity with different input was not rejected')
+        const privateReceipt = requireResult(await admin.from('list_duplicate_operations').select('*')
+          .eq('owner_id', ids.owner).eq('operation_id', operationId).single(), 'Duplicate operation receipt')
+        const clientReceiptRead = await owner.from('list_duplicate_operations').select('*').eq('operation_id', operationId)
+        const receiptFields = ['created_at', 'operation_id', 'owner_id', 'request_fingerprint', 'result_list_id', 'source_list_id']
+        requireCondition(Object.keys(privateReceipt).sort().join(',') === receiptFields.join(',')
+          && !Object.hasOwn(privateReceipt, 'name') && clientReceiptRead.error?.code === '42501',
+        'Duplicate retry receipt retained authored name text or was client-readable')
+
+        const copiedConcepts = requireResult(await owner.from('concepts')
+          .select('id,title,description,state,position,deleted_at').eq('list_id', first.id).order('position,id'), 'Copied concepts')
+        const copiedRounds = requireResult(await owner.from('rounds').select('id').eq('list_id', first.id), 'Copied rounds')
+        const copiedPractices = requireResult(await owner.from('practices').select('id').eq('list_id', first.id), 'Copied practices')
+        const copiedOperations = requireResult(await admin.from('round_operations').select('operation_id').eq('list_id', first.id), 'Copied round receipts')
+        const copiedPracticeIds = new Set(copiedPractices.map((practice) => practice.id))
+        const allNotes = requireResult(await admin.from('practice_notes').select('practice_id'), 'Copy note inspection')
+        const allNoteReceipts = requireResult(await admin.from('practice_note_operations').select('practice_id'), 'Copy note receipt inspection')
+        const copiedAppearanceRoundIds = new Set(copiedRounds.map((round) => round.id))
+        const allAppearances = requireResult(await admin.from('round_appearances').select('round_id'), 'Copy appearance inspection')
+        requireCondition(copiedConcepts.length === 1
+          && copiedConcepts[0].id !== ids.activeConcept
+          && copiedConcepts[0].title === 'Synthetic concept'
+          && copiedConcepts[0].description === 'Synthetic source description'
+          && copiedConcepts[0].state === 'pending' && copiedConcepts[0].position === 1
+          && copiedConcepts[0].deleted_at === null,
+        'Duplicate did not copy active concept content with a fresh identity and pending progress')
+        requireCondition(copiedRounds.length === 0 && copiedPractices.length === 0 && copiedOperations.length === 0
+          && !allNotes.some((note) => copiedPracticeIds.has(note.practice_id))
+          && !allNoteReceipts.some((receipt) => copiedPracticeIds.has(receipt.practice_id))
+          && !allAppearances.some((appearance) => copiedAppearanceRoundIds.has(appearance.round_id)),
+        'Duplicate copied round, practice, note, or history data')
+        const sourceAfter = {
+          list: requireResult(await owner.from('lists').select('id,owner_id,name,name_normalized,archived_at').eq('id', ids.list).single(), 'Duplicate source readback'),
+          concepts: requireResult(await owner.from('concepts').select('id,title,description,state,position,deleted_at').eq('list_id', ids.list).order('position,id'), 'Duplicate source concepts readback'),
+          rounds: requireResult(await owner.from('rounds').select('id,list_id,status,opened_at,closed_at').eq('list_id', ids.list).order('id'), 'Duplicate source rounds readback'),
+          practices: requireResult(await owner.from('practices').select('id,kind,list_id,concept_id,round_id,appearance_id,title_snapshot,duration_minutes,completed_at,rating').eq('list_id', ids.list).order('id'), 'Duplicate source practices readback'),
+          notes: requireResult(await owner.from('practice_notes').select('practice_id,body,revision').eq('practice_id', ids.practice), 'Duplicate source note readback'),
+          appearances: requireResult(await owner.from('round_appearances').select('id,round_id,concept_id,appearance_order,origin,title_snapshot,concept_deleted').eq('round_id', ids.round).order('appearance_order'), 'Duplicate source history readback'),
+        }
+        requireCondition(JSON.stringify(sourceAfter) === JSON.stringify(sourceBefore), 'Duplicate changed its source list or history')
+        const archivedCopy = requireResult(await owner.rpc('archive_private_list', { p_list_id: first.id }), 'Archive duplicate copy')
+        const restoredSource = requireResult(await owner.rpc('restore_private_list', { p_list_id: ids.list }), 'Restore duplicate source')
+        requireCondition(archivedCopy.archived_at !== null && restoredSource.archived_at === null,
+          'Could not return T04 fixtures to their pre-check state')
+      })
+      await check('owned list collection uses a bounded database page', async () => {
+        const rows = requireResult(await owner.rpc('list_owned_lists', {
+          p_collection: 'active', p_search: null, p_sort: 'name_asc',
+          p_cursor_name: null, p_cursor_created_at: null, p_cursor_updated_at: null,
+          p_cursor_id: null, p_page_size: 10,
+        }), 'Owned list page')
+        requireCondition(rows.length >= 1 && rows.length <= 10
+          && rows.every((row) => row.owner_id === ids.owner && row.archived_at === null),
+        'Owned active list page was not owner-scoped and bounded')
+      })
+      await check('list collection search is trimmed, accent-insensitive and scoped', async () => {
+        const active = requireResult(await owner.rpc('list_owned_lists',
+          listPageArgs('active', '  bIoLo  ', 'name_asc', 10)), 'Active partial search')
+        const archived = requireResult(await owner.rpc('list_owned_lists',
+          listPageArgs('archived', 'BIOLO', 'name_asc', 10)), 'Archived partial search')
+        const accentedQuery = requireResult(await owner.rpc('list_owned_lists',
+          listPageArgs('active', 'BIOLOGÍA', 'name_asc', 10)), 'Accent-normalized query')
+        requireCondition(active.map((row) => row.id).sort().join(',')
+          === [ids.collectionLists.biologyOne, ids.collectionLists.biologyTwo, ids.trustedSearchList].sort().join(',')
+          && active.every((row) => row.archived_at === null), 'Active accent-insensitive search mismatch')
+        requireCondition(archived.length === 1 && archived[0].id === ids.collectionLists.biologyArchived
+          && archived[0].archived_at !== null, 'Archived collection search leaked other states')
+        requireCondition(accentedQuery.length === 3, 'Accented query did not match unaccented names')
+      })
+      await check('list ordering is allowlisted and deterministic for every option', async () => {
+        const orders = [
+          ['name_asc', ['Sort Alpha', 'Sort Bravo', 'Sort Charlie']],
+          ['name_desc', ['Sort Charlie', 'Sort Bravo', 'Sort Alpha']],
+          ['created_newest', ['Sort Charlie', 'Sort Alpha', 'Sort Bravo']],
+          ['created_oldest', ['Sort Alpha', 'Sort Bravo', 'Sort Charlie']],
+          ['modified_newest', ['Sort Bravo', 'Sort Alpha', 'Sort Charlie']],
+        ]
+        for (const [sort, expectedNames] of orders) {
+          const rows = requireResult(await owner.rpc('list_owned_lists',
+            listPageArgs('active', 'Sort', sort, 3)), `List order ${sort}`)
+          const next = requireResult(await owner.rpc('list_owned_lists',
+            listPageArgs('active', 'Sort', sort, 10, rows[1])), `List order cursor ${sort}`)
+          requireCondition(rows.map((row) => row.name).join('|') === expectedNames.join('|')
+            && next.length === 1 && next[0].name === expectedNames[2],
+          `Unexpected order or cursor boundary for ${sort}`)
+        }
+        const invalid = await owner.rpc('list_owned_lists', listPageArgs('active', null, 'created_at desc; select', 10))
+        requireCondition(invalid.error?.code === '22023', 'Unsafe sort value was not rejected')
+      })
+      await check('search treats wildcard and SQL punctuation as literal text', async () => {
+        const rows = requireResult(await owner.rpc('list_owned_lists',
+          listPageArgs('active', "%_ ' OR true --", 'name_asc', 10)), 'Literal punctuation search')
+        requireCondition(rows.length === 1 && rows[0].id === ids.collectionLists.literalSearch,
+          'Search punctuation changed matching or query behavior')
+      })
+      await check('list keyset pages are bounded, stable and owner-isolated', async () => {
+        const firstPage = requireResult(await owner.rpc('list_owned_lists',
+          listPageArgs('archived', null, 'name_asc', 101)), 'First archived list page')
+        requireCondition(firstPage.length === 101 && firstPage.every((row) => row.owner_id === ids.owner
+          && row.archived_at !== null), 'Archived page was unbounded or crossed collection/owner')
+        const firstVisible = firstPage.slice(0, 100)
+        const cursor = firstVisible.at(-1)
+        const nextPage = requireResult(await owner.rpc('list_owned_lists',
+          listPageArgs('archived', null, 'name_asc', 100, cursor)), 'Next archived list page')
+        requireCondition(nextPage.length === 100
+          && firstVisible.every((row) => !nextPage.some((next) => next.id === row.id)),
+        'Keyset pages overlapped or were incomplete')
+        const workloadPage = requireResult(await owner.rpc('list_owned_lists',
+          listPageArgs('archived', 'BIOLO', 'name_asc', 10)), 'Search workload page')
+        const otherOwner = requireResult(await other.rpc('list_owned_lists',
+          listPageArgs('active', 'BIOLO', 'name_asc', 10)), 'Other owner search')
+        requireCondition(workloadPage.length === 1 && otherOwner.length === 0,
+          'Search returned an incorrect match or another owner’s list')
+        const anonymousQuery = await anonymous.rpc('list_owned_lists', listPageArgs('active', null, 'name_asc', 10))
+        requireCondition(Boolean(anonymousQuery.error), 'Anonymous caller queried private list collection')
+        const limited = await owner.rpc('list_owned_lists', listPageArgs('archived', null, 'name_asc', 102))
+        requireCondition(limited.error?.code === '22023', 'Oversized page request was not rejected')
       })
       await check('second authenticated account reads its own list', async () => {
         const rows = requireResult(await other.from('lists').select('id').eq('id', ids.otherList), 'Second owner read')
@@ -193,7 +512,7 @@ if (args.some((arg) => arg !== '--prove-failure') || args.length > 1) {
           && conflict.error?.message.includes('note_operation_conflict'), 'Note operation replay/conflict behavior mismatch')
         requireCondition(outcomes[0] === 'stale' && outcomes[1] === 'updated' && current.revision === 3,
           'Concurrent stale note updates were not serialized')
-        requireCondition(practice.rating === 4 && concept.description === '', 'Note update changed unrelated data')
+        requireCondition(practice.rating === 4 && concept.description === 'Synthetic source description', 'Note update changed unrelated data')
         requireCondition(receipts.every((receipt) => !Object.hasOwn(receipt, 'body') && /^[0-9a-f]{64}$/.test(receipt.request_fingerprint)),
           'Note receipts contain payload data or an invalid fingerprint')
       })
@@ -376,27 +695,150 @@ if (args.some((arg) => arg !== '--prove-failure') || args.length > 1) {
           && history.data?.items.some((item) => item.id === ids.practice && item.has_note
             && item.title_snapshot === 'Synthetic concept'), 'Concept deletion damaged list-context note history')
       })
+      await check('archived lists remain readable while every associated write is rejected', async () => {
+        const protectedConcept = requireResult(await owner.rpc('create_concept', {
+          p_list_id: ids.list, p_title: 'Archived protected concept', p_description: 'Keep this content unchanged',
+        }), 'Protected archived-list concept fixture')
+        ids.archivedGuardConcept = protectedConcept.id
+        const archived = requireResult(await owner.rpc('archive_private_list', { p_list_id: ids.list }), 'Archive read-only boundary fixture')
+        requireCondition(archived.archived_at !== null, 'Read-only boundary fixture was not archived')
+
+        const [ownerList, ownerConcepts, ownerHistory, ownerRoundHistory, ownerPractice] = await Promise.all([
+          owner.from('lists').select('id,archived_at').eq('id', ids.list),
+          owner.from('concepts').select('id,title,description,state,position,deleted_at').eq('list_id', ids.list),
+          owner.rpc('list_practice_history', { p_list_id: ids.list, p_kind: 'associated', p_page_size: 50 }),
+          owner.rpc('list_round_appearances', { p_round_ids: [ids.round] }),
+          owner.rpc('get_saved_practice', { p_id: ids.practice }),
+        ])
+        requireCondition(requireResult(ownerList, 'Archived owner list read').length === 1
+          && requireResult(ownerConcepts, 'Archived owner concept read').some((concept) => concept.id === protectedConcept.id)
+          && ownerHistory.data?.items.some((item) => item.id === ids.practice)
+          && ownerRoundHistory.data?.length === 1 && ownerPractice.data?.practice?.id === ids.practice,
+        'Owner could not inspect archived list content and history')
+
+        const currentRound = requireResult(await owner.rpc('get_current_round_readonly', { p_list_id: ids.list }), 'Read-only current round')
+        const missingRoundBefore = requireResult(await admin.from('rounds').select('id').eq('list_id', ids.workloadLists[1]), 'Missing-round before read')
+        const missingRound = requireResult(await owner.rpc('get_current_round_readonly', { p_list_id: ids.workloadLists[1] }), 'Read-only missing current round')
+        const missingRoundAfter = requireResult(await admin.from('rounds').select('id').eq('list_id', ids.workloadLists[1]), 'Missing-round after read')
+        const otherRoundRead = await other.rpc('get_current_round_readonly', { p_list_id: ids.list })
+        const anonymousRoundRead = await anonymous.rpc('get_current_round_readonly', { p_list_id: ids.list })
+        requireCondition(currentRound.length === 1 && currentRound[0].id === ids.round
+          && missingRound.length === 0 && missingRoundBefore.length === 0 && missingRoundAfter.length === 0
+          && Boolean(otherRoundRead.error) && Boolean(anonymousRoundRead.error),
+        'Read-only round path returned another owner, or created a missing round')
+
+        const oldCreateRound = await owner.rpc('get_or_create_current_round', { p_list_id: ids.workloadLists[1] })
+        requireCondition(oldCreateRound.error?.message?.includes('list_archived_read_only'),
+          'Mutating current-round path remained callable for an archived list')
+
+        const listPracticeIds = requireResult(await admin.from('practices').select('id').eq('list_id', ids.list), 'Archived practice IDs')
+        const readSnapshot = async () => ({
+          list: requireResult(await admin.from('lists').select('id,name,name_normalized,archived_at,updated_at').eq('id', ids.list).single(), 'Archived list snapshot'),
+          concepts: requireResult(await admin.from('concepts').select('id,title,description,state,position,deleted_at,updated_at').eq('list_id', ids.list).order('id'), 'Archived concepts snapshot'),
+          rounds: requireResult(await admin.from('rounds').select('id,list_id,status,opened_at,closed_at,anonymous_appearance_total').eq('list_id', ids.list).order('id'), 'Archived rounds snapshot'),
+          appearances: requireResult(await admin.from('round_appearances').select('id,round_id,concept_id,appearance_order,origin,title_snapshot,concept_deleted').eq('round_id', ids.round).order('appearance_order'), 'Archived appearances snapshot'),
+          operations: requireResult(await admin.from('round_operations').select('list_id,operation_id,round_id,action,outcome,appearance_id,concept_id,result_state').eq('list_id', ids.list), 'Archived round operations snapshot'),
+          practices: requireResult(await admin.from('practices').select('id,kind,list_id,concept_id,round_id,appearance_id,title_snapshot,rating').eq('list_id', ids.list).order('id'), 'Archived practices snapshot'),
+          notes: listPracticeIds.length ? requireResult(await admin.from('practice_notes').select('practice_id,body,revision').in('practice_id', listPracticeIds.map((practice) => practice.id)).order('practice_id'), 'Archived notes snapshot') : [],
+          noteOperations: listPracticeIds.length ? requireResult(await admin.from('practice_note_operations').select('practice_id,operation_id,operation_kind,expected_revision,resulting_revision,outcome').in('practice_id', listPracticeIds.map((practice) => practice.id)).order('practice_id,operation_id'), 'Archived note operations snapshot') : [],
+        })
+        const before = await readSnapshot()
+        const conceptVersion = before.concepts.find((concept) => concept.id === protectedConcept.id)
+        const writeResults = await Promise.all([
+          owner.rpc('rename_private_list', { p_list_id: ids.list, p_name: 'Archived rename attempt' }),
+          owner.rpc('create_concept', { p_list_id: ids.list, p_title: 'Archived create attempt', p_description: '' }),
+          owner.rpc('create_concepts_batch', { p_list_id: ids.list, p_items: [{ title: 'Archived batch attempt', description: '' }] }),
+          owner.rpc('update_concept', {
+            p_concept_id: protectedConcept.id, p_title: 'Changed archived concept',
+            p_description: 'Changed description', p_expected_updated_at: conceptVersion.updated_at,
+          }),
+          owner.rpc('delete_concept', { p_concept_id: protectedConcept.id, p_expected_updated_at: conceptVersion.updated_at }),
+          owner.rpc('mark_concept_seen', { p_list_id: ids.list, p_concept_id: protectedConcept.id, p_operation_id: randomUUID() }),
+          owner.rpc('draw_pending_concept', { p_list_id: ids.list, p_operation_id: randomUUID() }),
+          owner.rpc('return_concept_to_pending', { p_list_id: ids.list, p_concept_id: protectedConcept.id, p_operation_id: randomUUID() }),
+          owner.rpc('start_new_round', { p_list_id: ids.list, p_operation_id: randomUUID() }),
+          owner.rpc('save_completed_practice', {
+            p_id: randomUUID(), p_kind: 'associated', p_list_id: ids.list,
+            p_concept_id: protectedConcept.id, p_round_id: ids.round,
+            p_appearance_id: null, p_duration_minutes: 5,
+            p_completed_at: '2026-01-05T16:00:00Z', p_label: null, p_note: 'Blocked archived practice', p_rating: null,
+          }),
+          owner.rpc('update_practice_note', {
+            p_practice_id: ids.practice, p_operation_id: randomUUID(),
+            p_expected_revision: 1, p_body: 'Blocked archived note edit',
+          }),
+          owner.rpc('delete_practice_note', {
+            p_practice_id: ids.practice, p_operation_id: randomUUID(), p_expected_revision: 1,
+          }),
+        ])
+        requireCondition(writeResults.every((result) => result.error?.message?.includes('list_archived_read_only')),
+          'One or more trusted list-linked writes were not rejected for the archived parent')
+        const [crossOwnerWrite, anonymousWrite, independentPractice] = await Promise.all([
+          other.rpc('create_concept', { p_list_id: ids.list, p_title: 'Cross-owner attempt', p_description: '' }),
+          anonymous.rpc('draw_pending_concept', { p_list_id: ids.list, p_operation_id: randomUUID() }),
+          owner.rpc('save_completed_practice', {
+            p_id: randomUUID(), p_kind: 'independent', p_list_id: null,
+            p_concept_id: null, p_round_id: null, p_appearance_id: null,
+            p_duration_minutes: 3, p_completed_at: '2026-01-05T16:05:00Z',
+            p_label: 'Independent while archived', p_note: null, p_rating: null,
+          }),
+        ])
+        requireCondition(Boolean(crossOwnerWrite.error) && Boolean(anonymousWrite.error)
+          && !independentPractice.error && independentPractice.data?.practice?.kind === 'independent',
+        'Archived boundary exposed another owner or blocked independent practice')
+        const after = await readSnapshot()
+        requireCondition(JSON.stringify(after) === JSON.stringify(before),
+          'A rejected archived-list operation changed list, concept, round, practice, note, or history data')
+      })
       await check('list deletion removes authored practice data and preserves anonymous totals', async () => {
         const anonymousRoundId = ids.round
-        // The app intentionally has no list-delete API. Use the local DB CLI
-        // against this tracked synthetic UUID to exercise FK and trigger behavior.
-        deleteList(ids.list)
-        const [practices, notes, receipts, totals, visibleTotals] = await Promise.all([
+        const before = requireResult(await owner.from('lists').select('id').eq('id', ids.list), 'Delete confirmation target read')
+        requireCondition(before.length === 1, 'Synthetic list disappeared before the confirmed delete call')
+        const [crossOwner, anonymousResult, directWrite] = await Promise.all([
+          other.rpc('delete_private_list', { p_list_id: ids.list }),
+          anonymous.rpc('delete_private_list', { p_list_id: ids.list }),
+          owner.from('lists').delete().eq('id', ids.list),
+        ])
+        requireCondition(Boolean(crossOwner.error) && Boolean(anonymousResult.error)
+          && directWrite.error?.code === '42501', 'Unauthorized or direct list deletion unexpectedly succeeded')
+        const unchanged = requireResult(await owner.from('lists').select('id').eq('id', ids.list), 'Rejected delete readback')
+        const practiceBefore = requireResult(await owner.from('practices').select('id').eq('id', ids.practice), 'Rejected delete practice readback')
+        requireCondition(unchanged.length === 1 && practiceBefore.length === 1, 'Rejected deletion changed list or practice data')
+
+        const deleted = requireResult(await owner.rpc('delete_private_list', { p_list_id: ids.list }), 'Confirmed list deletion')
+        requireCondition(deleted === ids.list, 'Delete RPC did not confirm the requested list identity')
+        const [lists, concepts, practices, notes, receipts, totals, visibleTotals, appearances, roundOperations, duplicateCopy] = await Promise.all([
+          admin.from('lists').select('id').eq('id', ids.list),
+          admin.from('concepts').select('id').eq('list_id', ids.list),
           admin.from('practices').select('id').eq('id', ids.practice),
           admin.from('practice_notes').select('practice_id').eq('practice_id', ids.practice),
           admin.from('practice_note_operations').select('practice_id').eq('practice_id', ids.practice),
-          admin.from('rounds').select('id,list_id,anonymous_appearance_total').eq('id', anonymousRoundId),
+          admin.from('rounds').select('id,list_id,status,created_at,opened_at,closed_at,anonymous_appearance_total')
+            .in('id', [anonymousRoundId, ids.tiedRound]).order('id'),
           owner.from('rounds').select('id').eq('id', anonymousRoundId),
+          admin.from('round_appearances').select('id').in('round_id', [anonymousRoundId, ids.tiedRound]),
+          admin.from('round_operations').select('operation_id').eq('list_id', ids.list),
+          admin.from('lists').select('id').eq('id', ids.duplicateListId),
         ])
-        requireCondition(requireResult(practices, 'Deleted practice check').length === 0
+        requireCondition(requireResult(lists, 'Deleted list check').length === 0
+          && requireResult(concepts, 'Deleted concepts check').length === 0
+          && requireResult(practices, 'Deleted practice check').length === 0
           && requireResult(notes, 'Deleted note check').length === 0
-          && requireResult(receipts, 'Deleted receipt check').length === 0,
-        'List deletion retained authored practice resources')
+          && requireResult(receipts, 'Deleted receipt check').length === 0
+          && requireResult(appearances, 'Deleted appearances check').length === 0
+          && requireResult(roundOperations, 'Deleted round operation check').length === 0,
+        'List deletion retained authored content, practice data, or history details')
         const remainingTotal = requireResult(totals, 'Anonymous total check')
-        requireCondition(remainingTotal.length === 1 && remainingTotal[0].list_id === null
-          && remainingTotal[0].anonymous_appearance_total === 2
-          && requireResult(visibleTotals, 'Anonymous visibility check').length === 0,
-        'Anonymous aggregate was lost or exposed')
+        const allowedRoundFields = ['anonymous_appearance_total', 'closed_at', 'created_at', 'id', 'list_id', 'opened_at', 'status']
+        requireCondition(remainingTotal.length === 2
+          && remainingTotal.every((round) => round.list_id === null && round.status === 'closed'
+            && round.created_at === null && round.opened_at === null && round.closed_at === null
+            && Object.keys(round).sort().join(',') === allowedRoundFields.join(','))
+          && remainingTotal.find((round) => round.id === anonymousRoundId)?.anonymous_appearance_total === 2
+          && remainingTotal.find((round) => round.id === ids.tiedRound)?.anonymous_appearance_total === 0
+          && requireResult(visibleTotals, 'Anonymous visibility check').length === 0
+          && requireResult(duplicateCopy, 'Unrelated duplicate retention check').length === 1,
+        'Deletion failed to retain only field-limited round totals or changed unrelated copy data')
       })
       await check('account deletion cascades its private resources', async () => {
         requireResult(await admin.auth.admin.deleteUser(ids.other), 'Second account deletion')

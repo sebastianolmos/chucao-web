@@ -10,9 +10,11 @@ import i18n from '../../i18n/i18n';
 import { resources } from '../../i18n/resources';
 import { ConceptManagementView } from './ConceptManagementView';
 import { ListDetailView } from '../lists/ListDetailView';
+import { restorePrivateList } from '../lists/listService';
 import { createConcept, createConceptBatch, deleteConcept, getOwnedConcepts, updateConcept } from './conceptService';
 import { DomainServiceError } from '../shared/supabaseErrors';
 import { ToastProvider, ToastViewport } from '../../app/toasts/ToastProvider';
+import { ToastContext } from '../../app/toasts/toastContext';
 import { listPracticeHistory } from '../history/historyService';
 import {
   drawPendingConcept,
@@ -30,6 +32,11 @@ vi.mock('./conceptService', () => ({
   createConceptBatch: vi.fn(),
   updateConcept: vi.fn(),
   deleteConcept: vi.fn(),
+}));
+
+vi.mock('../lists/listService', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../lists/listService')>(),
+  restorePrivateList: vi.fn(),
 }));
 
 vi.mock('../rounds/roundService', () => ({
@@ -148,6 +155,169 @@ describe('ConceptManagementView', () => {
     renderView();
     expect(await screen.findByRole('button', { name: i18n.t('practiceNote.deletedConceptsShort') })).toBeInTheDocument();
     expect(listPracticeHistory).not.toHaveBeenCalled();
+  });
+
+  it('keeps archived concepts and notes readable while hiding every mutating or study action', async () => {
+    currentConcepts = [existingConcept];
+    const user = userEvent.setup();
+    render(<QueryClientProvider client={queryClient}><MantineProvider env="test"><ToastProvider>
+      <ConceptManagementView userId="user-a" list={{ ...list, archived_at: '2026-01-01T00:00:00Z' }} onBack={vi.fn()} onStartPractice={vi.fn()} archived />
+      <ToastViewport />
+    </ToastProvider></MantineProvider></QueryClientProvider>);
+    expect((await screen.findAllByText(existingConcept.title)).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('heading', { name: i18n.t('rounds.title') })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: i18n.t('conceptDetail.viewConcept', { title: existingConcept.title }) })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: i18n.t('concepts.addTitle') })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: i18n.t('rounds.drawConcept') })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: i18n.t('rounds.newRound') })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: i18n.t('rounds.markSeen') })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: i18n.t('conceptDetail.viewConcept', { title: existingConcept.title }) }));
+    expect(await screen.findByText(existingConcept.description)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: i18n.t('conceptDetail.editConcept') })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: i18n.t('conceptDetail.deleteConcept') })).not.toBeInTheDocument();
+  });
+
+  it('restores an archived list in place and retains read-only mode when the active limit rejects', async () => {
+    const user = userEvent.setup();
+    vi.mocked(restorePrivateList).mockRejectedValueOnce(new DomainServiceError('list_limit', 'list_limit'))
+      .mockResolvedValueOnce({ ...list, archived_at: null });
+    render(<QueryClientProvider client={queryClient}><MantineProvider env="test"><ToastProvider>
+      <ListDetailView userId="user-a" list={{ ...list, archived_at: '2026-01-01T00:00:00Z' }} onBack={vi.fn()} onStartPractice={vi.fn()} />
+    </ToastProvider></MantineProvider></QueryClientProvider>);
+    await screen.findByText(i18n.t('lists.archivedStatus'));
+    await user.click(screen.getByRole('button', { name: i18n.t('lists.restore') }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(i18n.t('lists.freeSlot'));
+    expect(screen.queryByRole('button', { name: i18n.t('concepts.addTitle') })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: i18n.t('rounds.title') })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: i18n.t('lists.restore') }));
+    await waitFor(() => expect(restorePrivateList).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText(i18n.t('lists.archivedStatus'))).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: i18n.t('concepts.addTitle') })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: i18n.t('rounds.title') })).toBeInTheDocument();
+  });
+
+  it('filters concepts by study state, selects only visible rows, and announces selection clearing', async () => {
+    const pending = { ...existingConcept, id: 'pending-1', title: 'Pendiente', state: 'pending' as const };
+    const practiced = { ...existingConcept, id: 'seen-1', title: 'Practicado', state: 'seen' as const };
+    currentConcepts = [pending, practiced];
+    const user = userEvent.setup();
+    renderView();
+    const region = await screen.findByRole('region', { name: i18n.t('concepts.list') });
+    expect(await within(region).findByRole('button', { name: i18n.t('conceptDetail.viewConcept', { title: 'Pendiente' }) })).toBeInTheDocument();
+    expect(within(region).getByRole('button', { name: i18n.t('conceptDetail.viewConcept', { title: 'Practicado' }) })).toBeInTheDocument();
+    await user.click(screen.getByRole('checkbox', { name: i18n.t('concepts.selectConcept', { title: 'Pendiente' }) }));
+    await user.click(screen.getByRole('button', { name: i18n.t('concepts.filterPracticed') }));
+    expect(await screen.findByText(i18n.t('concepts.selectionCleared'))).toBeInTheDocument();
+    expect(within(region).queryByRole('button', { name: i18n.t('conceptDetail.viewConcept', { title: 'Pendiente' }) })).not.toBeInTheDocument();
+    expect(within(region).getByRole('button', { name: i18n.t('conceptDetail.viewConcept', { title: 'Practicado' }) })).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { checked: true })).not.toBeInTheDocument();
+    await act(async () => { await i18n.changeLanguage('en'); });
+    expect(screen.getByRole('button', { name: 'Practiced' })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(region).getByRole('button', { name: i18n.t('conceptDetail.viewConcept', { title: 'Practicado' }) })).toBeInTheDocument();
+    await act(async () => { await i18n.changeLanguage('es'); });
+  });
+
+  it('distinguishes an empty list, an empty filter, and an exhausted round', async () => {
+    renderView();
+    expect(await screen.findByText(i18n.t('concepts.empty'))).toBeInTheDocument();
+    currentConcepts = [{ ...existingConcept, state: 'seen' }];
+    await act(async () => { await queryClient.invalidateQueries({ queryKey: ['concepts', 'user-a', list.id] }); });
+    await screen.findByRole('button', { name: i18n.t('conceptDetail.viewConcept', { title: existingConcept.title }) });
+    expect(await screen.findByText(i18n.t('rounds.exhausted'))).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('button', { name: i18n.t('concepts.filterPending') }));
+    expect(await screen.findByText(i18n.t('concepts.filterEmpty', { filter: i18n.t('concepts.filterPending') }))).toBeInTheDocument();
+  });
+
+  it('returns a selected practiced concept to pending without delete confirmation', async () => {
+    currentConcepts = [{ ...existingConcept, state: 'seen' }];
+    const user = userEvent.setup();
+    renderView();
+    await user.click(await screen.findByRole('checkbox', { name: i18n.t('concepts.selectConcept', { title: existingConcept.title }) }));
+    await user.click(screen.getByRole('button', { name: i18n.t('concepts.bulkReturnPending') }));
+    await waitFor(() => expect(returnConceptToPending).toHaveBeenCalledWith(list.id, existingConcept.id));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('places concept selection after the row state action', async () => {
+    currentConcepts = [existingConcept];
+    renderView();
+    const selection = await screen.findByRole('checkbox', { name: i18n.t('concepts.selectConcept', { title: existingConcept.title }) });
+    const row = selection.closest('li');
+    expect(row).not.toBeNull();
+    const stateAction = within(row as HTMLElement).getByRole('button', { name: i18n.t('rounds.markSeenForConcept', { title: existingConcept.title }) });
+    expect(stateAction.compareDocumentPosition(selection) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('stops later round items while an unresolved item still needs reconciliation', async () => {
+    const first = { ...existingConcept, id: 'pending-1', title: 'Uno', state: 'pending' as const };
+    const second = { ...existingConcept, id: 'pending-2', title: 'Dos', state: 'pending' as const };
+    currentConcepts = [first, second];
+    vi.mocked(markConceptSeen).mockResolvedValue({ status: 'unresolved', error: new DomainServiceError('unresolved', 'unresolved') });
+    vi.mocked(retryUnresolvedRoundOperation).mockResolvedValue({ status: 'unresolved', error: new DomainServiceError('unresolved', 'unresolved') });
+    const user = userEvent.setup();
+    renderView();
+    await user.click(await screen.findByRole('checkbox', { name: i18n.t('concepts.selectConcept', { title: 'Uno' }) }));
+    await user.click(screen.getByRole('checkbox', { name: i18n.t('concepts.selectConcept', { title: 'Dos' }) }));
+    await user.click(screen.getByRole('button', { name: i18n.t('concepts.bulkMarkSeen') }));
+    await waitFor(() => expect(retryUnresolvedRoundOperation).toHaveBeenCalledWith(list.id));
+    expect(markConceptSeen).toHaveBeenCalledTimes(1);
+    expect(markConceptSeen).not.toHaveBeenCalledWith(list.id, second.id);
+    expect(screen.getByRole('checkbox', { name: i18n.t('concepts.selectConcept', { title: 'Uno' }) })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: i18n.t('concepts.selectConcept', { title: 'Dos' }) })).toBeChecked();
+  });
+
+  it('reports partial round-action outcomes and retries only the failed concept after refreshing owner state', async () => {
+    const first = { ...existingConcept, id: 'pending-1', title: 'Uno', state: 'pending' as const };
+    const second = { ...existingConcept, id: 'pending-2', title: 'Dos', state: 'pending' as const };
+    currentConcepts = [first, second];
+    vi.mocked(markConceptSeen).mockImplementation(async (_listId, conceptId) => {
+      if (conceptId === first.id && currentConcepts.some((item) => item.id === first.id && item.state === 'pending')) {
+        currentConcepts = currentConcepts.map((item) => item.id === first.id ? { ...item, state: 'seen' } : item);
+        return { status: 'confirmed', result: { action: 'mark_seen', outcome: 'applied', round_id: currentRound.id, appearance_id: 'appearance-1', appearance_order: 1, concept_id: first.id, title: first.title, result_state: 'seen', pending_count: 1, seen_count: 1 } };
+      }
+      if (conceptId === second.id && vi.mocked(markConceptSeen).mock.calls.filter((call) => call[1] === second.id).length === 1) {
+        return { status: 'rejected', error: new DomainServiceError('round_action_rejected', 'round_action_rejected') };
+      }
+      currentConcepts = currentConcepts.map((item) => item.id === second.id ? { ...item, state: 'seen' } : item);
+      return { status: 'confirmed', result: { action: 'mark_seen', outcome: 'applied', round_id: currentRound.id, appearance_id: 'appearance-2', appearance_order: 2, concept_id: second.id, title: second.title, result_state: 'seen', pending_count: 0, seen_count: 2 } };
+    });
+    const user = userEvent.setup();
+    queryClient.clear();
+    const notify = vi.fn();
+    render(<QueryClientProvider client={queryClient}><MantineProvider env="test">
+      <ToastContext.Provider value={{ notify, dismiss: vi.fn(), toasts: [] }}>
+        <ConceptManagementView userId="user-a" list={list} onBack={vi.fn()} onStartPractice={vi.fn()} />
+      </ToastContext.Provider>
+    </MantineProvider></QueryClientProvider>);
+    await screen.findByText('Uno');
+    await user.click(screen.getByRole('checkbox', { name: i18n.t('concepts.selectConcept', { title: 'Uno' }) }));
+    await user.click(screen.getByRole('checkbox', { name: i18n.t('concepts.selectConcept', { title: 'Dos' }) }));
+    await user.click(screen.getByRole('button', { name: i18n.t('concepts.bulkMarkSeen') }));
+    await waitFor(() => expect(notify).toHaveBeenCalledTimes(2));
+    expect(notify).toHaveBeenNthCalledWith(1, `Uno: ${i18n.t('concepts.bulkOutcomeCompleted')}`, 'success', 10_000);
+    expect(notify).toHaveBeenNthCalledWith(2, `Dos: ${i18n.t('concepts.bulkOutcomeFailed')}`, 'error', 10_000);
+    expect(screen.queryByText(i18n.t('concepts.bulkPartial', { succeeded: 1, failed: 1 }))).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: i18n.t('concepts.selectConcept', { title: 'Uno' }) })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: i18n.t('concepts.selectConcept', { title: 'Dos' }) })).toBeChecked();
+    await user.click(screen.getByRole('button', { name: i18n.t('concepts.bulkMarkSeen') }));
+    await waitFor(() => expect(vi.mocked(markConceptSeen).mock.calls.filter((call) => call[1] === second.id)).toHaveLength(2));
+    expect(vi.mocked(markConceptSeen).mock.calls.filter((call) => call[1] === first.id)).toHaveLength(1);
+    expect(screen.queryByRole('checkbox', { checked: true })).not.toBeInTheDocument();
+    await waitFor(() => expect(notify).toHaveBeenCalledTimes(3));
+    expect(notify).toHaveBeenLastCalledWith(`Dos: ${i18n.t('concepts.bulkOutcomeCompleted')}`, 'success', 10_000);
+  });
+
+  it('requires confirmation for selected concept deletion and submits only after confirmation', async () => {
+    currentConcepts = [existingConcept];
+    const user = userEvent.setup();
+    renderView();
+    await screen.findByRole('checkbox', { name: i18n.t('concepts.selectConcept', { title: existingConcept.title }) });
+    await user.click(screen.getByRole('checkbox', { name: i18n.t('concepts.selectConcept', { title: existingConcept.title }) }));
+    await user.click(screen.getByRole('button', { name: i18n.t('concepts.bulkDelete') }));
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(deleteConcept).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: i18n.t('concepts.confirmBulkDelete') }));
+    await waitFor(() => expect(deleteConcept).toHaveBeenCalledWith(expect.objectContaining({ conceptId: existingConcept.id, listId: list.id })));
   });
 
   it('opens deleted-concept notes from the symmetric list header action and returns to the list', async () => {
