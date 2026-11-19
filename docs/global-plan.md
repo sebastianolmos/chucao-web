@@ -1,4 +1,4 @@
-﻿# Chucao Web â€” Global Plan
+# Chucao Web — Global Plan
 
 ## 1. Document status and sources
 
@@ -49,7 +49,7 @@ No numeric adoption, latency, retention, or learning targets are invented at thi
 | CAP-04 | Independent list rounds, pending/seen state, uniform random selection, manual marking, appearance order, and new-round history | MVP | Planned |
 | CAP-05 | Timed practice from a selected concept or independently, with a configurable duration from 1 to 59 minutes, pause, resume, restart, and reduced-motion behavior | MVP | Delivered locally in VS-04; active sessions remain transient and are not saved as practices |
 | CAP-06 | Chucao forest animation and optional completion sound synchronized with the timer | MVP | Delivered locally in VS-04; browser background/audio restrictions remain for release validation |
-| CAP-07 | Completed practice records, notes, prior rounds, and practice history, including a 0â€“5 satisfaction rating distinct from Unrated; independent practices are saved only when given a free-text label | MVP | Planned |
+| CAP-07 | Completed practice records, notes, prior rounds, and practice history, including a 0–5 satisfaction rating distinct from Unrated; independent practices are saved only when given a free-text label | MVP | Planned |
 | CAP-08 | Spanish/English interface, translated validation and accessibility text, and locale-aware dates/plurals | MVP | Partially delivered locally in VS-01/VS-02; remaining views and locale-aware study content remain pending |
 | CAP-09 | Responsive, keyboard-usable, accessible interface for PC and mobile browsers | MVP | Partially delivered and user-reviewed locally for VS-01/VS-02; later views and release-wide validation remain pending |
 | CAP-10 | Cross-device access to the same signed-in user's saved data through the responsive web application | MVP baseline from the first release, not a later feature | Partially delivered locally for private lists/concepts; supported-device release validation remains pending |
@@ -75,10 +75,10 @@ The existing plan treats list search/order, duplication, archive/restore, return
 - The timer uses elapsed time and recorded pauses rather than visual frame updates as its source of truth. Its duration is between 1 and 59 minutes. Users may edit the duration before starting, but cannot add time after starting.
 - Active timer/session state is not persisted, synchronized, or resumed across devices or browser instances. Leaving the practice abandons the active timer and does not create a resumable timer state.
 - The animation uses React, SVG, transparent images, CSS Modules, and `requestAnimationFrame`; reduced-motion behavior is required.
-- Concept titles are 1â€“50 characters after trimming. Duplicate detection initially preserves the desktop rule: exact, case-sensitive match within the same list, including seen concepts and duplicates within a pasted block.
+- Concept titles are 1–50 characters after trimming. Duplicate detection initially preserves the desktop rule: exact, case-sensitive match within the same list, including seen concepts and duplicates within a pasted block.
 - Maximum lengths are 80 characters for list names, 50 characters for concept titles, 2,000 characters for descriptions, and 2,000 characters for practice notes. Limits apply after trimming and are enforced in the backend as well as the interface.
 - List names are unique per user after trimming and case folding.
-- MVP ordering is predefined and does not provide manual ordering: lists by name Aâ€“Z/Zâ€“A, recently/oldest created, or recently modified; concepts by title Aâ€“Z/Zâ€“A, pending/seen first, or incorporation order; history newest/oldest first. Ordering is local and does not change persisted concept order.
+- MVP ordering is predefined and does not provide manual ordering: lists by name A–Z/Z–A, recently/oldest created, or recently modified; concepts by title A–Z/Z–A, pending/seen first, or incorporation order; history newest/oldest first. Ordering is local and does not change persisted concept order.
 - Multi-selection applies to concepts and supports delete, mark as seen, and return to pending. Only delete requires confirmation; bulk results report successes and failures.
 - Privileged credentials stay out of the frontend. Authorization is enforced at the backend/database boundary, not only by hidden controls.
 - Random selection and manual marking must be atomic, and retries must not consume another concept or duplicate a practice.
@@ -89,8 +89,8 @@ The existing plan treats list search/order, duplication, archive/restore, return
 - A new round closes the previous round, preserves its history, and makes existing concepts available again; deleted concepts are not restored.
 - A concept added while a list round is open joins that round as pending. Concurrent state-changing actions for one list are processed in order against current state; repeating the same intent does not produce another effect.
 - Concept identity is stable across title and description edits, so editing does not reset round state. Historical appearances keep a snapshot of the title used at that time while the concept remains active.
-- On concept deletion, replace its displayable historical title with a deletion marker. History shows the localized equivalent of “Deleted concept”, preserving appearance order and origin while not disclosing the deleted title; retain only the minimum reference needed for that history.
-- Deleting a concept removes it from the active list and shows it as â€œDeleted conceptâ€ in history, without allowing new practices. Deleting a list should generally be preceded by archiving; permanent deletion removes active content and preserves only anonymized historical records.
+- On concept deletion, preserve its historical title in past round/practice history and clearly mark the concept as deleted with localized status text, preserving appearance order and origin. The deleted concept is removed from active use and cannot be practiced again.
+- Deleting a list should generally be preceded by archiving; permanent deletion removes active content and preserves only anonymized round totals. Saved practices and notes associated with the permanently deleted list are deleted.
 - Notes can be edited or deleted without deleting their associated practice.
 - Deleting an account removes or anonymizes all associated personal and content data, subject to the documented retention and backup process.
 - Abandoning a timer creates no practice record. Practice history contains only practices explicitly completed and saved according to the later practice specification.
@@ -136,7 +136,7 @@ The following is a conceptual inventory, not a physical schema. It includes data
 | Define identity and account lifecycle | DP11 | Google owns credential recovery; the application owns Google sign-in initiation, logout/session handling, account deletion, and linkage of private content to the authenticated identity. | Pending; verify in the account slice and before public registration |
 | Use maintained security and encrypted transport controls | DP12 | Keep secrets server-side, use provider-managed authentication, HTTPS, protected sessions, least privilege, and recovery procedures. | Pending; verify before deployment |
 | Prevent auxiliary disclosure | DP13 | Errors, logs, URLs, caches, browser storage, backups, and support artifacts must not expose credentials or other users' content. | Pending; verify before publication and after observability changes |
-| Define retention, erasure, account deletion, and backups | DP14, DP18 | Supabase-managed backups will be used initially; no separate backup system is planned. Active account and content data are retained while the account is active or until deletion is requested. Logs and sessions are retained only for the minimum period necessary for security, diagnostics, and operation, with exact operational periods documented before release. Account deletion removes or anonymizes associated active data; permanently deleted lists retain only anonymized historical records. Backup copies may persist temporarily according to Supabase retention and will be disclosed in the notice. | Decision confirmed; implement deletion and document provider retention before public registration |
+| Define retention, erasure, account deletion, and backups | DP14, DP18 | Supabase-managed backups will be used initially; no separate backup system is planned. Active account and content data are retained while the account is active or until deletion is requested. Logs and sessions are retained only for the minimum period necessary for security, diagnostics, and operation, with exact operational periods documented before release. Account deletion removes or anonymizes associated active data; permanently deleted lists delete associated practices and notes and retain only anonymous round totals. Backup copies may persist temporarily according to Supabase retention and will be disclosed in the notice. | Decision confirmed; implement deletion and document provider retention before public registration |
 | Provide accessible privacy information and collection notice | DP08, DP09 | A public privacy notice and point-of-collection explanation will describe the data categories, purposes, providers, transfers, retention, deletion, rights, security at an appropriate level, contact channel, policy version, and update date. It must be available before or during Google registration. | Decision confirmed; publish and review before public registration |
 | Provide rights handling and correction processes | DP15, DP16, DP17 | A manual process will initially handle access, export where applicable, correction, deletion, objection, and restriction requests. The process will use proportionate ownership verification, track requests, provide secure responses, and distinguish account closure from deletion and restriction. | Decision confirmed; publish contact and procedure before public registration |
 | Review providers and international transfers | DP05 | Google, Supabase, and Cloudflare require a provider review covering role, location, subprocessors, retention, deletion, security terms, and international transfers. Future providers require the same review before use with real data. | Decision confirmed; document provider evidence before public registration |
@@ -152,241 +152,73 @@ The sequence preserves the proposed increment order while making each increment 
 
 | Slice | Observable result | Capabilities | Boundary and dependencies | Activated quality/privacy conditions |
 |---|---|---|---|---|
-| **VS-01 Account and first private list** | **Closed for validated local scope; publication conditions remain pending.** A person can sign in with Google and create and view a private empty list in Spanish or English from supported responsive devices. | CAP-01, CAP-02 (partial: create/view), CAP-08, CAP-09, CAP-10, CAP-12 (partial: language/account shell) | Supabase Auth, Google OAuth, database, RLS, frontend shell, and the minimum account linkage needed for private lists. Rename/delete lists, full settings, concepts, and later study behavior remain outside this slice. Requires account lifecycle and privacy notice decisions before real users. | Q01â€“Q06, SEC01, SEC04â€“SEC08, SEC10, WEB02â€“WEB04; DP01â€“DP03, DP08â€“DP13 |
-| **VS-02 Concept management** | **Closed for validated local scope (2026-11-18, including T10).** A person can manage concepts in private lists, use the shared authenticated navigation/preferences, and receive localized action feedback. | CAP-01 (partial), CAP-02 (partial), CAP-03, CAP-08 (partial), CAP-09 (partial), CAP-10 (partial), CAP-12 (partial) | Depends on private lists and trusted validation. The delivered local scope excludes rounds, selection, practice, account deletion, list rename/delete, release-wide browser validation, and publication. | Q01â€“Q04, SEC01â€“SEC03, SEC08; DP02, DP03, DP10, DP13, DP14 |
-| VS-03 Persistent round and selection | **Closed for validated local scope (2026-11-18).** A person can mark or randomly select a pending concept, see the result and appearance order, and start a new round without losing prior history. | CAP-04, CAP-10 (partial) | Depends on concepts and atomic persistence; requires concurrency, retry/idempotency, return-to-pending, and the defined concept/list history rules. Broader release compatibility and publication remain VS-07. | Q01â€“Q04, SEC01â€“SEC04, SEC08; DP02, DP10, DP12â€“DP14, DP16 |
-| **VS-04 Timed practice journey** | **Closed for validated local scope (2026-11-18).** An authenticated person can run and control an associated or independent timer, see the timer-synchronized Chucao scene, and configure account-level timer preferences. Active sessions are transient; completion and abandonment do not save practice history. | CAP-05, CAP-06, CAP-09 (local/user-reviewed scope), CAP-12 (timer preferences) | Reuses VS-01â€“VS-03 auth, concepts, Draw Result and shell. Adds constrained account preference fields, a minimal Credits and Licenses section in existing Preferences, and no practice persistence. T07/T08 manual review was user-confirmed; broad release compatibility, accessibility and publication checks remain VS-07. | Q01â€“Q06, SEC01, SEC03, SEC04, SEC08, SEC10, WEB03â€“WEB04; DP02, DP10, DP12â€“DP14. DP07 only if telemetry/storage is added. See [`spec.md`](../specs/004-timed-practice-journey/spec.md), [`tasks.md`](../specs/004-timed-practice-journey/tasks.md), and local closure evidence. |
-| VS-05 Notes and history | A person can complete a practice, save notes, and review prior practices and rounds without confusing notes with descriptions. Abandoning a timer creates no practice record. | CAP-07, CAP-10 | Depends on practice lifecycle and deletion/retention rules; note length/edit/delete and deleted-reference behavior are defined. | Q01â€“Q04, SEC01â€“SEC04; DP02, DP03, DP10, DP13â€“DP16, DP18 |
-| VS-06 Advanced organization | A person can search/order, duplicate/archive/restore lists, filter List Detail to all, pending, or practiced concepts, and use the defined multi-selection actions. | CAP-02, CAP-03, CAP-04, CAP-11 | Depends on stable identities and history semantics; list filters, limits, sorting, multi-selection actions, and confirmation rules are defined. Permanent list deletion must preserve the documented anonymization and retention behavior. | Q01â€“Q04, SEC01â€“SEC04, SEC08; DP10, DP13â€“DP16 |
+| **VS-01 Account and first private list** | **Closed for validated local scope; publication conditions remain pending.** A person can sign in with Google and create and view a private empty list in Spanish or English from supported responsive devices. | CAP-01, CAP-02 (partial: create/view), CAP-08, CAP-09, CAP-10, CAP-12 (partial: language/account shell) | Supabase Auth, Google OAuth, database, RLS, frontend shell, and the minimum account linkage needed for private lists. Rename/delete lists, full settings, concepts, and later study behavior remain outside this slice. Requires account lifecycle and privacy notice decisions before real users. | Q01–Q06, SEC01, SEC04–SEC08, SEC10, WEB02–WEB04; DP01–DP03, DP08–DP13 |
+| **VS-02 Concept management** | **Closed for validated local scope (2026-11-18, including T10).** A person can manage concepts in private lists, use the shared authenticated navigation/preferences, and receive localized action feedback. | CAP-01 (partial), CAP-02 (partial), CAP-03, CAP-08 (partial), CAP-09 (partial), CAP-10 (partial), CAP-12 (partial) | Depends on private lists and trusted validation. The delivered local scope excludes rounds, selection, practice, account deletion, list rename/delete, release-wide browser validation, and publication. | Q01–Q04, SEC01–SEC03, SEC08; DP02, DP03, DP10, DP13, DP14 |
+| VS-03 Persistent round and selection | **Closed for validated local scope (2026-11-18).** A person can mark or randomly select a pending concept, see the result and appearance order, and start a new round without losing prior history. | CAP-04, CAP-10 (partial) | Depends on concepts and atomic persistence; requires concurrency, retry/idempotency, return-to-pending, and the defined concept/list history rules. Broader release compatibility and publication remain VS-07. | Q01–Q04, SEC01–SEC04, SEC08; DP02, DP10, DP12–DP14, DP16 |
+| **VS-04 Timed practice journey** | **Closed for validated local scope (2026-11-18).** An authenticated person can run and control an associated or independent timer, see the timer-synchronized Chucao scene, and configure account-level timer preferences. Active sessions are transient; completion and abandonment do not save practice history. | CAP-05, CAP-06, CAP-09 (local/user-reviewed scope), CAP-12 (timer preferences) | Reuses VS-01–VS-03 auth, concepts, Draw Result and shell. Adds constrained account preference fields, a minimal Credits and Licenses section in existing Preferences, and no practice persistence. T07/T08 manual review was user-confirmed; broad release compatibility, accessibility and publication checks remain VS-07. | Q01–Q06, SEC01, SEC03, SEC04, SEC08, SEC10, WEB03–WEB04; DP02, DP10, DP12–DP14. DP07 only if telemetry/storage is added. See [`spec.md`](../specs/004-timed-practice-journey/spec.md), [`tasks.md`](../specs/004-timed-practice-journey/tasks.md), and local closure evidence. |
+| **VS-05 Notes and history** | **Closed for validated local scope (2026-11-19).** An authenticated person explicitly saves a completed associated or labeled independent practice, records an optional note and rating, and reviews saved practices and prior rounds. Abandoning a timer never creates a practice record. The user confirmed the integrated MV-01 journey; MV-02 browser storage/URL/cache/diagnostic inspection was explicitly excluded from local spec completion and remains unverified. | CAP-07, CAP-10 (saved-data access across supported devices; subject to release validation) | Builds on VS-01–VS-04; private practice/note persistence and history are implemented and checked locally. See [`specs/005-notes-and-history/spec.md`](../specs/005-notes-and-history/spec.md) and [`specs/005-notes-and-history/tasks.md`](../specs/005-notes-and-history/tasks.md) for requirements, validation, and closure evidence. VS-05 is closed and is no longer the current slice; broader publication checks remain VS-07. | Q01–Q04, Q06, SEC01–SEC04, SEC08; DP02, DP03, DP10, DP12–DP16, DP18 |
+| **VS-06 Advanced organization** | **Selected; current slice, spec drafted for clarification.** See [specs/006-advanced-organization/spec.md](../specs/006-advanced-organization/spec.md). An authenticated person finds and organizes private lists and concepts: searches and orders lists, duplicates a list, archives and restores it, filters its concepts by study state, and applies the defined bulk actions. | CAP-02 (complete list management), CAP-03 (multi-selection operations), CAP-04 (study-state filters), CAP-11 (selected organization subset) | Builds on VS-01–VS-05: owned lists/concepts, stable identities, round state, practice/note history, and deletion semantics are available locally. Preserve private ownership and existing histories. Permanent list deletion retains only the documented anonymous round totals and removes its practices/notes; archive and duplication semantics remain proposals pending clarification. Remaining CAP-11 functionality outside this bounded set stays deferred. | Q01–Q04, Q06, SEC01–SEC04, SEC08; DP02, DP03, DP10, DP13–DP16, DP18 |
 | VS-07 Publication readiness | The integrated study journey is validated on modern browsers on PC and Android, with accessibility, migration reproducibility, deployment, and documented privacy handling. | CAP-01, CAP-10, CAP-12 | Depends on all release-blocking decisions, provider review, production configuration, migration/recovery evidence, and representative PC/Android checks. | All selected release criteria; unresolved DP items block real-user publication unless explicitly resolved with rationale. |
 
 Cross-cutting conditions apply to every slice: errors must expose the real state or uncertainty, retries must be safe, authorization must hold at the trusted boundary, and affected documentation must be updated.
+### Current slice: VS-06 Advanced organization
 
-### Closed slice: VS-03 Persistent round and selection
+**Selection status and rationale:** Selected as the next implementation slice after VS-05 closed for its validated local scope. This continues the provisional roadmap order and brings forward the remaining private-list management and organization subset without delaying the already delivered study loop. VS-07 remains the separate publication-readiness increment.
 
-**Slice status:** Closed for local implementation and validation (2026-11-18)
-after the validated local VS-02 scope. T01–T07 are complete within the
-owner-accepted Chrome/Brave PC and mobile review scope (CL-06). This does not
-claim broader release compatibility or publication readiness; those remain
-VS-07 checks. It activates the first complete study loop without pulling
-timed practice or notes/history views forward.
+**User outcome:** An authenticated person can locate and organize their private lists, maintain list availability through archive/restore and duplication, focus a list on concepts by study state, and apply supported actions to multiple selected concepts.
 
-**Specification, plan, validation, and closure:** [`specs/003-persistent-round-and-selection/spec.md`](../specs/003-persistent-round-and-selection/spec.md), [`plan.md`](../specs/003-persistent-round-and-selection/plan.md), and [`tasks.md`](../specs/003-persistent-round-and-selection/tasks.md). The validation matrix and closure record are in `tasks.md`. T01–T07 and AC-08 are complete within CL-06; release-wide browser/version review remains for VS-07. No later slice is selected here.
+**Capabilities covered:** CAP-02 list rename/delete plus list search, ordering, duplication, and archive/restore; CAP-03 multi-selection actions over concepts; CAP-04 filters for all, pending, and practiced concepts; the bounded subset of CAP-11 named here. Existing create/view and concept CRUD/round/practice/history behavior is preserved. CAP-11 features not named in scope remain deferred.
 
-**User outcome:** An authenticated person can progress through a private
-list's current round by marking a pending concept seen or drawing one uniformly
-at random, see the selected concept and its order, return it to pending when
-needed, and begin a fresh round while retaining the prior round's appearances.
+**Included scope:** Search and order the user's lists; duplicate a list and archive/restore a list; exact copy contents, progress reset, and history retention remain subject to OQ-02/OQ-03 in the linked spec; filter List Detail by all, pending, or practiced concepts; select multiple concepts and invoke only the previously defined bulk actions, with applicable confirmation and partial-failure feedback. Include empty, no-match, loading, failure/retry, and destructive-action states. Permanent list deletion follows the existing rule: remove practices and notes and retain only anonymous round totals. No cross-user access is permitted.
 
-**Capabilities covered:**
+**Deferred scope:** Any CAP-11 action not included in the defined multi-selection set, public/shared lists, export/import, and changes to the study or history model. VS-07 retains release-wide browser/accessibility, migration, deployment, and publication checks. The selection does not claim these quality or release obligations are already satisfied.
 
-- **CAP-04:** Current-round pending/seen state, manual appearance, random
-  selection, appearance order/origin, return-to-pending, and a new round with
-  history retained.
-- **CAP-10:** Extend account-owned persistence to rounds and appearances so
-  current progress is available after reload and across the same user's
-  supported devices; active timer/session synchronization remains excluded.
+**Dependencies and readiness:** VS-01–VS-05 are closed for their recorded local scopes. Stable list/concept IDs, persisted rounds and history, Supabase Auth ownership, RLS, migrations, query/cache, i18n, and the authenticated shell are available locally. The spec must trace list duplication/archive/restore and bulk actions through database constraints and trusted authorization, preserve practice/note/history semantics, and confirm the precise already-defined bulk-action set from the relevant flow/spec evidence. Local demonstration requires Vite, Supabase/Docker, and synthetic accounts. Browser runtime privacy inspection excluded from VS-05 remains unverified and is not a blocker to specifying this slice; it remains a publication concern.
 
-**Included scope:** Enter List Detail for an owned list; show empty, pending,
-seen, exhausted, and current-round progress states. Keep all active concepts
-visible in the collection with a clear pending/practiced (seen) label; show
-practiced/active-concept counts on My Lists cards. Manually mark pending
-concepts seen; draw only from pending concepts with equal eligibility; show a
-confirmed draw result with description hidden; return a seen concept to pending
-without erasing prior appearances; confirm or cancel a new round; reset active
-concept progress while preserving closed-round appearance history. Failed,
-repeated, and concurrent operations must not falsely show a result, consume an
-extra concept, or corrupt order/history. Persist only the minimum round and
-appearance data required by these behaviors, privately under the authenticated
-owner. Existing concept management and shared authenticated shell remain
-available.
+**Affected layers:** Authenticated list index and List Detail UI; localized search/order, archive/restore/duplicate and multi-select interactions; typed services/query-cache invalidation; versioned PostgreSQL operations, RLS and ownership enforcement; and focused UI/database-boundary evidence. Reuse existing list/concept/round/practice/note identities and history views.
 
-**Deferred scope:** Timed or independent practice, animation/sound, practice
-notes and history/rating views, list rename/delete and advanced organization,
-bulk mark-as-seen, cross-device active operation/session synchronization,
-status filters for all/pending/practiced concepts (planned for VS-06 Advanced
-organization), publication, and release-wide browser validation. Practice entry may remain a
-future action; this slice does not create a practice record or timer state.
+**Applicable shared criteria and consequences:** Q01/Q02 require truthful empty/no-match/retry behavior and safe duplicate, archive, restore, bulk, and deletion operations; required during implementation and integration. Q03/WEB03 require localized, keyboard-usable, responsive selection, filters, and confirmations. Q04/SEC08 require bounded list queries, sorting, selection size, and processing for realistic personal volumes. Q06 requires actionable errors without exposing user-authored content and aligned docs. SEC01–SEC04 require trusted validation, safe rendering, and owner-only access on every direct read/write/delete path. DP02/DP03/DP10/DP13–DP16/DP18 require purpose-limited private data handling, retention and deletion semantics consistent with VS-05, and access/correction/deletion handling; these controls apply when the operations are enabled.
 
-**Dependencies and readiness:** VS-02 is closed for its validated local scope.
-Its concepts have stable UUIDs, list association, active/deleted tombstone
-state, and initial `pending` state in the local migration and trusted RPCs
-(`supabase/migrations/20261117134700_vs02_concept_management.sql`,
-`src/features/concepts/conceptService.ts`). VS-01 provides authenticated
-ownership, RLS conventions, localization, and the responsive shell. No round,
-appearance, draw, or progress persistence is currently present; the slice must
-add the trusted transactional persistence needed for state changes, with safe
-retry/idempotency and ownership checks. Local demonstration can use synthetic
-accounts with Vite and Supabase/Docker. Real-user publication, production
-provider configuration, and legal/privacy release review remain outside this
-selection. Existing VS-02 tombstones preserve a minimum future-history
-reference; exact appearance snapshots and list-deletion/anonymization effects
-must be reconciled with the existing global retention rules in the spec.
+**Demonstration scenario:** Run the local app and Supabase as synthetic user A with several lists and concepts in pending/practiced states, including a list with history. Search and order lists, duplicate one and verify distinct identity with fresh progress, archive then restore another and verify its history remains, filter List Detail and verify each concept set, then perform a defined multi-selection action and verify persisted results after reload. Attempt permanent deletion and verify its confirmation, removal of practices/notes, and anonymous round totals only. Sign in as user B and verify direct access and mutation of A's lists/concepts are rejected. Use the same data with user A across a reload to show persistence; no deployed backup or release-browser claim is implied.
 
-**Affected layers:** List Detail and a focused draw/result/confirmation UI;
-localized accessible loading, empty, progress, success, failure, retry, and
-confirmation states; typed round/appearance service operations; PostgreSQL
-migrations, constraints, RLS, and trusted atomic operations. Reuse the VS-01/
-VS-02 authenticated shell, list/concept identities, localization, query/cache
-patterns, and migration conventions. No additional provider or application
-server is anticipated.
+**Open decisions and readiness for specification:** Product-level selection is bounded and ready for specification. The spec should resolve detail-level limits for search/order/selection and enumerate the previously defined multi-selection actions by tracing existing flow/decision records; these do not block starting the spec. The global plan still marks archive-history and duplicate-new-progress behavior as proposals; resolve them in spec clarification before treating them as confirmed.
 
-**Activated shared criteria and controls:**
+### Closed slices: VS-03 and VS-04
 
-- **Q01/Q03:** Every round state and action must be understandable, keyboard
-  operable, responsive, and localized; success is shown only after persistence
-  is confirmed.
-- **Q02/Q04, SEC08:** Concurrent draws, repeated submissions, retries,
-  interruptions, and large personal lists must preserve a valid unique order
-  and bounded operation; define realistic list limits or query/resource bounds
-  in the spec if needed.
-- **SEC01/SEC04, DP10:** State transitions and all round/appearance reads and
-  writes are validated at the trusted boundary and isolated by Auth UUID; a
-  second synthetic account must be unable to access or mutate the data.
-- **SEC02/SEC03:** Titles and historical snapshots remain parameterized data
-  and safely rendered as text.
-- **DP02/DP12â€“DP14/DP16:** Inventory generated round/appearance data and its
-  purpose; keep it private, minimize auxiliary disclosure, define retention
-  when concepts/lists are deleted, and ensure displayed progress/history agrees
-  with persisted events. Verify confidentiality/integrity through the local
-  boundary; deployed transport and operational controls remain publication
-  evidence.
+VS-03 Persistent round and selection is closed for validated local scope after T01–T07 and the accepted CL-06 browser review. Its specification, plan, and task/validation evidence are retained in [`specs/003-persistent-round-and-selection/`](../specs/003-persistent-round-and-selection/). Broader release compatibility remains VS-07.
 
-**Demonstration scenario:** Start local Vite and Supabase, then sign in as
-synthetic user A with a list containing three named concepts. Draw until the
-round is exhausted; verify each appears once in persisted appearance order,
-only after a confirmed operation, and reload to confirm seen/pending state and
-history remain. Return one seen concept to pending and verify a subsequent draw
-can select it without deleting the earlier appearance. Cancel a new-round
-confirmation and verify nothing changes; confirm it and verify the old round's
-appearances remain while active concepts become pending in the new round. Retry
-or overlap a draw and verify it cannot consume a second concept; sign in as
-synthetic user B and verify direct reads/writes for A's list/round are rejected.
-The local scenario demonstrates persistence and trusted ownership, not
-production transport or the full supported-browser matrix; those remain
-publication checks.
+VS-04 Timed practice journey is closed for validated local scope after T01–T08, including automated/database evidence and user-confirmed T07/T08 review. Its specification and closure evidence are retained in [`specs/004-timed-practice-journey/`](../specs/004-timed-practice-journey/). Active timers remain transient; broader browser/accessibility and publication checks remain VS-07.
 
-**Decisions and task readiness:** Product clarifications and technical
-decisions Q-03/Q-04 are accepted and recorded in the spec and plan: same-list
-changes are ordered, same-intent retries use a command ledger, concepts added
-during an open round join as pending, Practice is introduced with VS-04,
-deleted concept titles are replaced by a localized history marker, and future
-permanent list deletion retains only anonymous round totals. The seven-task
-breakdown is ready for execution; all tasks remain pending and implementation
-has not started.
+### Closed slice: VS-05 Notes and history
 
-### Selected slice: VS-04 Timed practice journey
+**Status and rationale:** Closed for validated local scope after T01–T12. The user confirmed MV-01's integrated journey; MV-02 runtime browser privacy inspection was explicitly excluded from local spec completion and remains unverified. This local closure does not establish publication readiness. The increment completes the saved-practice and review outcome assigned to CAP-07 while reusing the authenticated, round, and timer journeys rather than expanding into advanced list organization (VS-06). Validation and closure evidence are in [`specs/005-notes-and-history/tasks.md`](../specs/005-notes-and-history/tasks.md).
 
-**Status and rationale:** Closed for validated local scope on 2026-11-18 after
-T01–T08. It delivers the core timed practice behavior before VS-05 adds saved
-practices, notes, ratings, and history. Automated, database, privacy, and
-user-confirmed manual review evidence is recorded in the VS-04 task breakdown;
-this is not a deployment or release-wide validation claim.
+**User outcome:** An authenticated person explicitly completes and saves an associated or labeled independent practice, optionally records a note and a 0–5 satisfaction rating (with Unrated distinct from 0), and later reviews practice and round history. Notes remain separate from concept descriptions; abandoning an active timer creates no practice.
 
-**User outcome:** An authenticated person starts a 1–59 minute timer either
-from a selected concept's Draw Result or as an independent timer, can reveal
-the associated concept description, pause/resume/restart, and reaches a clear
-completion state with the Chucao scene and optional completion sound.
+**Capabilities covered:** CAP-07 (saved practices, optional practice notes, rating, prior rounds, and history); CAP-10 (saved records available to the same signed-in user across supported devices, subject to release validation).
 
-**Capabilities covered:** CAP-05 (associated and independent timer, duration,
-controls, transient lifecycle); CAP-06 (timer-synchronized scene and optional
-sound); CAP-09 (responsive, localized, keyboard-accessible practice surface,
-including reduced-motion presentation); CAP-12 (account-level default
-duration, sound, volume, and reduced-motion preferences), now implemented for
-timer settings in VS-04. Wider release validation remains in VS-07.
+**Included scope:** On timer completion, present an explicit closure/save journey. Associated practice retains its concept and applicable list/round context; independent practice is saved only when the person supplies a free-text label. Allow optional note and rating entry before explicit save. Saving does not navigate automatically: after confirmed save, offer return to the originating context, a fresh timer for the same mode/context, and (for associated practice) Draw Another or Start New Round when no concepts remain pending. Support the confirmed note edit/delete actions from the relevant associated concept/list context, or an independent practice detail opened from its History entry; the History list and ratings remain read-only. Note deletion does not delete its practice. Provide a History view with Practices and Rounds, the confirmed practice filters and read-only practice/rating entries, including completion state, duration, date, rating state, and note presence. Round history shows closed/open state, appearance order, and draw/manual origin. Preserve originating context and filters on return where possible. Show localized loading, empty, validation, save-failure, retry, and success states. Reuse the transient VS-04 timer: no save is offered for an abandoned/incomplete session.
 
-**Included scope:** Entry from Draw Result and the planned Independent Timer
-entry; duration selection before start, constrained to 1–59 minutes; hidden
-description with voluntary reveal for associated practice; start, pause,
-resume, confirmed restart, elapsed-time-based completion; synchronized
-animation, optional sound triggered once, and an understandable completed
-state. Add and synchronize timer preferences per account. Add a concise,
-localized Credits and Licenses section to the existing Preferences dialog
-with the required project, font, and timer-media attribution. Show loading,
-unavailable-context, error/retry, and completion states truthfully in Spanish
-and English. Active timer state stays in the current browser session;
-leaving, reloading, session loss, or changing browser/device abandons it without
-recovery or a practice record. Existing authentication, list/concept context,
-round selection, and navigation remain in place.
+**Deferred scope:** Advanced list organization and concept-state filters remain VS-06. Editing ratings or practice records from History, drafts/autosave before explicit submission, timer recovery, cross-device active sessions, shared history, analytics, exports, and release-wide compatibility/publication remain out of scope or VS-07 as applicable.
 
-**Deferred scope:** Saving completed practices, independent-practice labels,
-notes, ratings, closure save/repeat/draw-another actions, and practice/history
-views remain VS-05. Cross-device timer synchronization/recovery remains
-excluded (CAP-14); post-start time extension, list organization, publication,
-and release-wide browser validation are also out of scope. Completion here is
-a transient result, not a saved practice.
+**Dependencies and readiness:** VS-01–VS-04 are closed for their documented local scope. Supabase Auth UUID ownership, RLS, migrations, query/cache, i18n, concept/round context, timer completion, and account shell are available locally. VS-05 practice/note resources, private trusted-boundary policies, cross-user checks, history, deleted-concept title rules, and anonymous-total deletion behavior are implemented and have local evidence in the task log. Local demonstration requires Vite, Supabase/Docker, and synthetic accounts. Runtime browser privacy inspection was not completed; publication transport, rights handling, provider backup retention/restoration, and supported-browser evidence remain release work.
 
-**Implementation and boundaries:** VS-01–VS-03 provide the authenticated shell,
-private ownership, concept detail, and Draw Result. VS-04 extends the owner
-profile with constrained timer preference fields and a narrow trusted update
-grant; the timer remains client-only, so no practice/timer persistence layer is
-needed. The user confirmed `src/assets/fly1.png`, `fly2.png`, and `tronco.png`
-are owner-created and approved for reuse, and confirmed `src/assets/chucao.wav`
-as the completion sound and its CC BY-NC-SA 4.0 attribution terms. The root
-README now records the creator, font, audio source, modifications, and license
-exclusion; VS-04 adds a concise in-app Credits and Licenses section. Browser
-restrictions can delay or suppress sound while backgrounded or locked;
-the UI must not misrepresent the timer's logical completion, and publication
-testing must record the limitation. Local demonstration requires Vite,
-Supabase/Docker, synthetic accounts, and browser sound enabled by the user.
-
-**Affected layers:** Draw Result and Independent Timer entry in the React
-authenticated shell; localized practice surface and account Preferences UI;
-client-side elapsed-time state and animation/audio lifecycle; typed profile
-preference service and profile migration/RLS/trusted update operation; tests
-and focused browser review. Reuse VS-01–VS-03 identity, query/cache, i18n,
-responsive components, and migration conventions. Do not add an application
-server or persist active timer state.
+**Affected layers:** Authenticated navigation and practice closure/history surfaces; localized forms and read-only history presentation; typed client services and query/cache invalidation; versioned PostgreSQL migrations, ownership/RLS and trusted constraints/operations; focused unit/component and database-boundary verification. Reuse existing list/concept/round IDs, timer-completion state, deletion markers, account identity, and UI patterns.
 
 **Applicable shared criteria and consequences:**
 
-- **Q01/Q02:** Start, pause, restart, completion, errors, retry, and abandonment
-  must follow logical timer state without duplicate completion effects;
-  preference writes report success only after persistence and recover from
-  failure.
-- **Q03, WEB03–WEB04:** Controls and completion remain localized and operable
-  by keyboard/touch; reduced motion preserves time and completion information;
-  timer artwork has appropriate alternatives and animation/audio is not
-  required to understand state. Required for this UI slice.
-- **Q04, SEC08:** Bound timer update work and audio/animation resources; reject
-  durations outside 1–59 minutes at the relevant boundary. Required during
-  implementation and before publication.
-- **Q05/Q06, SEC10:** Keep setup/build reproducible, errors actionable without
-  sensitive data, and privileged keys absent from client artifacts. Q06 applies
-  throughout; release configuration checks remain VS-07.
-- **SEC01/SEC04; DP10:** Validate permitted preference fields and enforce
-  account ownership at Supabase/RLS/trusted boundaries. Required with the
-  preference persistence change.
-- **SEC03; DP02/DP13:** Render concept text safely and avoid exposing concept
-  content or session details through errors, URLs, caches, or diagnostics.
-- **DP12/DP14:** Keep account preference access private and reconcile its
-  retention with existing account deletion/backup rules. No timer or practice
-  content is retained by this slice.
-- **DP07** is conditional only if telemetry, tracking, or additional device
-  storage is introduced; none is selected here.
+- **Q01/Q02:** Explicit save, retry, reload, repeated submission, and history reads must produce truthful state without duplicate/corrupt records; required during implementation and integration.
+- **Q03, WEB03:** Closure, note actions, filters, and history remain localized, responsive, keyboard-operable, and understandable; required for this UI.
+- **Q04, SEC08:** Bound history queries and note/label input and processing for realistic personal data; set limits in the spec and reject invalid values at the trusted boundary.
+- **Q06:** Errors are actionable without exposing authored content; keep docs aligned throughout.
+- **SEC01–SEC04; DP10/DP12:** Validate allowed fields/state and enforce owner isolation on every practice, note, and history path, including direct requests; required when persistence is enabled.
+- **SEC03; DP02/DP03/DP13:** Treat notes/labels as user-authored private content, inventory their purpose and lifecycle, render safely, and prevent disclosure through URLs, errors, logs, or caches; required at implementation.
+- **DP14/DP18:** Define deletion, retention, backup, and retry behavior for practices/notes and historical links consistently with existing concept/list deletion rules; resolve in the spec and before real-user release.
+- **DP15/DP16:** Include these records in applicable access/correction processes and ensure history reflects accepted edits/deletions; release process remains a publication prerequisite.
 
-**Demonstration scenario:** Run local Vite and Supabase with a synthetic signed-
-in user and a list with at least one concept containing a description. Open its
-Draw Result, start a short valid timer, reveal the description, pause and resume,
-then restart and let it reach zero; verify one completion state and one optional
-sound event. Change duration/sound/volume/reduced-motion preferences, reload,
-and verify those preferences persist while the in-progress timer does not.
-Start the independent timer and verify the same controls and completion path
-without a concept. Try an out-of-range duration and verify rejection; abandon a
-running timer by navigating/reloading and verify there is no recovery or
-practice/history record. Verify another synthetic account cannot read or
-change the first user's preferences. This demonstrates local persistence and
-ownership, not background/locked-device sound guarantees or publication
-compatibility; those require supported-browser review in VS-07.
+**Demonstration scenario:** Start local Vite and Supabase with synthetic user A, a list, a concept, an open round, and a selected concept. Complete a short associated timer, enter a note and rating 0, explicitly save, reload, and verify the practice, note, rating, and associated context in History. Edit then delete the note from its permitted concept/list context and verify the practice remains, History shows no note, and note text is not exposed in history/errors. Save an independent completed practice with a label and verify it is filterable; leave another timer incomplete and verify no record exists. Review rounds and verify appearance order/origin and deleted-concept marker behavior. Sign in as synthetic user B and verify direct reads/writes of A's practice/note/history are rejected. This demonstrates local persistence/ownership, not deployed backup or release-browser behavior.
 
-**Decisions and readiness for technical planning:** Clarification is complete.
-The user approved the timer defaults, sound-volume mapping and preview, reduced-
-motion precedence, background timing, session preference behavior, navigation
-confirmation, completion destinations, timer assets, audio attribution, and the
-minimal Credits and Licenses section in Preferences. The specification is
-ready for technical planning; browser background/locked-device sound limits
-remain implementation and release constraints.
-
+**Implementation and readiness:** The clarified behavior and technical contracts are in [`specs/005-notes-and-history/spec.md`](../specs/005-notes-and-history/spec.md) and [`plan.md`](../specs/005-notes-and-history/plan.md): explicit practice save, associated versus labeled-independent records, optional notes, 0–5/Unrated, 2,000-character notes, 1–50-character independent labels, read-only history ratings, AND-combined filters with inclusive local-date bounds, deleted-concept title retention/labeling, permanent-list practice/note deletion, independent-note detail, bounded cursor pagination, and post-save actions. Implementation details and local validation evidence are recorded in `tasks.md`. The user excluded the browser runtime privacy inspection from local spec completion; it remains unverified. Publication also requires the remaining rights, backup/provider, transport, and browser checks.
 ## 9. Proposals and open questions
 
 | Decision needed | Consequence | Owner / stage |
@@ -416,5 +248,13 @@ The following remain proposals rather than approvals: hidden-by-default descript
 | 2026-11-18 | Closed VS-03 for validated local scope after T01–T07 and the accepted CL-06 browser review; aligned the slice status with validation evidence. | Records the delivered round journey without claiming production deployment or release-wide compatibility. |
 | 2026-11-18 | Selected and bounded VS-04 Timed practice journey after VS-03 closure. | Activates the associated and independent transient timer plus account-synced timer preferences; keeps saved practice/notes/history in VS-05 and records unconfirmed timer asset provenance as an implementation constraint. |
 | 2026-11-18 | Clarified VS-04 behavior and approved timer-media reuse and attribution. | Adds the account-preference timing rules, timer background behavior, controlled abandonment and completion navigation, owner-created scene assets, licensed sound attribution, and a minimal Credits and Licenses section in existing Preferences; the spec is ready for technical planning. |
-| 2026-11-18 | Closed VS-04 for validated local scope after T01â€“T08; recorded automated/database evidence and user-confirmed T07/T08 review. | Marks the associated and independent timer journey locally complete while keeping broad browser compatibility, accessibility, and publication readiness in VS-07. |
-
+| 2026-11-18 | Closed VS-04 for validated local scope after T01–T08; recorded automated/database evidence and user-confirmed T07/T08 review. | Marks the associated and independent timer journey locally complete while keeping broad browser compatibility, accessibility, and publication readiness in VS-07. |
+| 2026-11-18 | Selected VS-05 Notes and history after VS-03/VS-04 local closure; replaced their detailed selection records with concise closure references. | Makes VS-05 the sole selected slice and bounds saved practices, notes, and history against CAP-07 and the confirmed app flow. |
+| 2026-11-18 | Clarified deleted-concept history: retain the historical title and visibly mark the concept as deleted; permanent list deletion removes practices/notes and retains only anonymous round totals. | Preserves useful history while preventing deleted concepts from returning to active practice and keeps permanent list deletion aligned with its minimum-retention rule. |
+| 2026-11-18 | Clarified VS-05 behavior and synchronized its specification, flow, and design references. | Records explicit save, context-aware post-save actions, independent-practice note detail, and history filter/date semantics before technical planning. |
+| 2026-11-19 | Recorded VS-05's local implementation and evidence while retaining it as the selected slice pending separate validation/closure. | T11 was initially closed at the user's direction with the browser runtime privacy inspection explicitly omitted; local implementation is not represented as full privacy validation or publication readiness. |
+| 2026-11-19 | Reopened T11 as validation pending after spec validation found required browser review missing and the latest local database runner inconclusive for one note race. | Keeps the local implementation status separate from spec validation and preserves the required checks before any closure/delivery claim. |
+| 2026-11-19 | Recorded E10's passing 26-check database rerun and the user's confirmation that MV-01 was completed; accepted the user's decision to exclude MV-02 from local spec completion. | Marks VS-05 locally validated for that accepted scope while keeping runtime storage/URL/cache/diagnostic privacy behavior unverified and publication readiness separate. |
+| 2026-11-19 | Closed VS-05 for validated local scope after T01–T12 and E09–E12; left broader publication conditions in VS-07 and selected no next slice. | Records the saved-practice, note-management, and practice/round history capability without claiming deployment, runtime MV-02 results, or publication readiness. |
+| 2026-11-19 | Selected VS-06 Advanced organization as the current slice after VS-05 local closure. | Advances the provisional roadmap to private list organization, list search/order and duplicate/archive workflows, concept-state filters, and defined bulk actions while preserving ownership and deletion/history controls. |
+| 2026-11-19 | Drafted specs/006-advanced-organization/spec.md for VS-06. | Traces selected list/concept organization behavior to existing flow and design references; keeps unresolved search, duplicate, archive, ordering-tie, and bulk-selection rules visible for clarification before technical planning. |

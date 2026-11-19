@@ -106,4 +106,16 @@ describe('Preferences credits navigation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Volver' }));
     expect(await screen.findByRole('dialog', { name: /preferencias/i })).toBeInTheDocument();
   });
+
+  it('keeps sign out inside a scrollable preferences dialog', async () => {
+    renderApp();
+    fireEvent.click(await screen.findByRole('button', { name: /abrir preferencias/i }));
+    const dialog = await screen.findByRole('dialog', { name: /preferencias/i });
+    const signOut = within(dialog).getByRole('button', { name: i18n.t('auth.signOut') });
+    const body = signOut.closest('.mantine-Modal-body');
+
+    expect(body).not.toBeNull();
+    expect((body as HTMLElement).style.overflowY).toBe('auto');
+    expect((body as HTMLElement).style.maxHeight).toBe('calc(100dvh - 7rem)');
+  });
 });

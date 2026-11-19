@@ -7,6 +7,113 @@
   color: var(--chucao-brown);
 }
 
+.closure {
+  display: grid;
+  justify-items: center;
+  gap: 1.1rem;
+  width: min(100%, 48rem);
+  margin: 0 auto;
+  padding: clamp(1rem, 3vw, 1.75rem);
+  border: 2px solid var(--chucao-brown);
+  border-radius: 1rem;
+  background: var(--chucao-panel);
+  box-shadow: 4px 5px 0 var(--chucao-brown);
+  color: var(--chucao-brown);
+}
+
+.closure > header {
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+}
+
+.closure > header h1 {
+  grid-column: 2;
+  margin: 0;
+  text-align: center;
+  font-size: clamp(1.5rem, 4vw, 2.25rem);
+}
+
+.closureConcept,
+.closureSummary,
+.closureSuccess {
+  margin: 0;
+  text-align: center;
+  line-height: 1.55;
+}
+
+.closureConcept {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.closureField,
+.ratingField {
+  display: grid;
+  gap: 0.55rem;
+  width: 100%;
+  margin: 0;
+  font-weight: 700;
+}
+
+.closureField input,
+.closureField textarea {
+  border: 2px solid var(--chucao-brown);
+  border-radius: 0.65rem;
+  background: var(--chucao-cream);
+  color: var(--chucao-brown);
+  line-height: 1.5;
+}
+
+.ratingField {
+  border: 0;
+  padding: 0;
+}
+
+.ratingOptions,
+.closureActions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.ratingOptions button {
+  min-width: 2.9rem;
+  min-height: 2.9rem;
+  border: 2px solid var(--chucao-brown);
+  background: var(--chucao-cream);
+  color: var(--chucao-brown);
+}
+
+.ratingOptions button[aria-pressed='true'] {
+  background: var(--chucao-yellow);
+  box-shadow: 2px 3px 0 var(--chucao-brown);
+}
+
+.closureSuccess {
+  padding: 0.85rem 1rem;
+  border: 2px solid var(--chucao-brown);
+  border-radius: 0.7rem;
+  background: var(--chucao-cyan);
+  font-weight: 700;
+}
+
+.closureActions {
+  width: 100%;
+}
+
+@media (max-width: 36rem) {
+  .closure > header {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .closure > header h1 {
+    grid-column: 1;
+    grid-row: 2;
+  }
+}
+
 .practiceHeader {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);

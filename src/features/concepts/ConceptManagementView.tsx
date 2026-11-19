@@ -1,8 +1,9 @@
 import { Alert, Button, Modal, Text, Title } from '@mantine/core';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ListRow } from '../../lib/database.types';
+import type { RoundActionRequest } from '../lists/ListDetailView';
 import type { RoundCommandResult } from '../rounds/roundService';
 import {
   drawPendingConcept,
@@ -26,8 +27,16 @@ import { ConceptBatchReview } from './ConceptBatchReview';
 import { ConceptDetailView } from './ConceptDetailView';
 import styles from './concepts.module.css';
 import { useToast } from '../../app/toasts/useToast';
+import { AssociatedPracticeNotes } from './AssociatedPracticeNotes';
 
-type Props = { userId: string; list: ListRow; onBack: () => void; onStartPractice: (conceptId: string) => void };
+type Props = {
+  userId: string;
+  list: ListRow;
+  onBack: () => void;
+  onStartPractice: (conceptId: string, roundId?: string | null, appearanceId?: string | null) => void;
+  pendingRoundAction?: RoundActionRequest | null;
+  onRoundActionRequestHandled?: (requestId: number) => void;
+};
 
 function errorKey(error: unknown): string {
   if (!(error instanceof DomainServiceError)) return 'concepts.unavailable';
@@ -56,7 +65,7 @@ function roundErrorKey(error: unknown, context: 'load' | 'action' = 'action'): s
   }
 }
 
-export function ConceptManagementView({ userId, list, onBack, onStartPractice }: Props) {
+export function ConceptManagementView({ userId, list, onBack, onStartPractice, pendingRoundAction, onRoundActionRequestHandled }: Props) {
   const { t } = useTranslation();
   const [mode, setMode] = useState<EntryMode>('individual');
   const [review, setReview] = useState<BatchReview | null>(null);
@@ -64,6 +73,7 @@ export function ConceptManagementView({ userId, list, onBack, onStartPractice }:
   const [batchError, setBatchError] = useState<string | null>(null);
   const [summary, setSummary] = useState<number | null>(null);
   const [selectedConceptId, setSelectedConceptId] = useState<string | null>(null);
+  const [showDeletedConceptNotes, setShowDeletedConceptNotes] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const { notify } = useToast();
   const key = conceptQueryKey(userId, list.id);
@@ -77,8 +87,9 @@ export function ConceptManagementView({ userId, list, onBack, onStartPractice }:
   const [roundActionStatus, setRoundActionStatus] = useState<string | null>(null);
   const [roundOperationUnresolved, setRoundOperationUnresolved] = useState(false);
   const [newRoundOpen, setNewRoundOpen] = useState(false);
-  const [drawResult, setDrawResult] = useState<{ conceptId: string; title: string; appearanceOrder: number } | null>(null);
+  const [drawResult, setDrawResult] = useState<{ conceptId: string; title: string; appearanceOrder: number; roundId: string; appearanceId: string | null } | null>(null);
   const roundFlowBusyRef = useRef(false);
+  const handledPostSaveActionRef = useRef<number | null>(null);
 
   function handleRoundResult(result: RoundCommandResult) {
     if (result.status === 'confirmed') {
@@ -155,9 +166,12 @@ export function ConceptManagementView({ userId, list, onBack, onStartPractice }:
           conceptId: result.result.concept_id,
           title: result.result.title,
           appearanceOrder: result.result.appearance_order,
+          roundId: result.result.round_id,
+          appearanceId: result.result.appearance_id,
         });
       } else if (result.result.outcome === 'exhausted') {
         setRoundActionStatus('rounds.exhausted');
+        void Promise.all([conceptsQuery.refetch(), roundQuery.refetch()]);
       } else if (result.result.outcome === 'applied') {
         setRoundActionStatus(null);
         setRoundActionError('rounds.resultUnavailable');
@@ -171,17 +185,51 @@ export function ConceptManagementView({ userId, list, onBack, onStartPractice }:
     }
   }
 
-  function runRoundFlowAction(action: 'draw' | 'new_round') {
+  const runRoundFlowAction = useCallback((action: 'draw' | 'new_round') => {
     if (roundFlowBusyRef.current || roundOperationUnresolved) return;
     roundFlowBusyRef.current = true;
     roundFlowMutation.mutate(action);
-  }
+  }, [roundFlowMutation, roundOperationUnresolved]);
 
   function retryRoundFlowAction() {
     if (roundFlowBusyRef.current) return;
     roundFlowBusyRef.current = true;
     roundRetryMutation.mutate();
   }
+
+  useEffect(() => {
+    if (!pendingRoundAction || pendingRoundAction.listId !== list.id
+      || handledPostSaveActionRef.current === pendingRoundAction.id
+      || conceptsQuery.isPending || conceptsQuery.isFetching
+      || roundQuery.isPending || roundQuery.isFetching) return;
+
+    handledPostSaveActionRef.current = pendingRoundAction.id;
+    onRoundActionRequestHandled?.(pendingRoundAction.id);
+    if (conceptsQuery.isError || roundQuery.isError || !roundQuery.data) return;
+
+    if (pendingRoundAction.action === 'new_round') {
+      if (conceptsQuery.data.length > 0) setNewRoundOpen(true);
+      return;
+    }
+
+    const hasPending = conceptsQuery.data.some((concept) => concept.state === 'pending');
+    if (hasPending) runRoundFlowAction('draw');
+    else if (conceptsQuery.data.length > 0) setNewRoundOpen(true);
+    else setRoundActionStatus('rounds.empty');
+  }, [
+    conceptsQuery.data,
+    conceptsQuery.isError,
+    conceptsQuery.isFetching,
+    conceptsQuery.isPending,
+    list.id,
+    onRoundActionRequestHandled,
+    pendingRoundAction,
+    runRoundFlowAction,
+    roundQuery.data,
+    roundQuery.isError,
+    roundQuery.isFetching,
+    roundQuery.isPending,
+  ]);
   const createMutation = useMutation({
     mutationFn: createConcept,
     onSuccess: async (result) => {
@@ -267,8 +315,14 @@ export function ConceptManagementView({ userId, list, onBack, onStartPractice }:
             <Button className={styles.backButton} variant="default" onClick={onBack}>
               {t('detail.backShort')}
             </Button>
+            <Button className={styles.deletedNotesButton} variant="default" onClick={() => setShowDeletedConceptNotes((value) => !value)}>
+              {t(showDeletedConceptNotes ? 'practiceNote.backToList' : 'practiceNote.deletedConceptsShort')}
+            </Button>
             <Title className={styles.listTitle} order={1} id="concept-list-title">{list.name}</Title>
           </header>
+          {showDeletedConceptNotes ? (
+            <AssociatedPracticeNotes userId={userId} listId={list.id} activeConceptIds={conceptsQuery.data.map((concept) => concept.id)} deletedConcepts />
+          ) : <>
           <RoundProgressPanel
             pendingCount={conceptsQuery.data.filter((concept) => concept.state === 'pending').length}
             seenCount={conceptsQuery.data.filter((concept) => concept.state === 'seen').length}
@@ -308,7 +362,7 @@ export function ConceptManagementView({ userId, list, onBack, onStartPractice }:
             onPractice={() => {
               if (!drawResult) return;
               setDrawResult(null);
-              onStartPractice(drawResult.conceptId);
+              onStartPractice(drawResult.conceptId, drawResult.roundId, drawResult.appearanceId);
             }}
             opened={drawResult !== null}
             title={drawResult?.title ?? ''}
@@ -413,6 +467,7 @@ export function ConceptManagementView({ userId, list, onBack, onStartPractice }:
           <Button className={styles.addConceptsButton} onClick={openAddDialog} type="button">
             {t('concepts.addTitle')}
           </Button>
+          </>}
 
           <Modal
             centered

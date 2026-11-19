@@ -22,6 +22,7 @@ import {
 } from './conceptService';
 import { validateConceptFields } from './conceptParser';
 import styles from './concepts.module.css';
+import { AssociatedPracticeNotes } from './AssociatedPracticeNotes';
 import { useToast } from '../../app/toasts/useToast';
 
 type Props = {
@@ -205,6 +206,8 @@ export function ConceptDetailView({ userId, listId, concept, onClose, onReload, 
           </Stack>
         </Stack>
       )}
+
+      <AssociatedPracticeNotes userId={userId} listId={listId} conceptId={concept.id} />
 
       <Modal
         opened={deleteOpen}

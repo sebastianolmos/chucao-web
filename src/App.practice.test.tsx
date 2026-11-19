@@ -13,6 +13,8 @@ const mocks = vi.hoisted(() => ({
   getTimerPreferences: vi.fn(),
   getOwnedLists: vi.fn(),
   getOwnedConcepts: vi.fn(),
+  saveCompletedPractice: vi.fn(),
+  loadCurrentRound: vi.fn(),
   authChangeCallback: null as ((event: string, session: Session | null) => void) | null,
   locale: {
     locale: 'es' as 'es' | 'en',
@@ -41,6 +43,12 @@ vi.mock('./features/lists/listService', () => ({
 }));
 vi.mock('./features/concepts/conceptService', () => ({
   getOwnedConcepts: mocks.getOwnedConcepts,
+}));
+vi.mock('./features/practice/practiceService', () => ({
+  saveCompletedPractice: mocks.saveCompletedPractice,
+}));
+vi.mock('./features/rounds/roundService', () => ({
+  loadCurrentRound: mocks.loadCurrentRound,
 }));
 vi.mock('./lib/supabase', () => ({
   supabase: {
@@ -76,10 +84,17 @@ vi.mock('./features/lists/MyListsView', () => ({
   ),
 }));
 vi.mock('./features/lists/ListDetailView', () => ({
-  ListDetailView: ({ onStartPractice }: { onStartPractice: (conceptId: string) => void }) => (
+  ListDetailView: ({
+    onStartPractice,
+    pendingRoundAction,
+  }: {
+    onStartPractice: (conceptId: string) => void;
+    pendingRoundAction?: { id: number; listId: string; action: 'draw' | 'new_round' } | null;
+  }) => (
     <div>
       <p>List Detail test fixture</p>
       <button onClick={() => onStartPractice('concept-a')} type="button">Associated Practice fixture</button>
+      {pendingRoundAction && <p data-testid="post-save-round-action">{pendingRoundAction.action}</p>}
     </div>
   ),
 }));
@@ -120,6 +135,8 @@ describe('VIEW-07 application journeys', () => {
     });
     mocks.getOwnedLists.mockResolvedValue([list]);
     mocks.getOwnedConcepts.mockResolvedValue([concept]);
+    mocks.loadCurrentRound.mockResolvedValue({ id: 'round-a', list_id: list.id, status: 'open', opened_at: '2026-01-01T00:00:00Z' });
+    mocks.saveCompletedPractice.mockResolvedValue({ status: 'confirmed', practice: { id: 'practice-saved', owner_id: 'user-a' }, note: null, replayed: false });
     void i18n.changeLanguage('es');
   });
 
@@ -217,9 +234,97 @@ describe('VIEW-07 application journeys', () => {
       vi.setSystemTime(Date.now() + 60_000);
       vi.advanceTimersByTime(100);
     });
-    expect(screen.getByRole('status', { name: /práctica finalizada/i })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /escena del bosque/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /agregar nota y calificación/i })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Cierre de práctica' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /agregar nota y calificación/i }));
+    expect(screen.getByRole('heading', { name: 'Cierre de práctica' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Volver' }));
     expect(screen.getByText('List Detail test fixture')).toBeInTheDocument();
+  });
+
+  it('saves an independent closure only with a label and repeats with a fresh timer identity', async () => {
+    renderApp();
+    fireEvent.click(await screen.findByRole('button', { name: 'Independent Timer fixture' }));
+    expect(await screen.findByRole('heading', { name: 'Práctica independiente' })).toBeInTheDocument();
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByRole('button', { name: 'Comenzar' }));
+    act(() => vi.advanceTimersByTime(60_000));
+    expect(screen.getByRole('button', { name: /agregar nota y calificaci[oó]n/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /agregar nota y calificaci[oó]n/i }));
+
+    fireEvent.click(screen.getByRole('button', { name: /guardar pr[aá]ctica/i }));
+    expect(screen.getByRole('alert')).toHaveTextContent(/tema/i);
+    expect(mocks.saveCompletedPractice).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByRole('textbox', { name: /tema/i }), { target: { value: 'Charla de prueba' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /guardar pr[aá]ctica/i }));
+      await Promise.resolve();
+    });
+    expect(screen.getByText(/guardada/i)).toBeInTheDocument();
+    expect(mocks.saveCompletedPractice).toHaveBeenCalledTimes(1);
+    const firstSave = mocks.saveCompletedPractice.mock.calls[0][0];
+    expect(firstSave).toMatchObject({ kind: 'independent', label: 'Charla de prueba', rating: null, note: '' });
+
+    fireEvent.click(screen.getByRole('button', { name: /practicar de nuevo/i }));
+    expect(screen.getByRole('heading', { name: 'Práctica independiente' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Preparado' })).toBeInTheDocument();
+    expect(mocks.saveCompletedPractice).toHaveBeenCalledTimes(1);
+    expect(mocks.getTimerPreferences).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Comenzar' }));
+    act(() => vi.advanceTimersByTime(60_000));
+    fireEvent.click(screen.getByRole('button', { name: /agregar nota y calificaci[oó]n/i }));
+    fireEvent.change(screen.getByRole('textbox', { name: /tema/i }), { target: { value: 'Segunda práctica' } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /guardar pr[aá]ctica/i }));
+      await Promise.resolve();
+    });
+    expect(mocks.saveCompletedPractice).toHaveBeenCalledTimes(2);
+    expect(mocks.saveCompletedPractice.mock.calls[1][0].id).not.toBe(firstSave.id);
+  });
+
+  it('refreshes associated round availability after save and sends the chosen new-round action to List Detail', async () => {
+    renderApp();
+    fireEvent.click(await screen.findByRole('button', { name: 'Open List fixture' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Associated Practice fixture' }));
+    expect(await screen.findByRole('heading', { name: /Fotos/i })).toBeInTheDocument();
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByRole('button', { name: 'Comenzar' }));
+    act(() => vi.advanceTimersByTime(60_000));
+    fireEvent.click(screen.getByRole('button', { name: /agregar nota y calificaci[oó]n/i }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /guardar pr[aá]ctica/i }));
+      await Promise.resolve();
+    });
+
+    expect(screen.getByRole('button', { name: /iniciar nueva ronda/i })).toBeInTheDocument();
+    expect(mocks.loadCurrentRound).toHaveBeenCalledWith(list.id);
+    expect(mocks.saveCompletedPractice).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: /iniciar nueva ronda/i }));
+    expect(screen.getByTestId('post-save-round-action')).toHaveTextContent('new_round');
+    expect(mocks.saveCompletedPractice).toHaveBeenCalledTimes(1);
+  });
+
+  it('hides Repeat when a saved associated concept is no longer active', async () => {
+    mocks.getOwnedConcepts.mockResolvedValueOnce([concept]).mockResolvedValueOnce([]);
+    renderApp();
+    fireEvent.click(await screen.findByRole('button', { name: 'Open List fixture' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Associated Practice fixture' }));
+    expect(await screen.findByRole('heading', { name: /Fotos/i })).toBeInTheDocument();
+    vi.useFakeTimers();
+    fireEvent.click(screen.getByRole('button', { name: 'Comenzar' }));
+    act(() => vi.advanceTimersByTime(60_000));
+    fireEvent.click(screen.getByRole('button', { name: /agregar nota y calificaci[oó]n/i }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /guardar pr[aá]ctica/i }));
+      await Promise.resolve();
+    });
+
+    expect(screen.getByText(/guardada/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /practicar este concepto de nuevo/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /sortear otro concepto|iniciar nueva ronda/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Volver' })).toBeInTheDocument();
   });
 
   it('does not start with a stale or unavailable associated concept', async () => {

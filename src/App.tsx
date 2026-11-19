@@ -14,11 +14,15 @@ import { queryClient } from './lib/queryClient';
 import { supabase } from './lib/supabase';
 import { useTranslation } from 'react-i18next';
 import type { ActiveConceptRow, ListRow } from './lib/database.types';
-import { ListDetailView } from './features/lists/ListDetailView';
+import { ListDetailView, type RoundActionRequest } from './features/lists/ListDetailView';
 import { getOwnedLists } from './features/lists/listService';
 import { getOwnedConcepts } from './features/concepts/conceptService';
 import { DomainServiceError } from './features/shared/supabaseErrors';
 import { PracticeView } from './features/practice/PracticeView';
+import { PracticeClosureView, type PracticeCompletion } from './features/practice/PracticeClosureView';
+import type { PracticePostSaveActions, PracticeRoundAction } from './features/practice/PracticeClosureView';
+import { loadCurrentRound } from './features/rounds/roundService';
+import { HistoryView } from './features/history/HistoryView';
 import type { TimerSnapshot } from './features/practice/timerModel';
 import stand from './assets/stand.png';
 import styles from './app/app.module.css';
@@ -41,10 +45,14 @@ type MessageKey =
 type PracticeSession = {
   returnDestination: 'lists' | 'detail';
   preferences: TimerPreferences;
+  listId: string | null;
+  conceptId: string | null;
+  roundId: string | null;
+  appearanceId: string | null;
   concept?: Pick<ActiveConceptRow, 'title' | 'description'>;
 };
 
-type AppDestination = 'lists' | 'detail' | 'privacy' | 'credits' | 'signOut';
+type AppDestination = 'lists' | 'detail' | 'history' | 'privacy' | 'credits' | 'signOut';
 
 function readOAuthError() {
   const url = new URL(window.location.href);
@@ -58,6 +66,9 @@ function clearPrivateState() {
   queryClient.removeQueries({ queryKey: ['lists'] });
   queryClient.removeQueries({ queryKey: ['concepts'] });
   queryClient.removeQueries({ queryKey: ['profile'] });
+  queryClient.removeQueries({ queryKey: ['practice'] });
+  queryClient.removeQueries({ queryKey: ['practice-history'] });
+  queryClient.removeQueries({ queryKey: ['round-history'] });
 }
 
 function PrivacyContent({ onBack }: { onBack: () => void }) {
@@ -132,9 +143,15 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [creditsOpen, setCreditsOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [preferencesOpen, setPreferencesOpen] = useState(false);
   const [selectedList, setSelectedList] = useState<ListRow | null>(null);
   const [practiceSession, setPracticeSession] = useState<PracticeSession | null>(null);
+  const [practiceCompletion, setPracticeCompletion] = useState<PracticeCompletion | null>(null);
+  const [closureOpen, setClosureOpen] = useState(false);
+  const [practiceSaveLocked, setPracticeSaveLocked] = useState(false);
+  const [postSaveActions, setPostSaveActions] = useState<PracticePostSaveActions | null>(null);
+  const [pendingRoundAction, setPendingRoundAction] = useState<RoundActionRequest | null>(null);
   const [practiceStatus, setPracticeStatus] = useState<TimerSnapshot['status']>('prepared');
   const [practiceLoading, setPracticeLoading] = useState(false);
   const [practiceEntryError, setPracticeEntryError] = useState(false);
@@ -148,6 +165,8 @@ export default function App() {
   const mountedRef = useRef(true);
   const oauthReconciliationRef = useRef(false);
   const practiceEntryRequestRef = useRef(0);
+  const postSaveRequestRef = useRef(0);
+  const roundActionRequestRef = useRef(0);
 
   useEffect(() => {
     document.title = t(
@@ -172,6 +191,12 @@ export default function App() {
     if (previousUserId !== null && previousUserId !== nextUserId) {
       practiceEntryRequestRef.current += 1;
       setPracticeSession(null);
+      setPracticeCompletion(null);
+      setClosureOpen(false);
+      setPracticeSaveLocked(false);
+      setPostSaveActions(null);
+      setPendingRoundAction(null);
+      postSaveRequestRef.current += 1;
       setPracticeStatus('prepared');
       setPracticeLoading(false);
       setPracticeEntryError(false);
@@ -235,7 +260,13 @@ export default function App() {
     setPracticeStatus(status);
   }, []);
 
-  async function startPractice(listId?: string, conceptId?: string) {
+  async function startPractice(
+    listId?: string,
+    conceptId?: string,
+    roundId: string | null = null,
+    appearanceId: string | null = null,
+    preferencesSnapshot?: TimerPreferences,
+  ) {
     const userId = currentUserIdRef.current;
     if (!userId || practiceLoading) return;
     const requestId = practiceEntryRequestRef.current + 1;
@@ -259,15 +290,17 @@ export default function App() {
         };
       }
 
-      let preferences = DEFAULT_TIMER_PREFERENCES;
-      try {
-        preferences = await getTimerPreferences(userId);
-      } catch (error) {
-        if (error instanceof DomainServiceError
-          && (error.code === 'unauthenticated' || error.code === 'unauthorized')) {
-          throw error;
+      let preferences = preferencesSnapshot ?? DEFAULT_TIMER_PREFERENCES;
+      if (!preferencesSnapshot) {
+        try {
+          preferences = await getTimerPreferences(userId);
+        } catch (error) {
+          if (error instanceof DomainServiceError
+            && (error.code === 'unauthenticated' || error.code === 'unauthorized')) {
+            throw error;
+          }
+          // The timer remains usable with the effective defaults when preferences cannot load.
         }
-        // The timer remains usable with the effective defaults when preferences cannot load.
       }
 
       if (practiceEntryRequestRef.current !== requestId || currentUserIdRef.current !== userId) return;
@@ -276,8 +309,15 @@ export default function App() {
       setPracticeSession({
         returnDestination: associatedConcept ? 'detail' : 'lists',
         preferences,
+        listId: associatedConcept ? listId! : null,
+        conceptId: associatedConcept ? conceptId! : null,
+        roundId: associatedConcept ? roundId : null,
+        appearanceId: associatedConcept ? appearanceId : null,
         ...(associatedConcept ? { concept: associatedConcept } : {}),
       });
+      setPracticeCompletion(null);
+      setClosureOpen(false);
+      setPostSaveActions(null);
     } catch (error) {
       if (practiceEntryRequestRef.current !== requestId || currentUserIdRef.current !== userId) return;
       if (error instanceof DomainServiceError && error.code === 'unauthenticated') {
@@ -296,6 +336,12 @@ export default function App() {
   function executeDestination(destination: AppDestination) {
     practiceEntryRequestRef.current += 1;
     setPracticeSession(null);
+    setPracticeCompletion(null);
+    setClosureOpen(false);
+    setPracticeSaveLocked(false);
+    setPostSaveActions(null);
+    setPendingRoundAction(null);
+    postSaveRequestRef.current += 1;
     setPracticeStatus('prepared');
     setPracticeLoading(false);
     setPracticeEntryError(false);
@@ -304,6 +350,7 @@ export default function App() {
     setPreferencesOpen(false);
     setPrivacyOpen(destination === 'privacy');
     setCreditsOpen(destination === 'credits');
+    setHistoryOpen(destination === 'history');
     if (destination === 'lists') setSelectedList(null);
     if (destination === 'signOut') {
       setSelectedList(null);
@@ -312,6 +359,7 @@ export default function App() {
   }
 
   function requestDestination(destination: AppDestination) {
+    if (practiceSaveLocked) return;
     if (practiceSession && (practiceStatus === 'running' || practiceStatus === 'paused')) {
       setPendingDestination(destination);
       setAbandonOpen(true);
@@ -322,6 +370,61 @@ export default function App() {
 
   function requestPracticeReturn() {
     requestDestination(practiceSession?.returnDestination ?? 'lists');
+  }
+
+  async function refreshPostSaveActions() {
+    const savedSession = practiceSession;
+    const userId = currentUserIdRef.current;
+    if (!userId || !savedSession?.listId || !savedSession.conceptId) return;
+    const requestId = postSaveRequestRef.current + 1;
+    postSaveRequestRef.current = requestId;
+    setPostSaveActions({ status: 'loading' });
+    try {
+      const [lists, concepts, round] = await Promise.all([
+        getOwnedLists(userId),
+        getOwnedConcepts(userId, savedSession.listId),
+        loadCurrentRound(savedSession.listId),
+      ]);
+      if (postSaveRequestRef.current !== requestId || currentUserIdRef.current !== userId) return;
+      const freshList = lists.find((list) => list.id === savedSession.listId && list.owner_id === userId);
+      if (!freshList || round.list_id !== freshList.id) throw new Error('practice_context_unavailable');
+      setSelectedList(freshList);
+      const pendingCount = concepts.filter((concept) => concept.state === 'pending').length;
+      setPostSaveActions({
+        status: 'ready',
+        repeatAvailable: concepts.some((concept) => concept.id === savedSession.conceptId),
+        roundAction: pendingCount > 0 ? 'draw' : concepts.length > 0 ? 'new_round' : null,
+      });
+    } catch {
+      if (postSaveRequestRef.current === requestId && currentUserIdRef.current === userId) {
+        setPostSaveActions({ status: 'error' });
+      }
+    }
+  }
+
+  function repeatPracticeFromClosure() {
+    const current = practiceSession;
+    if (!current) return;
+    void startPractice(
+      current.listId ?? undefined,
+      current.conceptId ?? undefined,
+      current.roundId,
+      current.appearanceId,
+      current.preferences,
+    );
+  }
+
+  function activatePostSaveRoundAction(action: PracticeRoundAction) {
+    const listId = practiceSession?.listId;
+    if (!listId) return;
+    const request: RoundActionRequest = {
+      id: roundActionRequestRef.current + 1,
+      listId,
+      action,
+    };
+    roundActionRequestRef.current = request.id;
+    executeDestination('detail');
+    setPendingRoundAction(request);
   }
 
   const reconcileOAuthReturn = useCallback(async () => {
@@ -557,6 +660,7 @@ export default function App() {
         <button
           aria-label={t('navigation.goToLists')}
           className={styles.brandLink}
+          disabled={practiceSaveLocked}
           onClick={() => {
             requestDestination('lists');
           }}
@@ -566,6 +670,7 @@ export default function App() {
           <span>Chucao</span>
         </button>
         <nav aria-label={t('navigation.label')} className={styles.navActions}>
+          <button type="button" onClick={() => requestDestination(historyOpen ? 'lists' : 'history')}>{historyOpen ? t('navigation.goToLists') : t('navigation.history')}</button>
           <button
             aria-label={t('navigation.changeLanguage')}
             className={`${styles.localeToggle} ${locale === 'es' ? styles.localeEnglish : styles.localeSpanish}`}
@@ -595,16 +700,49 @@ export default function App() {
           </div>
         )}
         {practiceLoading && <p role="status">{t('practice.contextLoading')}</p>}
-        {practiceSession ? (
+        {practiceSession ? practiceCompletion && closureOpen ? (
+          <PracticeClosureView
+            completion={practiceCompletion}
+            context={practiceSession.concept ? {
+              ownerId: session!.user.id,
+              kind: 'associated',
+              listId: practiceSession.listId!,
+              conceptId: practiceSession.conceptId!,
+              roundId: practiceSession.roundId,
+              appearanceId: practiceSession.appearanceId,
+              conceptTitle: practiceSession.concept.title,
+            } : {
+              ownerId: session!.user.id,
+              kind: 'independent',
+              listId: null,
+              conceptId: null,
+              roundId: null,
+              appearanceId: null,
+            }}
+            onReturn={requestPracticeReturn}
+            onSaveLockChange={setPracticeSaveLocked}
+            postSaveActions={postSaveActions ?? undefined}
+            onSaveConfirmed={practiceSession.concept ? () => { void refreshPostSaveActions(); } : undefined}
+            onRetryPostSaveActions={() => { void refreshPostSaveActions(); }}
+            onRepeat={repeatPracticeFromClosure}
+            onRoundAction={activatePostSaveRoundAction}
+          />
+        ) : (
           <PracticeView
             concept={practiceSession.concept}
             initialDurationMinutes={practiceSession.preferences.defaultDurationMinutes}
+            onCompleted={(completion) => {
+              if (currentUserIdRef.current === session?.user.id) setPracticeCompletion(completion);
+            }}
+            onContinueToClosure={() => setClosureOpen(true)}
             onReturn={requestPracticeReturn}
             onStatusChange={onPracticeStatusChange}
             reducedMotion={practiceSession.preferences.reducedMotion}
             soundEnabled={practiceSession.preferences.completionSoundEnabled}
             soundVolume={practiceSession.preferences.soundVolume}
           />
+        ) : historyOpen ? (
+          <HistoryView userId={session!.user.id} />
         ) : privacyOpen ? (
           <div className={styles.privacy}>
             <PrivacyContent onBack={() => {
@@ -623,8 +761,12 @@ export default function App() {
           <ListDetailView
             list={selectedList}
             userId={session!.user.id}
+            pendingRoundAction={pendingRoundAction}
+            onRoundActionRequestHandled={(requestId) => {
+              setPendingRoundAction((current) => current?.id === requestId ? null : current);
+            }}
             onBack={() => setSelectedList(null)}
-            onStartPractice={(conceptId) => void startPractice(selectedList.id, conceptId)}
+            onStartPractice={(conceptId, roundId, appearanceId) => void startPractice(selectedList.id, conceptId, roundId, appearanceId)}
           />
         ) : (
           <MyListsView
@@ -679,13 +821,22 @@ export default function App() {
           },
           header: {
             position: 'relative',
+            flex: '0 0 auto',
             backgroundColor: 'var(--chucao-navbar)',
           },
           body: {
+            flex: '1 1 auto',
+            minHeight: 0,
+            maxHeight: 'calc(100dvh - 7rem)',
+            overflowY: 'auto',
+            overscrollBehavior: 'contain',
             backgroundColor: 'var(--chucao-cream)',
             color: 'var(--chucao-brown)',
           },
           content: {
+            display: 'flex',
+            flexDirection: 'column',
+            maxHeight: 'calc(100dvh - 2rem)',
             overflow: 'hidden',
             border: '2px solid var(--chucao-brown)',
             borderRadius: '1rem',

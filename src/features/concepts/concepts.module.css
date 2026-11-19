@@ -48,8 +48,8 @@
 
 .listHeader {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  justify-items: center;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
   gap: 0.5rem;
   min-width: 0;
 }
@@ -59,7 +59,13 @@
   transform: translateY(-0.35rem);
 }
 
+.deletedNotesButton {
+  justify-self: end;
+  transform: translateY(-0.35rem);
+}
+
 .listTitle {
+  grid-column: 1 / -1;
   min-width: 0;
   margin: 0;
   text-align: center;
@@ -338,6 +344,30 @@
   min-width: 0;
   overflow-wrap: anywhere;
   word-break: break-word;
+}
+
+.associatedNotes {
+  display: grid;
+  gap: 0.75rem;
+  margin-block: 1rem;
+  padding: 1rem;
+  border: 2px solid var(--chucao-brown);
+  border-radius: 1rem;
+  background: var(--chucao-panel);
+  box-shadow: 3px 4px 0 var(--chucao-brown);
+  color: var(--chucao-brown);
+}
+
+.associatedNotes h2 { margin: 0; font-size: 1.15rem; }
+.associatedNotes ul { display: grid; gap: 0.65rem; margin: 0; padding: 0; list-style: none; }
+.associatedNotes li { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; min-width: 0; padding: 0.65rem; border: 1px solid var(--chucao-brown); border-radius: 0.65rem; background: var(--chucao-cream); }
+.associatedNoteInfo { display: grid; gap: 0.2rem; min-width: 0; overflow-wrap: anywhere; }
+.associatedNoteDeleted { width: fit-content; padding: 0.1rem 0.4rem; border-radius: 999px; background: var(--chucao-lilac); font-size: 0.8rem; font-weight: 700; }
+.manageNoteButton { --button-bg: var(--chucao-cyan) !important; --button-hover: #72e6f2 !important; --button-color: var(--chucao-brown) !important; --button-hover-color: var(--chucao-brown) !important; --button-bd: 2px solid var(--chucao-brown) !important; }
+
+@media (max-width: 36rem) {
+  .associatedNotes li { align-items: flex-start; flex-direction: column; }
+  .associatedNotes li > button { width: 100%; }
 }
 
 @media (max-width: 36rem) {

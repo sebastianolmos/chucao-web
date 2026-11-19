@@ -26,6 +26,8 @@ export type PracticeViewProps = {
   concept?: PracticeConcept;
   onReturn: () => void;
   onStatusChange?: (status: TimerSnapshot['status']) => void;
+  onCompleted?: (completion: { id: string; durationMinutes: number; completedAt: string }) => void;
+  onContinueToClosure?: () => void;
 };
 
 function readSystemReducedMotion() {
@@ -47,6 +49,8 @@ export function PracticeView({
   concept,
   onReturn,
   onStatusChange,
+  onCompleted,
+  onContinueToClosure,
 }: PracticeViewProps) {
   const { t } = useTranslation();
   const [snapshotPreferences] = useState(() => ({
@@ -63,26 +67,39 @@ export function PracticeView({
   const [singing, setSinging] = useState(false);
   const [restartOpen, setRestartOpen] = useState(false);
   const completedSoundAttempted = useRef(false);
+  const saveIdentity = useRef(crypto.randomUUID());
+  const completedIdentity = useRef<string | null>(null);
+  const completedAt = useRef<string | null>(null);
   const singingTimeout = useRef<number | null>(null);
   const syncedSnapshot = useMemo(() => syncTimer(snapshot, nowMs), [nowMs, snapshot]);
   const remainingMs = syncedSnapshot.status === 'running'
     ? Math.max(0, syncedSnapshot.remainingMs - Math.max(0, nowMs - syncedSnapshot.startedAtMs))
     : syncedSnapshot.remainingMs;
   const elapsedMs = syncedSnapshot.durationMinutes * 60_000 - remainingMs;
+  const completionAtMs = syncedSnapshot.status === 'running'
+    ? syncedSnapshot.startedAtMs + syncedSnapshot.remainingMs
+    : null;
 
   useEffect(() => {
     onStatusChange?.(syncedSnapshot.status);
   }, [onStatusChange, syncedSnapshot.status]);
 
-  const completionAtMs = syncedSnapshot.status === 'running'
-    ? syncedSnapshot.startedAtMs + syncedSnapshot.remainingMs
-    : null;
+  useEffect(() => {
+    if (syncedSnapshot.status !== 'completed' || completedIdentity.current === saveIdentity.current) return;
+    completedIdentity.current = saveIdentity.current;
+    onCompleted?.({
+      id: saveIdentity.current,
+      durationMinutes: syncedSnapshot.durationMinutes,
+      completedAt: completedAt.current ?? new Date().toISOString(),
+    });
+  }, [completionAtMs, onCompleted, syncedSnapshot.durationMinutes, syncedSnapshot.status]);
 
   useEffect(() => {
     if (completionAtMs === null) return undefined;
     const interval = window.setInterval(() => {
       const tick = Date.now();
       if (tick >= completionAtMs && singingTimeout.current === null) {
+        completedAt.current = new Date(tick).toISOString();
         setSinging(true);
         singingTimeout.current = window.setTimeout(() => {
           setSinging(false);
@@ -141,6 +158,9 @@ export function PracticeView({
 
   function confirmRestart() {
     setSnapshot((current) => restartTimer(current, true));
+    saveIdentity.current = crypto.randomUUID();
+    completedIdentity.current = null;
+    completedAt.current = null;
     setDurationText(String(snapshot.durationMinutes));
     setInvalidDuration(false);
     setDescriptionVisible(false);
@@ -231,7 +251,19 @@ export function PracticeView({
           <Button className={styles.timerActionButton} onClick={resume} type="button" variant="filled">{t('practice.resume')}</Button>
         )}
         {syncedSnapshot.status === 'completed' && (
-          <Button className={styles.timerActionButton} onClick={onReturn} type="button" variant="filled">{t('practice.return')}</Button>
+          <>
+            {onContinueToClosure && (
+              <Button className={styles.timerActionButton} onClick={onContinueToClosure} type="button" variant="filled">
+                {t('practice.openClosure')}
+              </Button>
+            )}
+            <Button
+              className={onContinueToClosure ? styles.cancelButton : styles.timerActionButton}
+              onClick={onReturn}
+              type="button"
+              variant="filled"
+            >{t('practice.return')}</Button>
+          </>
         )}
         {invalidDuration && <p className={styles.error} id="practice-duration-error" role="alert">{t('practice.invalidDuration')}</p>}
         <Button

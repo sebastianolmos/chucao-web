@@ -2,12 +2,12 @@
 
 ## 1. Status and sources
 
-**Status:** Architecture baseline, awaiting review  
-**Date:** 2026-11-16  
+**Status:** Shared architecture baseline; local implementation evidence recorded through VS-05
+**Date:** 2026-11-19
 **Scope:** Shared system boundaries, selected technologies, trust boundaries, conceptual data ownership, and architectural constraints for the planned product. This document does not define feature specifications, a complete database schema, or implementation tasks.
 
 **Decision state:** Confirmed, proposed, and open decisions are identified explicitly.  
-**Implementation state:** Existing code and locally implemented VS-01–VS-03 boundaries are described as evidence; later planned architecture is not treated as implemented.
+**Implementation state:** VS-01–VS-05 application and database boundaries are implemented for local scope and linked to task evidence. VS-05 is closed for validated local scope after the user-confirmed MV-01 journey. MV-02 runtime browser privacy inspection remains unverified by user decision; this is not a claim of complete privacy validation, production deployment, or release readiness.
 
 **Sources**
 
@@ -19,7 +19,7 @@
 - [`supabase/config.toml`](../supabase/config.toml): current local Supabase configuration evidence.
 - [`src/lib/supabase.ts`](../src/lib/supabase.ts) and [`src/App.tsx`](../src/App.tsx): current Google authentication proof.
 
-The repository is in early development. The current implementation contains the Google sign-in flow and the locally implemented VS-01–VS-03 list, concept, and round boundaries, including domain data, RLS policies, and migrations. Later study journeys, full release readiness, and production deployment remain unimplemented or unverified.
+The repository remains in development. The current implementation contains Google sign-in and locally implemented list, concept, round, timer, practice, note, and history journeys, including domain data, RLS policies, and migrations. Full release readiness, runtime browser privacy inspection, and production deployment remain unverified.
 
 ## 2. Technical context and constraints
 
@@ -56,17 +56,17 @@ Important shared constraints include:
 | UI | React | Screens, components, and interactive client behavior | Confirmed; present |
 | Development/build | Vite | Local development server and frontend build | Confirmed; present |
 | Components | Mantine | Reusable controls, dialogs, forms, and responsive component behavior | Confirmed; dependency present; broader use planned |
-| Styling | CSS Modules and CSS variables | Product-specific appearance, tokens, responsive styles, and illustration layout | Confirmed; product styling planned |
-| Forms | React Hook Form | Form state, validation presentation, and submission state | Confirmed; dependency present; feature use planned |
-| Remote data | TanStack Query | Queries, cache, loading/error state, and invalidation for remote data | Confirmed; dependency present; feature use planned |
-| Internationalization | `i18next` and `react-i18next` | Spanish/English resources, locale switching, plural and date-aware presentation | Confirmed; dependencies present; wiring planned |
+| Styling | CSS Modules and CSS variables | Product-specific appearance, tokens, responsive styles, and illustration layout | Confirmed; implemented in current local views |
+| Forms | React Hook Form | Form state, validation presentation, and submission state | Confirmed; used by current forms |
+| Remote data | TanStack Query | Queries, cache, loading/error state, and invalidation for remote data | Confirmed; used for owner-scoped queries and cache invalidation |
+| Internationalization | `i18next` and `react-i18next` | Spanish/English resources, locale switching, plural and date-aware presentation | Confirmed; wired for current application views |
 | Typography | Fontsource Comfortaa | Bundled product font | Confirmed; present |
 | Auth/data client | `@supabase/supabase-js` | Browser communication with Supabase Auth and data APIs | Confirmed; present |
 | Authentication | Supabase Auth with Google OAuth and PKCE | External identity delegation and Chucao session | Confirmed; local proof exists |
-| Database | PostgreSQL managed by Supabase | Source of truth for user-owned product data | Confirmed; VS-01–VS-03 schemas applied and checked locally; production not evidenced |
-| Authorization | Supabase API and PostgreSQL RLS | Trusted resource isolation and protected data access | Confirmed; list, concept, round, appearance, and operation boundaries checked locally |
-| Transactions | PostgreSQL functions when required | Atomic selection, marking, and other multi-step operations | Confirmed; VS-03 list-locked round/concept functions implemented and checked locally |
-| Schema evolution | Versioned SQL migrations | Reproducible database changes, policies, and functions | Confirmed; VS-01–VS-03 migration files applied and linted locally; production not evidenced |
+| Database | PostgreSQL managed by Supabase | Source of truth for user-owned product data | Confirmed; VS-01–VS-05 schemas applied and checked locally; production not evidenced |
+| Authorization | Supabase API and PostgreSQL RLS | Trusted resource isolation and protected data access | Confirmed; list, concept, round, practice, note, history, and operation boundaries checked locally with synthetic owners |
+| Transactions | PostgreSQL functions when required | Atomic selection, marking, and other multi-step operations | Confirmed; VS-03 round operations and VS-05 practice/note operations implemented and checked locally |
+| Schema evolution | Versioned SQL migrations | Reproducible database changes, policies, and functions | Confirmed; VS-01–VS-05 migration files applied and linted locally; production not evidenced |
 | Local infrastructure | Supabase CLI and Docker | Reproducible local Auth/API/PostgreSQL environment | Confirmed; local configuration present |
 | Frontend hosting | Cloudflare Pages | Static frontend artifact hosting and preview/production environments | Confirmed; deployment planned |
 | Automation | GitHub Actions | Installation, lint, type-check, tests, and build checks | Confirmed; configuration planned |
@@ -76,7 +76,7 @@ Dependency versions are governed by [`package.json`](../package.json) and its lo
 
 ## 4. Components and responsibilities
 
-### Browser application — planned boundary, partially existing
+### Browser application — implemented client boundary
 
 The React application runs in the user's browser and owns presentation, local interaction state, form feedback, locale presentation, responsive layout, and the active timer/animation state. It may read and write remote product data only through the configured Supabase client.
 
@@ -86,17 +86,17 @@ Current evidence:
 
 - `src/main.tsx` mounts React, Mantine, Comfortaa, and the current application.
 - `src/lib/supabase.ts` creates a PKCE Supabase client with URL/session persistence, URL-session detection, and token refresh.
-- `src/App.tsx` starts Google OAuth, observes session changes, displays a minimal signed-in state, and performs local-scope logout.
+- `src/App.tsx` owns authenticated navigation and session cleanup; practice/history feature views use owner-scoped services and queries. See section 10 for the VS-05 implementation references.
 
 ### Supabase Auth — managed identity boundary
 
 Supabase Auth receives the Google OAuth result, creates or recognizes the Supabase user, issues the Chucao session, and exposes the authenticated identity to database policies. Google owns the underlying Google credentials and account recovery; Chucao does not receive or store the Google password.
 
-### Supabase API and PostgreSQL — planned product-data boundary
+### Supabase API and PostgreSQL — implemented local product-data boundary
 
-Supabase exposes the approved database operations to the authenticated browser client. PostgreSQL will store the product's user-owned data, enforce constraints that must not rely on the client, and apply RLS policies based on the authenticated UUID.
+Supabase exposes approved database operations to the authenticated browser client. PostgreSQL stores product data, enforces constraints that must not rely on the client, and applies RLS policies based on the authenticated UUID. Practice, note, and history contracts are implemented for local scope; their executable definitions and evidence are linked in section 10.
 
-SQL functions are available for operations whose correctness depends on selecting and updating related state atomically. Their exact contracts belong in later specifications and executable migrations.
+SQL functions implement operations whose correctness depends on selecting and updating related state atomically. Exact contracts are versioned in the selected slice plans and executable migrations; later resources still require their own contracts.
 
 ### Cloudflare Pages — planned delivery boundary
 
@@ -137,7 +137,7 @@ flowchart LR
 - **Receives:** Auth requests, authenticated product operations, and user-owned content required by the product.
 - **Delegated responsibility:** Provider infrastructure, authentication/session mechanisms, database hosting, managed backups, and service operations.
 - **Application responsibility:** Resource ownership rules, data minimization, RLS policies, trusted validation, deletion behavior, and handling of service failures.
-- **State:** Confirmed; local configuration exists, while domain schema and production setup are planned.
+- **State:** Confirmed; local configuration and VS-01–VS-05 domain schema/operations are implemented. Production setup and provider-retention evidence remain planned.
 
 ### Cloudflare Pages
 
@@ -152,7 +152,7 @@ No separate application server, queue, file storage, analytics platform, email p
 
 ## 6. Conceptual data model and access
 
-The conceptual source of truth for persistent product data is Supabase PostgreSQL. The physical tables, columns, indexes, foreign keys, and migration sequence are deferred to the relevant technical plans and executable migrations.
+The source of truth for persistent product data is Supabase PostgreSQL. Physical details are defined by executable, versioned migrations and their slice plans. VS-05 practice schema, policies, indexes, and trusted operations are implemented in migrations and checked against local Supabase; later resources remain deferred until specified.
 
 Known entities and relationships:
 
@@ -163,19 +163,21 @@ Known entities and relationships:
 - **Round:** A cycle associated with one list. A new round closes the previous one and makes existing concepts available again while retaining prior history.
 - **Appearance:** Historical record that a concept was selected or manually marked in a round, including its order and origin. Historical appearances retain the title snapshot used at that time.
 - **Round operation record:** Internal list-scoped record keyed by a client operation UUID. It lets a retry return the original result without repeating a state change; it stores no authored concept text. The physical ledger and RPC contract are defined in the VS-03 migration and plan.
-- **Practice:** A deliberately saved practice associated with a list concept and, when applicable, its list and round, or an independent practice with a free-text label. Independent practices are persisted only when that label is provided; the label does not create or modify a list concept. A saved practice may have a satisfaction rating from 0 to 5, with `Unrated` distinct from 0. Abandoning an active timer creates no practice record.
-- **Practice note:** User-authored note associated with a saved practice. Editing or deleting a note does not delete the practice.
+- **Practice:** A deliberately saved practice associated with a list concept and, when applicable, its list and round, or an independent practice with a free-text label. Independent practices are persisted only when that label is provided; the label does not create or modify a list concept. A saved practice may have a satisfaction rating from 0 to 5, with `Unrated` distinct from 0. Abandoning an active timer creates no practice record. The local VS-05 schema is `public.practices`; trusted RPCs enforce eligibility, ownership, and idempotent save.
+- **Practice note:** User-authored note associated with a saved practice in `public.practice_notes`. Owner-only detail reads return its current revision for compare-and-swap updates; deletion removes only the note. `public.practice_note_operations` stores text-free operation receipts for safe retries without retaining note payloads; receipts cascade with the practice.
 
 Ownership and access invariants:
 
 - Lists, concepts, rounds, appearances, practices, notes, and preferences are private to the owning Auth UUID.
 - A resource is operable only when its ownership chain resolves to the authenticated user.
 - Round and concept state-changing operations for one list take the parent-list lock first and execute in one order. Retries use the same operation UUID; the trusted boundary derives identity from `auth.uid()`.
-- When a concept is deleted, replace its historical displayable title with a neutral deletion marker. Preserve appearance order and origin without disclosing the deleted title.
+- Note mutations lock the parent list before an associated practice, or only the practice for an independent record. The expected note revision prevents stale overwrites; operation UUIDs are bound to a payload fingerprint and receipts cascade with the practice.
+- When a concept is deleted, preserve its historical title in past round/practice history and visibly mark it with a localized deleted status. Preserve appearance order and origin; remove the concept from active use so it cannot be practiced again.
+- Legacy deleted-concept appearances whose title snapshot is null display the localized “Concepto eliminado — título no disponible” / “Deleted concept — title unavailable” fallback. Do not infer or reconstruct the removed title.
 - The email returned by Google is display/account information, not the stable ownership key.
 - The browser is not trusted to assert an owner, role, or protected state.
-- Deleted concepts are removed from active use but appear as “Deleted concept” in historical views.
-- Permanently deleted lists remove active content and preserve only anonymous round totals. Remove owner/list/concept identifiers, authored content, operation identifiers, exact event timestamps, and per-concept appearance detail from retained records; verify re-identification risk under DP14 before relying on the anonymization claim.
+- Permanently deleted lists remove active content and preserve only anonymous round totals. Delete associated saved practices and notes; remove owner/list/concept identifiers, authored content, operation identifiers, exact event timestamps, and per-concept appearance detail from retained round records. Verify re-identification risk under DP14 before relying on the anonymization claim.
+- Anonymous round totals have no owner/list link and are excluded from private History. Actual re-identification risk, provider retention, and backup handling remain release/privacy review items.
 - Account deletion removes or anonymizes associated active personal/content data, subject to documented provider backup retention.
 - The active timer is transient browser state; it is not part of the persistent data model and is not recovered after reload, navigation, abandonment, or device/browser changes.
 
@@ -183,12 +185,12 @@ Ownership and access invariants:
 
 | Source | Architectural consequence | Decision state and timing |
 |---|---|---|
-| SEC01, SEC04; DP10 | Enforce ownership, permitted fields, state transitions, and private-by-default access in Supabase/RLS or another trusted data boundary. React visibility is not authorization. | Confirmed; VS-01–VS-03 list/concept/round boundaries are locally implemented and checked; apply to each future protected resource |
+| SEC01, SEC04; DP10 | Enforce ownership, permitted fields, state transitions, and private-by-default access in Supabase/RLS or another trusted data boundary. React visibility is not authorization. | Confirmed; VS-01–VS-05 list/concept/round/practice/note/history boundaries are locally implemented and checked; future resources need their own evidence |
 | SEC02, SEC03 | Use parameterized/allowlisted database operations and framework-safe rendering for user-authored text. No raw user content becomes SQL or executable markup. | Confirmed constraint; apply when persistence and rendering are implemented |
 | SEC05; DP11 | Use Google/Supabase Auth rather than custom password storage. Link product ownership to the Auth UUID and define logout, session expiry, and account deletion behavior. | Confirmed constraint; verify in the account slice |
 | SEC10; DP12, DP19 | Keep OAuth secrets and privileged keys outside the browser and repository; separate local, preview, and production configuration; use synthetic development data. | Confirmed constraint; verify before deployment |
-| Q02; global plan atomicity rule | Place random selection/marking and other multi-record invariants in trusted transactional operations, with safe retry behavior. | Confirmed; VS-03 implements parent-list serialization and same-UUID replay locally; future operation contracts remain spec-specific |
-| Q05 | Keep schema changes, RLS policies, and SQL functions in versioned migrations and make local setup reproducible with Supabase CLI/Docker. | Confirmed; VS-01–VS-03 migrations and local setup are evidenced; production rollout remains unverified |
+| Q02; global plan atomicity rule | Place random selection/marking and other multi-record invariants in trusted transactional operations, with safe retry behavior. | Confirmed; VS-03 implements parent-list serialization and same-UUID replay; VS-05 adds explicit practice save and revision-checked note replay. Local evidence is recorded; future operation contracts remain spec-specific |
+| Q05 | Keep schema changes, RLS policies, and SQL functions in versioned migrations and make local setup reproducible with Supabase CLI/Docker. | Confirmed; VS-01–VS-05 migrations and local setup are evidenced; production rollout remains unverified |
 | Q03, WEB03, WEB04 | The UI boundary must expose accessible names, focus, errors, language metadata, and meaningful image alternatives; reduced-motion behavior belongs to the client animation boundary. | Confirmed constraint; verify across UI slices |
 | DP02, DP05, DP08, DP14, DP18 | The architecture must account for provider flows, logs, backups, deletion, anonymized historical records, and privacy notice content; adding SDKs or providers changes the review. | Confirmed planning constraint; operational evidence required before public registration |
 | Q04 and committed platform scope | Avoid unbounded pasted-input processing and define realistic workloads for personal-scale data on modern PC/Android browsers. | Confirmed constraint; refine workload in relevant specs |
@@ -213,28 +215,28 @@ Choosing a mechanism such as RLS, PKCE, or managed backups does not by itself pr
 
 ### ARCH-03 — Supabase Auth UUID owns resources
 
-- **State:** Confirmed; locally implemented for VS-01–VS-03 resources.
+- **State:** Confirmed; locally implemented for VS-01–VS-05 resources.
 - **Decision:** Associate every private product resource with the stable Supabase Auth UUID rather than an email address.
 - **Rationale:** Email can change and is not an adequate ownership key.
 - **Consequences:** RLS and all service operations must derive identity from the authenticated session; account deletion must traverse the identity-to-content relationship.
 
 ### ARCH-04 — RLS is a primary authorization boundary
 
-- **State:** Confirmed; locally implemented and directly checked for VS-01–VS-03 resources.
+- **State:** Confirmed; locally implemented and directly checked for VS-01–VS-05 resources using synthetic owners and anonymous clients.
 - **Decision:** Enforce resource isolation in PostgreSQL RLS and trusted service operations, with UI restrictions only as a usability layer.
 - **Rationale:** Direct API requests must have the same protection as normal UI flows.
 - **Consequences:** Every persisted resource relationship and operation must be designed with ownership in mind. RLS policies require focused review and direct access tests.
 
 ### ARCH-05 — Transactional core operations
 
-- **State:** Confirmed; VS-03 round and concept operations are locally implemented and checked.
+- **State:** Confirmed; VS-03 round and concept operations and VS-05 practice/note operations are locally implemented and checked.
 - **Decision:** Use PostgreSQL functions or equivalent trusted transactions when selection, marking, history, or practice writes must be atomic.
 - **Rationale:** Random selection, per-list ordering, and retries must not produce duplicate or inconsistent state.
 - **Consequences:** VS-03 uses a parent-list row lock and a list-scoped idempotency ledger. Later multi-record features must define and verify their own operation contracts; client-side sequencing cannot be the sole consistency mechanism.
 
 ### ARCH-06 — One responsive client, account-level preferences
 
-- **State:** Confirmed, planned.
+- **State:** Confirmed; responsive application shell, account-level preferences, and transient timer are implemented locally. Release browser support remains pending.
 - **Decision:** Use one responsive web client for PC and Android browsers. Persist user preferences at account level, but keep active timer/session state local to the current browser.
 - **Rationale:** Device form factor changes presentation, not product identity or preferences; active timer synchronization is explicitly out of scope.
 - **Consequences:** Cross-device reads of saved data and preferences are expected from the first release. Reloading, navigating away, abandoning the practice, or changing device/browser instances ends the local timer without recovery or a practice record; no server-side timer session state is introduced.
@@ -250,14 +252,14 @@ Choosing a mechanism such as RLS, PKCE, or managed backups does not by itself pr
 
 | Decision | Architectural impact | State and remaining detail |
 |---|---|---|
-| Use the conceptual entities User, Profile/Preferences, List, Concept, Round, Appearance, Round operation record, Practice, and Practice Note. Implement migrations in dependency order: profile/preferences, lists, concepts, rounds, appearances, practices, notes, then constraints, RLS, and transactional functions. | Establishes ownership paths and the order in which the physical schema can be introduced without designing every column here. | **Partly implemented:** VS-01–VS-03 schemas and round operation ledger are locally applied and checked. Practice entities and later schema remain planned. |
+| Use the conceptual entities User, Profile/Preferences, List, Concept, Round, Appearance, Round operation record, Practice, and Practice Note. Implement migrations in dependency order: profile/preferences, lists, concepts, rounds, appearances, practices, notes, then constraints, RLS, and transactional functions. | Establishes ownership paths and the order in which the physical schema can be introduced without designing every column here. | **Partly implemented:** VS-01–VS-05 schemas, practice/note storage, and trusted operations are locally applied and checked. Future protected resources remain subject to their own policies and tests. |
 | Use deny-by-default RLS based on the authenticated Supabase Auth UUID. A resource is accessible only when its ownership chain resolves to that user; the client cannot choose or change ownership. | Direct API access receives the same isolation as normal UI flows. SQL functions are used for operations that require trusted validation or atomicity. | **Partly implemented:** VS-01–VS-03 resource policies and function contracts are locally checked. Future protected resources still require their own policies and tests. |
-| Use optimistic concurrency for editable resources. A stale update is rejected explicitly instead of silently overwriting another change. Use atomic database operations for selection, marking, rounds, and other multi-record invariants. | Prevents silent data loss while keeping the application usable across devices. Retried operations must be safe and clients must be able to reload current state after a conflict. | **Partly implemented:** VS-03 serializes list-scoped state changes and supports idempotent replay locally. Future operation contracts remain spec-specific. |
-| Retain active account/content data while the account is active or until deletion is requested. Retain technical logs for 30 days without unnecessary user content; use Supabase's actual session and backup retention; anonymize historical records from permanently deleted lists. | The privacy notice, deletion behavior, diagnostics, and provider review must describe these rules. Backup deletion may not be immediate. | **Confirmed, planned.** Verify Supabase's actual retention values and document exceptions before public registration. |
+| Use optimistic concurrency for editable resources. A stale update is rejected explicitly instead of silently overwriting another change. Use atomic database operations for selection, marking, rounds, and other multi-record invariants. | Prevents silent data loss while keeping the application usable across devices. Retried operations must be safe and clients must be able to reload current state after a conflict. | **Partly implemented:** VS-03 serializes list-scoped state changes, and VS-05 adds revision-checked note mutations with safe operation replay; both are locally checked. Future operation contracts remain spec-specific. |
+| Retain active account/content data while the account is active or until deletion is requested. Retain technical logs for 30 days without unnecessary user content; use Supabase's actual session and backup retention; permanently deleted lists retain only anonymous round totals after associated practices and notes are deleted. | The privacy notice, deletion behavior, diagnostics, and provider review must describe these rules. Backup deletion may not be immediate. | **Confirmed, planned.** Verify Supabase's actual retention values and document exceptions before public registration. |
 | Support the current and previous versions of Chrome, Edge, and Firefox on PC, and Chrome on Android. Do not promise support for Internet Explorer, obsolete browsers, embedded browsers, Safari, or iOS in the initial release. | Defines the first compatibility matrix for responsive behavior, authentication redirects, timers, and release validation. | **Confirmed, planned.** Revisit if the target audience expands to iOS/Safari or other platforms. |
 | Use local Supabase CLI/Docker, a separate Supabase staging project for preview deployments, and a separate Supabase production project. Use separate Google OAuth credentials and environment variables for local, staging, and production. Promote versioned migrations from staging to production under controlled release. | Prevents previews and tests from changing production data and keeps OAuth redirects, secrets, provider settings, and migrations environment-specific. | **Confirmed, planned.** Select actual provider regions, confirm contractual/transfer evidence, and configure the production projects before public registration. |
 
-The architecture guides delivered authentication, list, concept, and round slices. Deferred physical schema details remain for later features; each protected resource must have its ownership paths, RLS policies, and trusted operations specified and evidenced before release.
+Some status cells above retain the implementation snapshot from the earlier VS-01–VS-03 reviews. The current local implementation also includes VS-04 and VS-05 practice, note, and history boundaries; their ownership paths, RLS policies, RPCs, migrations, and evidence are linked below. Local checks do not verify deployment, provider retention, browser runtime privacy diagnostics, or release readiness; each protected resource still requires an evidenced trusted boundary before release.
 
 ## 10. Implementation references and significant changes
 
@@ -267,7 +269,8 @@ The architecture guides delivered authentication, list, concept, and round slice
 - [`supabase/config.toml`](../supabase/config.toml): local ports, signup setting, disabled email provider, Google provider environment references, and redirect configuration.
 - [`src/lib/supabase.ts`](../src/lib/supabase.ts): current PKCE client configuration, session persistence, and token refresh.
 - [`src/App.tsx`](../src/App.tsx): current minimal Google sign-in, session observation, OAuth error handling, and local logout.
-- VS-01–VS-03 domain migrations and RLS/trusted-operation functions are present in [`supabase/migrations/`](../supabase/migrations/) and were applied/checked against local Supabase. Local evidence and limitations are recorded in [`specs/003-persistent-round-and-selection/tasks.md`](../specs/003-persistent-round-and-selection/tasks.md); no production migration or deployment is claimed.
+- [`src/features/practice/practiceService.ts`](../src/features/practice/practiceService.ts) owns explicit practice save/reconciliation and note mutation RPC calls; [`src/features/history/historyService.ts`](../src/features/history/historyService.ts) parses bounded owner history and ordered round appearances. `App.clearPrivateState` removes owner-scoped practice/history query caches on session changes.
+- VS-01–VS-05 domain migrations and RLS/trusted-operation functions are present in [`supabase/migrations/`](../supabase/migrations/) and locally applied/checked. VS-05 adds `practices`, `practice_notes`, and text-free note-operation receipts; `save_completed_practice`, `get_saved_practice`, `update_practice_note`, and `delete_practice_note`; and bounded practice/round history plus separate appearance reads. See [`specs/005-notes-and-history/tasks.md`](../specs/005-notes-and-history/tasks.md) and [`README.md`](../README.md) for commands, results, and limitations. No production migration or deployment is claimed.
 
 ### Significant changes
 
@@ -276,7 +279,11 @@ The architecture guides delivered authentication, list, concept, and round slice
 | 2026-11-18 | Recorded the locally validated VS-04 boundary: constrained account timer preferences, narrow profile update access, and transient in-memory timer/scene state without recovery or practice persistence. | Keeps the architecture aligned with the delivered slice and preserves VS-05 practice records and VS-07 release review as separate scope. |
 | 2026-11-18 | Recorded the locally validated VS-03 round boundary: list-scoped operation ledger, parent-list serialization, fixed-search-path RPCs, RLS, and retained appearance history. | Keeps the shared ownership and atomicity architecture aligned with the closed local slice while leaving physical schema and functions in the executable migrations/spec. |
 | 2026-11-18 | Recorded accepted VS-03 deletion handling: retain only anonymous round totals after permanent list deletion and remove links/content/event detail. | Minimizes retained history and aligns round persistence with the accepted global deletion boundary, subject to DP14 review. |
-| 2026-11-18 | Clarified historical title retention on concept deletion: replace the displayable title with a neutral marker while preserving appearance order and origin. | Aligns historical snapshots with the global privacy and deletion behavior. |
+| 2026-11-18 | Clarified historical title retention on concept deletion: preserve the historical title and visibly mark it as deleted, preserving appearance order and origin. | Aligns the architecture with the confirmed VS-05 decision while preventing deleted concepts from returning to active practice. |
+| 2026-11-18 | Confirmed permanent list deletion removes associated practices and notes and retains only anonymous round totals. | Defines the saved-practice lifecycle consistently with the global minimum-retention rule. |
+| 2026-11-18 | Implemented local VS-05 note update/delete RPCs with parent-first locking, revision compare-and-swap, operation replay and text-free receipts; the local runner validates concurrent update/delete behavior and owner isolation. | Aligns the shared concurrency and privacy boundaries with the executable note mutation contract; no browser note editor is included in T08. |
+| 2026-11-19 | Added associated note management from list context, including practices whose concepts were deleted; note content is loaded only after an explicit entry selection and deletion refreshes the list/history metadata. | Keeps note text out of list rows and preserves a route to retained historical notes without restoring deleted concepts. |
+| 2026-11-19 | Recorded the local VS-05 schema/service/lifecycle boundary: explicit practice persistence, revision-protected note updates, bounded private history, legacy-null title fallback, and anonymous round-total exclusion. | Aligns the conceptual architecture with executable migrations and local evidence while retaining release privacy and provider-retention limits. |
 | 2026-11-16 | Created the architecture baseline from `temp/archit.md`, `docs/global-plan.md`, `docs/quality-project.md`, and current configuration/code evidence. | Establishes shared boundaries without pre-designing every feature or schema. |
 | 2026-11-16 | Recorded Google-only PKCE authentication as both a confirmed architectural decision and a partially existing implementation. | Keeps the architecture aligned with the verified login proof while exposing the remaining account-slice work. |
 | 2026-11-16 | Resolved the previous open architecture questions with decisions for the conceptual migration order, RLS boundary, optimistic concurrency, retention baseline, supported browsers, and staging/production environments. | Makes the architecture ready to guide the next specification work while preserving implementation-level detail for later plans. |

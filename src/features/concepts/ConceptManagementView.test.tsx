@@ -1,6 +1,6 @@
-import { MantineProvider } from '@mantine/core';
+﻿import { MantineProvider } from '@mantine/core';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ActiveConceptRow, ListRow } from '../../lib/database.types';
@@ -13,6 +13,7 @@ import { ListDetailView } from '../lists/ListDetailView';
 import { createConcept, createConceptBatch, deleteConcept, getOwnedConcepts, updateConcept } from './conceptService';
 import { DomainServiceError } from '../shared/supabaseErrors';
 import { ToastProvider, ToastViewport } from '../../app/toasts/ToastProvider';
+import { listPracticeHistory } from '../history/historyService';
 import {
   drawPendingConcept,
   loadCurrentRound,
@@ -41,6 +42,8 @@ vi.mock('../rounds/roundService', () => ({
   startNewRound: vi.fn(),
 }));
 
+vi.mock('../history/historyService', () => ({ listPracticeHistory: vi.fn() }));
+
 const list = { id: 'list-a', name: 'Anatomía', owner_id: 'user-a' } as ListRow;
 const existingConcept: ActiveConceptRow = {
   id: 'concept-1', list_id: list.id, title: 'Anatomía', description: 'Estudio del cuerpo',
@@ -54,13 +57,24 @@ const currentRound = {
   anonymous_appearance_total: null, created_at: '2026-01-01T00:00:00Z',
 };
 
-function renderView(onStartPractice = vi.fn()) {
+function renderView(
+  onStartPractice = vi.fn(),
+  pendingRoundAction?: { id: number; listId: string; action: 'draw' | 'new_round' } | null,
+  onRoundActionRequestHandled = vi.fn(),
+) {
   queryClient.clear();
   return render(
     <QueryClientProvider client={queryClient}>
       <MantineProvider env="test">
         <ToastProvider>
-          <ConceptManagementView userId="user-a" list={list} onBack={vi.fn()} onStartPractice={onStartPractice} />
+          <ConceptManagementView
+            userId="user-a"
+            list={list}
+            onBack={vi.fn()}
+            onStartPractice={onStartPractice}
+            pendingRoundAction={pendingRoundAction}
+            onRoundActionRequestHandled={onRoundActionRequestHandled}
+          />
           <ToastViewport />
         </ToastProvider>
       </MantineProvider>
@@ -73,6 +87,7 @@ describe('ConceptManagementView', () => {
     await act(async () => { await i18n.changeLanguage('es'); });
     queryClient.setDefaultOptions({ queries: { retry: false }, mutations: { retry: false } });
     vi.mocked(getOwnedConcepts).mockResolvedValue([]);
+    vi.mocked(listPracticeHistory).mockResolvedValue({ items: [], hasMore: false, nextCursor: null, queryKey: ['practice-history', 'user-a'] });
     currentConcepts = [];
     vi.mocked(getOwnedConcepts).mockImplementation(async () => currentConcepts);
     vi.mocked(createConcept).mockResolvedValue({ status: 'created', concept: existingConcept });
@@ -127,6 +142,32 @@ describe('ConceptManagementView', () => {
     await act(async () => { await i18n.changeLanguage('es'); });
     vi.clearAllMocks();
     queryClient.clear();
+  });
+
+  it('offers deleted-concept notes from the list context', async () => {
+    renderView();
+    expect(await screen.findByRole('button', { name: i18n.t('practiceNote.deletedConceptsShort') })).toBeInTheDocument();
+    expect(listPracticeHistory).not.toHaveBeenCalled();
+  });
+
+  it('opens deleted-concept notes from the symmetric list header action and returns to the list', async () => {
+    const user = userEvent.setup();
+    renderView();
+    await user.click(await screen.findByRole('button', { name: i18n.t('practiceNote.deletedConceptsShort') }));
+    expect(await screen.findByRole('heading', { name: i18n.t('practiceNote.deletedConceptsTitle') })).toBeInTheDocument();
+    expect(screen.getByText(i18n.t('practiceNote.deletedConceptsDescription'))).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: i18n.t('practiceNote.backToList') }));
+    expect(await screen.findByRole('button', { name: i18n.t('practiceNote.deletedConceptsShort') })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: i18n.t('concepts.list') })).toBeInTheDocument();
+  });
+
+  it('places the practice notes panel in the selected concept detail', async () => {
+    const user = userEvent.setup();
+    currentConcepts = [existingConcept];
+    renderView();
+    await user.click(await screen.findByRole('button', { name: i18n.t('conceptDetail.viewConcept', { title: existingConcept.title }) }));
+    expect(await screen.findByRole('heading', { name: i18n.t('practiceNote.listTitle') })).toBeInTheDocument();
+    expect(listPracticeHistory).toHaveBeenCalledWith(expect.objectContaining({ conceptId: existingConcept.id, listId: list.id }));
   });
 
   it('shows the selected title and order only after a confirmed draw, without its description', async () => {
@@ -285,7 +326,7 @@ describe('ConceptManagementView', () => {
     expect(screen.getByRole('button', { name: 'Return to list' })).toBeInTheDocument();
   });
 
-  it('offers Practice after a successful draw and passes the selected concept id', async () => {
+  it('offers Practice after a successful draw and passes its concept, round, and appearance identities', async () => {
     const user = userEvent.setup();
     const startPractice = vi.fn();
     currentConcepts = [existingConcept];
@@ -296,8 +337,38 @@ describe('ConceptManagementView', () => {
     expect(dialog).toHaveTextContent(existingConcept.title);
     await user.click(screen.getByRole('button', { name: 'Practicar' }));
 
-    expect(startPractice).toHaveBeenCalledWith(existingConcept.id);
+    expect(startPractice).toHaveBeenCalledWith(existingConcept.id, currentRound.id, 'appearance-draw');
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('routes a post-save Draw Another request through the existing round draw flow', async () => {
+    currentConcepts = [existingConcept];
+    const handled = vi.fn();
+    renderView(vi.fn(), { id: 41, listId: list.id, action: 'draw' }, handled);
+
+    expect(await screen.findByRole('dialog')).toHaveTextContent(existingConcept.title);
+    expect(drawPendingConcept).toHaveBeenCalledWith(list.id);
+    expect(handled).toHaveBeenCalledWith(41);
+  });
+
+  it('uses the existing new-round confirmation when the saved draw action is stale or a new round was selected', async () => {
+    currentConcepts = [{ ...existingConcept, state: 'seen' }];
+    renderView(vi.fn(), { id: 42, listId: list.id, action: 'draw' });
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent(/iniciar una nueva ronda/i);
+    expect(drawPendingConcept).not.toHaveBeenCalled();
+    await userEvent.setup().click(within(dialog).getByRole('button', { name: /confirmar nueva ronda/i }));
+    expect(startNewRound).toHaveBeenCalledWith(list.id);
+  });
+
+  it('opens the established confirmation for an explicit post-save Start New Round action', async () => {
+    currentConcepts = [existingConcept];
+    renderView(vi.fn(), { id: 43, listId: list.id, action: 'new_round' });
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent(/iniciar una nueva ronda/i);
+    expect(startNewRound).not.toHaveBeenCalled();
   });
 
   it('shows empty and numeric pending progress without hiding Add Concepts', async () => {

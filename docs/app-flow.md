@@ -3,11 +3,11 @@
 ## 1. Status, scope, and references
 
 **Status:** Confirmed flow; VS-01–VS-04 implemented for local scope
-**Date:** 2026-11-18
+**Date:** 2026-11-19
 **Scope:** General navigation, main user journeys, observable states, transitions, and recovery behavior for the MVP and explicitly described later flows.
 
 **Definition state:** Requirements from the global plan are marked **confirmed**. Additions from `temp/flow.md` that are not in the global plan are marked **proposed** or **open**.  
-**Implementation state:** VS-01 and VS-02 are implemented and validated for local scope, including the T10 authenticated-shell extension. VS-03 is closed for local scope after T01–T07 implementation and validation within the owner-accepted Chrome/Brave PC and mobile review scope (CL-06); broader release browser review remains VS-07. Later study journeys are planned unless explicitly marked otherwise.
+**Implementation state:** VS-01–VS-05 are implemented locally. VS-05 includes explicit practice save, note management, and Practices/Rounds history; its T11 automated/local database evidence and user-confirmed MV-01 review are recorded in [`specs/005-notes-and-history/tasks.md`](../specs/005-notes-and-history/tasks.md). VS-05 is closed for validated local scope. MV-02 runtime browser storage/URL/cache/diagnostic inspection remains unverified by user decision and is not claimed as passed. Broader browser, accessibility, provider, and publication checks remain VS-07.
 
 The VS-04 completion and evidence boundary is recorded in [`specs/004-timed-practice-journey/tasks.md`](../specs/004-timed-practice-journey/tasks.md); this local closure does not claim VS-07 release-wide browser or accessibility validation.
 
@@ -44,8 +44,8 @@ Entry conditions:
 | VIEW-05 | Concept Detail | One Back action to the concept collection; view, edit, or delete a concept with confirmation and conflict handling | VS-02 implemented and locally validated |
 | VIEW-06 | Draw Result | Show the confirmed selected concept and appearance order, keep its description hidden, and return to the list; Practice opens the associated VIEW-07 timer | VS-03/VS-04 closed locally; walkthrough evidence is recorded under CL-06 and the VS-04 task record |
 | VIEW-07 | Practice | Associated or independent timer; reveal description, edit duration before start, pause/resume/restart, finish, or return/abandon to the entry context | VS-04 closed for validated local scope; broader release review remains VS-07 |
-| VIEW-08 | Practice Closure | Save a completed practice, optional note, and 0–5 satisfaction rating; return, repeat, or draw another | Planned |
-| VIEW-09 | History | Browse practices and rounds, filter, and inspect read-only details | Planned |
+| VIEW-08 | Practice Closure | Explicitly save an eligible completed practice with optional note and 0–5 satisfaction rating; after confirmed save, stay and choose return or a fresh practice action | Implemented locally in VS-05; release validation remains separate |
+| VIEW-09 | History | Browse/filter read-only practice and round records; opening an independent practice leads to its separate detail state for note maintenance | Implemented locally in VS-05; T11 evidence and accepted verification gap are recorded in its task log |
 | VIEW-10 | Settings | Change language, default duration, sound, volume, and reduced motion; view credits/licenses | Full Settings view remains planned; VS-02 adds the existing Preferences dialog for identity, sign-out, and Privacy, and VS-04 adds timer controls plus a minimal Credits and Licenses section there |
 | VIEW-11 | Account | View Google identity, sign out, or delete the Chucao account | Planned |
 
@@ -227,6 +227,8 @@ Navigation changes destination; saving, drawing, marking, deleting, and changing
 
 **Entry:** The person selects Practice from Draw Result or a concept context. This associated journey and FLOW-06 are implemented locally in VS-04.
 
+**Implementation:** VS-05 adds the explicit save, note, and rating closure described below. Its integrated local evidence and T11 limitation are recorded in the VS-05 task log.
+
 1. Practice opens with the concept context and a prepared scene.
 2. The person may change the duration before starting, within 1–59 minutes.
 3. The description is hidden initially and can be revealed.
@@ -234,7 +236,10 @@ Navigation changes destination; saving, drawing, marking, deleting, and changing
 5. The person may pause, continue, or restart after confirmation.
 6. At zero, the animation reaches its destination and optional sound is triggered once.
 7. Completion is shown in VIEW-07 with textual status and an optional sound attempt; completion is transient and creates no practice record in VS-04.
-8. Returning or abandoning discards the timer session and returns to its entry context. Saving the practice and its note/rating actions remain in VS-05.
+8. On timer completion, VIEW-07 stays visible with its completed state and forest scene. A prominent “Add note and rating” action opens VIEW-08 when the person is ready; its label is localized. Returning before Save creates no practice record. Timer completion or opening the closure does not itself create a practice record.
+9. In VIEW-08, the person explicitly saves the completed practice with an optional note/rating. Only after persistence succeeds does the UI confirm the save; it remains in VIEW-08 until the person chooses a next action.
+10. After save, the person may return to the originating context, start a fresh timer for the same concept, or draw another pending concept. If none remain, Draw Another is replaced by Start New Round. A fresh timer is not a duplicate of the saved practice.
+11. Returning or abandoning before explicit save creates no practice record or closure draft and returns to the timer's entry context.
 
 **Confirmed timer boundary**
 
@@ -242,13 +247,14 @@ Navigation changes destination; saving, drawing, marking, deleting, and changing
 - Adding time after start is not available; the person edits the duration before starting.
 - Abandoning the active timer creates no practice record under the global plan decision.
 - Reloading or leaving the practice does not recover the timer or create a practice record.
-- Notes are saved only when explicitly submitted; no closure draft is persisted while the person types.
+- The practice, optional note, and optional rating are saved together only after explicit submission in VIEW-08; no closure draft is persisted while the person types.
 
 **Alternatives and recovery**
 
 - Pause freezes the local timer/animation state and Continue resumes it.
 - Reset requires confirmation and returns to a full-duration timer.
-- A failure to save a completed practice keeps the closure data visible and does not report success.
+- A failure to save a completed practice keeps the closure data visible and does not report success; retry does not create duplicate practices.
+- Save success does not redirect automatically. Associated practice offers return to origin, a fresh timer for the same concept, and Draw Another/Start New Round according to pending concepts. Independent practice offers return to My Lists or a fresh independent timer.
 - If no pending concepts remain, Draw Another is replaced by Start New Round.
 - Background-tab and locked-device sound timing is subject to browser restrictions.
 
@@ -264,39 +270,43 @@ The supplied `temp/flow.md` proposed registering a practice at start, saving int
 
 **Entry:** The person opens Independent Timer from My Lists. This journey is implemented locally in VS-04.
 
+**Implementation:** VS-05 adds explicit labeled save and the same optional note/rating closure; local evidence and the T11 limitation are recorded in the VS-05 task log.
+
 1. The timer opens without a list or concept.
 2. The person selects a duration from 1–59 minutes and starts, pauses, continues, or restarts.
 3. The animation and optional sound follow the same timer rules as associated practice.
 4. Completion is shown in VIEW-07 with textual status and an optional sound attempt; no label, note, rating, or practice record is collected in VS-04.
-5. Returning or abandoning discards the timer session and returns to My Lists.
-6. Independent labels, notes, ratings, and saved practice history remain in VS-05.
+5. Returning before continuing to VIEW-08 or abandoning discards the timer session and returns to My Lists.
+6. Continuing after completion opens VIEW-08. The independent practice is persisted only after explicit Save and only when a non-empty label is provided; note and rating remain optional.
+7. After confirmed save, VIEW-08 remains visible until the person chooses Return to My Lists or Practice Again. Practice Again starts a fresh independent timer and does not alter the saved record.
 
 An incomplete independent timer is never saved. Reloading or leaving it abandons it without recovery or a history record.
 
 ### FLOW-07 — Review history
 
 **Capability:** CAP-07  
-**Scope:** MVP for saved practices and rounds; detailed filtering/editing is planned.  
-**State:** Confirmed for saved practices and rounds, with the following filter and read-only rules.
+**Scope:** MVP for saved practices and rounds, including the confirmed filters and note-maintenance contexts below. Advanced list/concept organization remains VS-06.
+**State:** Implemented locally in VS-05. T11 records automated/database evidence and the user's app review; runtime browser privacy inspection was omitted by user decision and is not verified. This state does not claim release validation.
 
 **Entry:** The person opens History from the main private navigation or a concept/list context.
 
 1. History presents Practices and Rounds.
-2. Practices can be filtered by date, list, concept or independent label, practice type, and rating state (rated/unrated).
+2. Practices can be filtered by date, list, concept or independent label, practice type, and rating state (rated/unrated). Active criteria combine with AND. A date range has inclusive start/end dates interpreted in the current device's local time zone; changing interface language does not change matching results.
 3. An entry shows concept identification or independent label, date, duration, completion state, rating from 0 to 5 or Unrated, and note presence.
-4. History entries and rating values are read-only. A rating is set during practice closure and is not corrected from History.
+4. History list entries and rating values are read-only. A rating is set during practice closure and is not corrected from History. Opening an independent practice entry leads to a distinct detail state where its note may be edited or deleted; this does not make the History list editable.
 5. Rounds show their list, closed/open state, appearance order, and whether each appearance came from drawing or manual marking.
 6. Returning preserves the originating context and filters when possible.
 
 **Concept and deletion behavior**
 
-- Historical appearances preserve the title snapshot used at the time, unless the concept is deleted.
-- When a concept is deleted, replace its displayable historical title with a deletion marker. Historical views show the localized equivalent of “Deleted concept” while preserving appearance order and origin; the deleted title is not disclosed.
+- Historical appearances preserve the title snapshot used at the time. When a concept is deleted, preserve that historical title and clearly mark it with a localized deleted status while preserving appearance order and origin.
+- For legacy deleted-concept appearances whose title snapshot is already null, show “Concepto eliminado — título no disponible” / “Deleted concept — title unavailable”; do not reconstruct an erased title.
 - Deleted concepts cannot be practiced or returned to active rounds.
-- Permanently deleted lists retain only anonymized historical records.
+- Permanently deleted lists delete associated practices and notes and retain only anonymous round totals.
+- Anonymous round totals have no owner link and are excluded from private History.
 - A concept manually marked as seen may have no practice.
 
-Notes may be edited or deleted from the relevant concept/list context, not from History. Deleting a note does not delete its practice. History remains a read-only record of the saved practice and its rating.
+Associated practice notes for an active concept are shown in the concept detail, below its description and edit/delete panel. Notes whose concepts were deleted remain accessible from a dedicated deleted-concept notes view in that list's context; this does not reactivate the concept. Independent practice notes may be edited or deleted in the separate detail state opened from their History entry. Note edits require explicit save; cancel discards the draft, whitespace-only edits are rejected, and failures/conflicts preserve the draft without overwriting the last saved note. Deleting a note does not delete its practice. History list entries and ratings remain read-only.
 
 ### FLOW-08 — Configure preferences and manage the account
 
@@ -392,7 +402,9 @@ The following are later-scope journeys and should not be treated as MVP commitme
 |---|---|---|
 | 2026-11-18 | Closed the local VS-03 flow after validation. | Records the implemented list/round/result states while retaining filters for VS-06, Practice for VS-04, and release-wide browser checks for VS-07. |
 | 2026-11-18 | Clarified VS-03 flow: concepts added during an open round join as pending, list mutations are ordered, and Draw Result offers Practice only after VS-04. | Aligns FLOW-04 and VIEW-06 with the selected slice boundary and accepted product decisions. |
+| 2026-11-19 | Recorded VS-05 practice closure, associated/deleted-concept note panels, independent-note detail, and Practices/Rounds history as implemented locally; documented the legacy-null title fallback and anonymous-total exclusion. | Aligns current flow status with implementation while recording the user-accepted omission of browser runtime privacy inspection separately from release validation. |
 | 2026-11-18 | Closed the local VS-02/T10 flow: list creation opens a name dialog; authenticated navigation, Preferences, Privacy return, locale switching, concept add/view/edit/delete, and toast feedback are recorded as implemented. | Aligns the flow with the user-confirmed local UI while leaving rounds, practice, history, and publication journeys planned. |
 | 2026-11-16 | Created the application-flow baseline from `temp/flow.md`, `docs/global-plan.md`, `docs/architecture.md`, and current authentication evidence. | Establishes navigable MVP journeys without treating every supplied proposal as confirmed. |
 | 2026-11-16 | Reconciled the supplied flow with the current architecture by marking timer interruption/reload recovery and satisfaction ratings as unresolved or proposed where they conflict with confirmed decisions. | Prevents the flow document from silently changing persistence or practice-history scope. |
 | 2026-11-16 | Confirmed 0–5 satisfaction ratings, no timer recovery or abandonment records, optional labels for saved independent practices, no closure drafts, read-only History, and note editing from concept/list context. | Closes the flow decisions raised in the previous review. |
+| 2026-11-18 | Clarified VS-05: practice/note/rating persist together only on explicit Save; VIEW-08 remains after success with context-appropriate next actions. Added an independent-practice detail state for note maintenance, AND-combined History filters, inclusive local-date bounds, and title-preserving deleted-concept status. | Aligns the accepted VS-05 behavior with the selected slice and preserves the History list and ratings as read-only. |

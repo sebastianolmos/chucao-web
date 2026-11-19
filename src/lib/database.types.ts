@@ -1,4 +1,5 @@
 export type Locale = 'es' | 'en';
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type ProfileRow = {
   id: string;
@@ -29,6 +30,46 @@ export type RoundAppearanceOrigin = 'draw' | 'manual';
 export type RoundAction = 'mark_seen' | 'draw' | 'return_pending' | 'new_round';
 
 export type RoundOperationOutcome = 'applied' | 'rejected' | 'exhausted';
+
+export type PracticeKind = 'associated' | 'independent';
+
+export type PracticeRow = {
+  id: string;
+  owner_id: string;
+  kind: PracticeKind;
+  list_id: string;
+  concept_id: string | null;
+  round_id: string | null;
+  appearance_id: string | null;
+  title_snapshot: string | null;
+  independent_label: string | null;
+  duration_minutes: number;
+  completed_at: string;
+  saved_at: string;
+  rating: number | null;
+  request_fingerprint: string;
+};
+
+export type PracticeNoteRow = {
+  practice_id: string;
+  body: string;
+  revision: number;
+  updated_at: string;
+};
+
+export type PracticeNoteOperationKind = 'update' | 'delete';
+
+export type PracticeNoteOperationRow = {
+  owner_id: string;
+  practice_id: string;
+  operation_id: string;
+  operation_kind: PracticeNoteOperationKind;
+  expected_revision: number;
+  resulting_revision: number | null;
+  request_fingerprint: string;
+  outcome: 'updated' | 'deleted' | 'stale' | 'not_found';
+  created_at: string;
+};
 
 export type RoundResultState = ConceptState | 'closed' | null;
 
@@ -107,6 +148,24 @@ export type ConceptBatchItem = {
 export type Database = {
   public: {
     Tables: {
+      practices: {
+        Row: PracticeRow;
+        Insert: PracticeRow;
+        Update: never;
+        Relationships: [];
+      };
+      practice_notes: {
+        Row: PracticeNoteRow;
+        Insert: PracticeNoteRow;
+        Update: never;
+        Relationships: [];
+      };
+      practice_note_operations: {
+        Row: PracticeNoteOperationRow;
+        Insert: PracticeNoteOperationRow;
+        Update: never;
+        Relationships: [];
+      };
       profiles: {
         Row: ProfileRow;
         Insert: {
@@ -315,6 +374,64 @@ export type Database = {
       get_or_create_current_round: {
         Args: { p_list_id: string };
         Returns: RoundRow;
+      };
+      save_completed_practice: {
+        Args: {
+          p_id: string;
+          p_kind: PracticeKind;
+          p_list_id: string | null;
+          p_concept_id: string | null;
+          p_round_id: string | null;
+          p_appearance_id: string | null;
+          p_duration_minutes: number;
+          p_completed_at: string;
+          p_label: string | null;
+          p_note: string | null;
+          p_rating: number | null;
+        };
+        Returns: Json;
+      };
+      get_saved_practice: {
+        Args: { p_id: string };
+        Returns: Json;
+      };
+      update_practice_note: {
+        Args: { p_practice_id: string; p_operation_id: string; p_expected_revision: number; p_body: string };
+        Returns: Json;
+      };
+      delete_practice_note: {
+        Args: { p_practice_id: string; p_operation_id: string; p_expected_revision: number };
+        Returns: Json;
+      };
+      list_practice_history: {
+        Args: {
+          p_from?: string | null;
+          p_to_exclusive?: string | null;
+          p_list_id?: string | null;
+          p_concept_id?: string | null;
+          p_independent_label?: string | null;
+          p_kind?: PracticeKind | null;
+          p_rating_state?: 'rated' | 'unrated' | null;
+          p_cursor_completed_at?: string | null;
+          p_cursor_id?: string | null;
+          p_page_size?: number;
+          p_direction?: 'newest' | 'oldest';
+        };
+        Returns: Json;
+      };
+      list_round_history: {
+        Args: {
+          p_list_id?: string | null;
+          p_cursor_opened_at?: string | null;
+          p_cursor_id?: string | null;
+          p_page_size?: number;
+          p_direction?: 'newest' | 'oldest';
+        };
+        Returns: Json;
+      };
+      list_round_appearances: {
+        Args: { p_round_ids: string[] };
+        Returns: Json;
       };
       mark_concept_seen: {
         Args: {

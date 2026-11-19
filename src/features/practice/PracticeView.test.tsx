@@ -63,6 +63,66 @@ describe('PracticeView', () => {
     act(() => vi.advanceTimersByTime(1_500));
     expect(scene).toHaveAttribute('data-singing', 'false');
   });
+
+  it('emits one save identity and the exact completion instant only when the timer completes', () => {
+    const onCompleted = vi.fn();
+    renderPractice({ onCompleted });
+    expect(onCompleted).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: /comenzar/i }));
+    act(() => vi.advanceTimersByTime(60_000));
+
+    expect(onCompleted).toHaveBeenCalledTimes(1);
+    expect(onCompleted).toHaveBeenCalledWith(expect.objectContaining({
+      id: expect.stringMatching(/^[0-9a-f-]{36}$/i),
+      durationMinutes: 1,
+      completedAt: '2026-01-01T12:01:00.000Z',
+    }));
+    act(() => vi.advanceTimersByTime(1_000));
+    expect(onCompleted).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the completed associated scene visible until the person opens the closure', () => {
+    const onContinueToClosure = vi.fn();
+    renderPractice({
+      concept: { title: 'Fotosíntesis', description: 'Proceso de las plantas' },
+      onContinueToClosure,
+    });
+    fireEvent.click(screen.getByRole('button', { name: /comenzar/i }));
+    act(() => vi.advanceTimersByTime(60_000));
+
+    expect(screen.getByRole('img', { name: /escena del bosque/i })).toHaveAttribute('data-singing', 'true');
+    expect(screen.getByRole('status', { name: /finalizada/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /agregar nota y calificaci[oó]n/i })).toBeInTheDocument();
+    expect(onContinueToClosure).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: /agregar nota y calificaci[oó]n/i }));
+    expect(onContinueToClosure).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not emit a saveable completion when the timer is abandoned before completion', () => {
+    const onCompleted = vi.fn();
+    renderPractice({ onCompleted });
+    fireEvent.click(screen.getByRole('button', { name: /comenzar/i }));
+    act(() => vi.advanceTimersByTime(59_000));
+    expect(onCompleted).not.toHaveBeenCalled();
+  });
+
+  it('uses a fresh save identity after the user confirms a restart', () => {
+    const onCompleted = vi.fn();
+    renderPractice({ onCompleted });
+    fireEvent.click(screen.getByRole('button', { name: /comenzar/i }));
+    act(() => vi.advanceTimersByTime(60_000));
+    const firstId = onCompleted.mock.calls[0][0].id;
+
+    fireEvent.click(screen.getByRole('button', { name: /reiniciar/i }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /s[ií], reiniciar/i }));
+    fireEvent.click(screen.getByRole('button', { name: /comenzar/i }));
+    act(() => vi.advanceTimersByTime(60_000));
+
+    expect(onCompleted).toHaveBeenCalledTimes(2);
+    expect(onCompleted.mock.calls[1][0].id).not.toBe(firstId);
+  });
   it('pauses, resumes, completes from elapsed wall time, then restarts only after confirmation', () => {
     renderPractice();
     fireEvent.click(screen.getByRole('button', { name: /comenzar/i }));

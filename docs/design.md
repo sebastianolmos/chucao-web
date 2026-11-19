@@ -2,8 +2,8 @@
 
 ## 1. Status, scope, and references
 
-**Status:** Visual baseline implemented for VS-01 and local VS-02/T10; future study views remain planned
-**Date:** 2026-11-18
+**Status:** Visual baseline and VS-01–VS-05 views implemented for local scope; release-wide visual/accessibility review remains pending
+**Date:** 2026-11-19
 **Scope:** Shared visual direction, foundations, interface composition, reusable components, interaction states, accessibility constraints, and visual resources for the MVP study journey.
 
 This document defines the shared visual direction. VS-01 and the VS-02/T10
@@ -21,13 +21,17 @@ views remain design guidance until their slices are implemented.
 - [`docs/quality-project.md`](./quality-project.md): selected criteria for keyboard use, focus, labels, contrast, reduced motion, touch targets, responsive behavior, and image alternatives.
 - Existing implementation evidence: `src/main.tsx` loads Comfortaa through
   Fontsource and configures Mantine; the VS-01/VS-02 shell and list/concept
-  views are in `src/App.tsx`, `src/app/app.module.css`,
-  `src/features/lists/lists.module.css`,
-  `src/features/concepts/concepts.module.css`, and `src/index.css`.
+views are in `src/App.tsx`, `src/app/app.module.css`,
+`src/features/lists/lists.module.css`,
+`src/features/concepts/concepts.module.css`, and `src/index.css`.
+
+VS-05 practice closure, history, and note-management views follow the same
+visual system and are implemented locally. The user confirmed the integrated MV-01 review on 2026-11-19. VS-05 is closed for validated local scope. MV-02 browser runtime privacy inspection remains unverified; this is not accessibility conformance or release browser validation. See the [VS-05 task and closure evidence](../specs/005-notes-and-history/tasks.md).
 
 The design rules are not by themselves accessibility proof; the current
 implementation has been reviewed manually for the validated VS-01 desktop and
-mobile scenarios.
+mobile scenarios. VS-05 uses this design system in its local implementation;
+later slices remain design guidance until implemented.
 
 ## 2. Visual direction
 
@@ -155,6 +159,8 @@ Cards may move from one column to two or more columns as space permits. Buttons 
 
 The functional behavior and transitions belong to [`docs/app-flow.md`](./app-flow.md). The following visual rules describe only presentation and action hierarchy.
 
+Within `VIEW-05`, place the shared past-practice notes panel directly below the concept description/edit/delete panel and above the authenticated shell footer. In `VIEW-03`, align a concise deleted-concept-notes action at the upper right opposite Back; it opens the same notes panel treatment with a clear deleted-concepts heading and a return-to-list action. Keep the standard list title centered beneath those controls.
+
 | Flow view | Visual composition |
 |---|---|
 | `VIEW-01` Access | Cream surface, chucao identity art, application name, short explanation, one prominent “Continue with Google” action, centered language selector, centered privacy link, and the developer footer. Access remains outside the authenticated navbar. |
@@ -163,9 +169,9 @@ The functional behavior and transitions belong to [`docs/app-flow.md`](./app-flo
 | `VIEW-04` Add Concepts | Dialog matching the supplied desktop reference, with Individual/By Batch modes, persistent labels, pasted-batch review, accepted/omitted summary, and clear confirm/cancel hierarchy. |
 | `VIEW-05` Concept Detail | One upper-left Back action to the collection, centered title, aligned description/edit form, centered Edit above Delete actions, and a destructive confirmation dialog; long unspaced text wraps without clipping. |
 | `VIEW-06` Draw Result | Cream dialog over a warm darkened backdrop; concept centered; show the secondary “Back to list” action and lilac “Practice” action to open associated VIEW-07. |
-| `VIEW-07` Practice | Concept, forest scene, and clock are dominant. Mobile stacks navigation, scene, concept, clock, controls, and revealable description; PC may place description/notes in a side panel. Implemented locally in VS-04 with the Chucao palette and responsive controls; the clickable clock is visually unraised and opens inline duration editing while prepared. |
-| `VIEW-08` Practice Closure | Preserve concept context; show satisfaction selector, optional note, save status, and a clear completion action. Independent practice includes an optional free-text concept label before rating/note. |
-| `VIEW-09` History | Practices and rounds sections, visible filters with reset, stacked mobile entries, aligned desktop columns, and explicit distinction between `0` and `Unrated`. |
+| `VIEW-07` Practice | Concept, forest scene, and clock are dominant. Mobile stacks navigation, scene, concept, clock, controls, and revealable description; PC may place description/notes in a side panel. At completion, keep the completed state and forest scene visible and offer a prominent localized “Add note and rating” action to open VIEW-08 on the person's choice. Implemented locally in VS-04 with the Chucao palette and responsive controls; the clickable clock is visually unraised and opens inline duration editing while prepared. |
+| `VIEW-08` Practice Closure | Preserve associated/independent context; show a required-on-save independent label, optional note, 0–5 satisfaction selector, and explicit Save. Pending, success, validation, and failure states stay in the closure; failed saves retain entered values and offer retry. After confirmed save, remain with success feedback and context-appropriate next actions; do not navigate automatically. Implemented locally in VS-05. |
+| `VIEW-09` History | Practices and rounds sections, visible resettable filters (active criteria combine with AND; date range uses inclusive local dates), stacked mobile entries, aligned desktop columns, and explicit distinction between `0` and `Unrated`. History rows and ratings are read-only; deleted concepts retain their historical title with a localized deleted status. Opening an independent practice row leads to a distinct detail state using the same Chucao form/card treatment for note editing/deletion; its rating remains read-only. Legacy null title snapshots use the agreed localized unavailable-title fallback; anonymous round totals are not shown in private History. Implemented locally in VS-05. |
 | `VIEW-10` Settings | Group language, default duration, sound/volume, reduced motion, and credits/licences by purpose; immediate changes show their result and save state. |
 | `VIEW-11` Account | Show available name/email and “Signed in with Google”; separate sign-out from account deletion; do not show password controls. |
 
@@ -251,7 +257,6 @@ library's component styles do not restore the default blue/white treatment.
 | Which owner-created assets are approved for the main/access illustration and favicon? | Affects the existing identity art and browser icon; timer frames and trunk for VS-04 have been confirmed. | Resolve before publication of the affected identity resources. |
 | What exact responsive breakpoints or layout thresholds are needed? | Affects when cards, buttons, panels, and navigation reflow. | Resolve through implementation prototypes and PC/Android checks; do not predefine unnecessary breakpoints now. |
 | Should a complementary icon set be selected if Mantine defaults do not fit the illustrated identity? | Affects consistency of menus, status, and action affordances. | Resolve before building reusable action menus and icon-only controls. |
-| What final compact representation should be used for `0`, `Unrated`, pending, seen, archived, and deleted historical content? | Affects scanability and language clarity across History and list views. | Resolve in the history and concept specifications while preserving the agreed semantics. |
 
 The following are not open product-behavior decisions here: responsive PC/Android support, Spanish/English support, Google-only access, the timer duration range, no post-start added time, no active-timer recovery, and the existence of reduced-motion behavior are already established elsewhere.
 
@@ -260,6 +265,8 @@ The following are not open product-behavior decisions here: responsive PC/Androi
 | Date | Change | Rationale |
 |---|---|---|
 | 2026-11-18 | Recorded VIEW-07's implemented timer/forest presentation and closed VS-04 visual decisions, including inline duration editing, the unraised clock affordance, continuous bird travel, support turns, grounded flight shadow, and brief arrival cue. | Documents the delivered local design while retaining broad accessibility and release conformance review for VS-07. |
+| 2026-11-18 | Defined the planned VS-05 closure and History presentation: explicit save with no automatic redirect, context-aware next actions, read-only History rows/ratings, and a separate independent-practice detail state for note actions. | Extends the implemented Chucao design language to the accepted practice/history journey without changing existing screens. |
+| 2026-11-19 | Recorded VIEW-08/09 and associated/deleted-concept note panels as implemented locally in VS-05. The user confirmed manual app review; browser runtime privacy inspection was omitted by user decision and remains unverified. | Aligns design status with the delivered local views while keeping accessibility and release validation distinct. |
 | 2026-11-18 | Updated VIEW-06 to stage its actions: Return to List at VS-03 and Practice when VS-04 is delivered. | Keeps the visual action hierarchy aligned with the selected slice boundaries without showing an inactive control. |
 | 2026-11-18 | Recorded the validated VS-02/T10 shared navbar, Preferences and list-creation dialogs, list/concept layouts, progress count, footer, and semantic action/hover colors. | Carries reusable visual decisions into future views while keeping later study screens planned and accessibility/release conformance unclaimed. |
 | 2026-11-16 | Created the visual design baseline from `temp/design.md`, the global plan, application flow, quality criteria, and existing Mantine/Comfortaa evidence. | Establishes a shared visual direction without implementing the interface or claiming validation. |

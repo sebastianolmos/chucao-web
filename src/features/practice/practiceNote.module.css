@@ -1,0 +1,15 @@
+.noteModal { overflow: hidden; border: 2px solid var(--chucao-brown); border-radius: 1rem; background: var(--chucao-cream); box-shadow: 5px 6px 0 var(--chucao-brown); color: var(--chucao-brown); }
+.noteHeader { background: var(--chucao-cream) !important; color: var(--chucao-brown) !important; }
+.noteTitle { color: var(--chucao-brown) !important; font-size: 1.35rem; font-weight: 700; }
+.noteHeader :global(.mantine-Modal-close) {
+  border: 1px solid var(--chucao-brown);
+  background: var(--chucao-panel) !important;
+  color: var(--chucao-brown) !important;
+}
+.noteHeader :global(.mantine-Modal-close:hover) { background: var(--chucao-yellow) !important; }
+.noteBody { min-width: 0; background: var(--chucao-cream); overflow-wrap: anywhere; }
+.savedNote, .savedConflict { min-width: 0; padding: 1rem; border: 2px solid var(--chucao-brown); border-radius: .75rem; background: var(--chucao-panel); overflow-wrap: anywhere; white-space: pre-wrap; }
+.savedConflict { background: #fff0c2; }
+.savedNote :global(.mantine-Text-root), .savedConflict :global(.mantine-Text-root) { overflow-wrap: anywhere; word-break: break-word; }
+.deleteButton { --button-bg: var(--chucao-pink) !important; --button-hover: #f39b9b !important; --button-color: var(--chucao-brown) !important; --button-hover-color: var(--chucao-brown) !important; --button-bd: 2px solid var(--chucao-brown) !important; }
+.notePrimaryButton { --button-bg: var(--chucao-cyan) !important; --button-hover: #72e6f2 !important; --button-color: var(--chucao-brown) !important; --button-hover-color: var(--chucao-brown) !important; --button-bd: 2px solid var(--chucao-brown) !important; }

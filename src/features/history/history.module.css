@@ -1,0 +1,21 @@
+.history { display: grid; gap: 1rem; color: var(--chucao-brown); }
+.history h1 { margin: 0; }
+.filters { display: flex; flex-wrap: wrap; align-items: end; gap: .75rem; padding: 1rem; border: 2px solid var(--chucao-brown); border-radius: 1rem; background: var(--chucao-panel); box-shadow: 3px 4px 0 var(--chucao-brown); }
+.filters label { display: grid; gap: .3rem; min-width: 9rem; flex: 1; font-weight: 700; }
+.filters input, .filters select { min-height: 2.75rem; min-width: 0; padding: .45rem; border: 2px solid var(--chucao-brown); border-radius: .55rem; background: white; color: inherit; }
+.entries { display: grid; gap: .8rem; padding: 0; list-style: none; }
+.entries > li { min-width: 0; padding: 1rem; border: 2px solid var(--chucao-brown); border-radius: 1rem; background: var(--chucao-panel); box-shadow: 3px 4px 0 var(--chucao-brown); overflow-wrap: anywhere; }
+.entries h2 { margin: 0 0 .5rem; font-size: 1.15rem; }
+.entries p { margin: .35rem 0; line-height: 1.5; }
+.entries ol { display: grid; gap: .4rem; }
+.openNoteButton { --button-bg: var(--chucao-cyan) !important; --button-hover: #72e6f2 !important; --button-color: var(--chucao-brown) !important; --button-hover-color: var(--chucao-brown) !important; --button-bd: 2px solid var(--chucao-brown) !important; }
+.practiceDetail { display: grid; gap: .75rem; min-width: 0; padding: clamp(1rem, 3vw, 1.5rem); border: 2px solid var(--chucao-brown); border-radius: 1rem; background: var(--chucao-panel); box-shadow: 3px 4px 0 var(--chucao-brown); overflow-wrap: anywhere; }
+.practiceDetail h1, .practiceDetail h2 { margin: 0; }
+.practiceDetail h2 { font-size: 1.15rem; }
+.practiceDetail p { margin: 0; }
+.practiceMetadata { display: grid; gap: .6rem; margin: 0; }
+.practiceMetadata > div { display: grid; grid-template-columns: minmax(7rem, .4fr) minmax(0, 1fr); gap: .75rem; }
+.practiceMetadata dt { font-weight: 700; }
+.practiceMetadata dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.detailBackButton { justify-self: start; }
+@media (min-width: 48rem) { .entries { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
