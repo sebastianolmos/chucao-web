@@ -416,6 +416,14 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      get_account_deletion_status: {
+        Args: Record<string, never>;
+        Returns: string;
+      };
+      begin_account_deletion: {
+        Args: Record<string, never>;
+        Returns: string;
+      };
       get_or_create_current_round: {
         Args: { p_list_id: string };
         Returns: RoundRow;

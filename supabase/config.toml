@@ -23,6 +23,11 @@ max_rows = 1000
 # instead. Left unset, a fresh project falls back to `true`.
 # auto_expose_new_tables = true
 
+[functions.delete-account]
+# The handler validates bearer JWTs through Supabase Auth and returns a stable
+# JSON response for missing/invalid credentials before using its admin client.
+verify_jwt = false
+
 [api.tls]
 # Enable HTTPS endpoints locally using a self-signed certificate.
 enabled = false

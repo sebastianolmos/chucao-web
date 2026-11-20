@@ -24,6 +24,8 @@ import type { PracticePostSaveActions, PracticeRoundAction } from './features/pr
 import { loadCurrentRound } from './features/rounds/roundService';
 import { HistoryView } from './features/history/HistoryView';
 import { AboutView } from './features/about/AboutView';
+import { getAccountDeletionStatus, retryAccountDeletion } from './features/account/accountService';
+import AccountView from './features/account/AccountView';
 import type { TimerSnapshot } from './features/practice/timerModel';
 import stand from './assets/stand.png';
 import styles from './app/app.module.css';
@@ -34,6 +36,7 @@ type AuthStatus =
   | 'access'
   | 'initializing_profile'
   | 'profile_error'
+  | 'deletion_pending'
   | 'authenticated';
 
 type MessageKey =
@@ -41,7 +44,9 @@ type MessageKey =
   | 'auth.signInError'
   | 'auth.signOutError'
   | 'auth.sessionError'
-  | 'auth.profileError';
+  | 'auth.profileError'
+  | 'auth.deletionStatusError'
+  | 'auth.deletionRetryError';
 
 type PracticeSession = {
   returnDestination: 'lists' | 'detail';
@@ -53,7 +58,7 @@ type PracticeSession = {
   concept?: Pick<ActiveConceptRow, 'title' | 'description'>;
 };
 
-type AppDestination = 'lists' | 'detail' | 'history' | 'about' | 'privacy' | 'credits' | 'signOut';
+type AppDestination = 'lists' | 'detail' | 'history' | 'about' | 'privacy' | 'credits' | 'account' | 'signOut';
 
 function readOAuthError() {
   const url = new URL(window.location.href);
@@ -89,7 +94,11 @@ function PrivacyContent({ onBack }: { onBack: () => void }) {
       <h2>{t('privacy.retentionTitle')}</h2>
       <p>{t('privacy.retention')}</p>
       <h2>{t('privacy.rightsTitle')}</h2>
-      <p>{t('privacy.rights')}</p>
+      <p>
+        {t('privacy.rightsIntro')}{' '}
+        <a href={`mailto:${t('privacy.contactEmail')}`}>{t('privacy.contactEmail')}</a>
+        {t('privacy.rightsOutro')}
+      </p>
       <h2>{t('privacy.securityTitle')}</h2>
       <p>{t('privacy.security')}</p>
       <p role="note">{t('privacy.pending')}</p>
@@ -149,6 +158,7 @@ export default function App() {
   const [creditsOpen, setCreditsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [preferencesOpen, setPreferencesOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const [selectedList, setSelectedList] = useState<ListRow | null>(null);
   const [practiceSession, setPracticeSession] = useState<PracticeSession | null>(null);
   const [practiceCompletion, setPracticeCompletion] = useState<PracticeCompletion | null>(null);
@@ -172,11 +182,32 @@ export default function App() {
   const postSaveRequestRef = useRef(0);
   const roundActionRequestRef = useRef(0);
 
+  const clearSessionPrivateState = useCallback(() => {
+    practiceEntryRequestRef.current += 1;
+    postSaveRequestRef.current += 1;
+    setPracticeSession(null);
+    setPracticeCompletion(null);
+    setClosureOpen(false);
+    setPracticeSaveLocked(false);
+    setPostSaveActions(null);
+    setPendingRoundAction(null);
+    setPracticeStatus('prepared');
+    setPracticeLoading(false);
+    setPracticeEntryError(false);
+    setAbandonOpen(false);
+    setPendingDestination(null);
+    setSelectedList(null);
+    setAccountOpen(false);
+    clearPrivateState();
+  }, []);
+
   useEffect(() => {
     document.title = t(
       authStatus !== 'authenticated'
         ? accessAboutOpen ? 'app.aboutTitle' : guestTimerOpen ? 'app.practiceTitle' : 'app.title'
-        : aboutOpen
+          : accountOpen
+            ? 'app.accountTitle'
+            : aboutOpen
           ? 'app.aboutTitle'
           : selectedList
             ? practiceSession
@@ -186,7 +217,7 @@ export default function App() {
             ? 'app.practiceTitle'
             : 'app.authenticatedTitle',
     );
-  }, [aboutOpen, accessAboutOpen, authStatus, guestTimerOpen, practiceSession, selectedList, t]);
+  }, [aboutOpen, accessAboutOpen, accountOpen, authStatus, guestTimerOpen, practiceSession, selectedList, t]);
 
   const synchronizeSession = useCallback(async (nextSession: Session | null) => {
     const requestId = syncRequestRef.current + 1;
@@ -198,6 +229,7 @@ export default function App() {
       setGuestTimerOpen(false);
       setAccessAboutOpen(false);
       setAboutOpen(false);
+      setAccountOpen(false);
       practiceEntryRequestRef.current += 1;
       setPracticeSession(null);
       setPracticeCompletion(null);
@@ -220,12 +252,32 @@ export default function App() {
     setMessageKey(null);
 
     if (!nextSession) {
+      clearSessionPrivateState();
       clearAccountLocale();
       setAuthStatus('access');
       return;
     }
 
     setAuthStatus('initializing_profile');
+
+    let deletionStatus: Awaited<ReturnType<typeof getAccountDeletionStatus>>;
+    try {
+      deletionStatus = await getAccountDeletionStatus();
+    } catch {
+      if (!mountedRef.current || syncRequestRef.current !== requestId) return;
+      clearSessionPrivateState();
+      setAuthStatus('profile_error');
+      setMessageKey('auth.deletionStatusError');
+      return;
+    }
+
+    if (!mountedRef.current || syncRequestRef.current !== requestId) return;
+
+    if (deletionStatus === 'deletion_pending') {
+      clearSessionPrivateState();
+      setAuthStatus('deletion_pending');
+      return;
+    }
 
     try {
       await ensureProfile();
@@ -244,7 +296,7 @@ export default function App() {
       setAuthStatus('profile_error');
       setMessageKey('auth.profileError');
     }
-  }, [clearAccountLocale, syncAccountLocale]);
+  }, [clearAccountLocale, clearSessionPrivateState, syncAccountLocale]);
 
   const refreshSession = useCallback(async () => {
     setAuthStatus('checking_session');
@@ -359,6 +411,7 @@ export default function App() {
     setPreferencesOpen(false);
     setPrivacyOpen(destination === 'privacy');
     setAboutOpen(destination === 'about');
+    setAccountOpen(destination === 'account');
     setCreditsOpen(destination === 'credits');
     setHistoryOpen(destination === 'history');
     if (destination === 'lists') setSelectedList(null);
@@ -533,15 +586,9 @@ export default function App() {
       const { error } = await supabase.auth.signOut({ scope: 'local' });
       if (error) throw error;
 
-      clearPrivateState();
+      clearSessionPrivateState();
       currentUserIdRef.current = null;
-      practiceEntryRequestRef.current += 1;
-      setPracticeSession(null);
-      setPracticeStatus('prepared');
-      setPracticeLoading(false);
-      setAbandonOpen(false);
       setCreditsOpen(false);
-      setSelectedList(null);
       setPreferencesOpen(false);
       setPrivacyOpen(false);
       setSession(null);
@@ -551,6 +598,68 @@ export default function App() {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function handleAccountDeletion(): Promise<'pending' | 'completed'> {
+    if (busy) throw new Error('account_deletion_busy');
+    setBusy(true);
+    setMessageKey(null);
+    clearSessionPrivateState();
+    setAuthStatus('deletion_pending');
+
+    try {
+      const result = await retryAccountDeletion();
+      if (result.status === 'pending') {
+        setAuthStatus('deletion_pending');
+        return 'pending';
+      }
+
+      const { error } = await supabase.auth.signOut({ scope: 'local' });
+      if (error) throw error;
+
+      currentUserIdRef.current = null;
+      clearAccountLocale();
+      setCreditsOpen(false);
+      setPreferencesOpen(false);
+      setPrivacyOpen(false);
+      setSession(null);
+      setAuthStatus('access');
+      return 'completed';
+    } catch (error) {
+      const deletionStatus = await getAccountDeletionStatus().catch(() => null);
+      if (deletionStatus === 'active') {
+        setAuthStatus('authenticated');
+        setAccountOpen(true);
+        setMessageKey('auth.deletionRetryError');
+      } else if (deletionStatus === 'deletion_pending') {
+        clearSessionPrivateState();
+        setAuthStatus('deletion_pending');
+        setMessageKey('auth.deletionRetryError');
+      } else {
+        clearSessionPrivateState();
+        setAuthStatus('profile_error');
+        setMessageKey('auth.deletionStatusError');
+      }
+      throw error;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (authStatus === 'deletion_pending') {
+    return (
+      <main className={styles.shell}>
+        {session && <AccountView
+          busy={busy}
+          deletionPending
+          unconfirmed={messageKey === 'auth.deletionRetryError'}
+          onDelete={handleAccountDeletion}
+          onSignOut={() => void signOut()}
+          user={session.user}
+        />}
+        <AppFooter />
+      </main>
+    );
   }
 
   if (authStatus === 'checking_session') {
@@ -627,6 +736,7 @@ export default function App() {
             initialDurationMinutes={DEFAULT_TIMER_PREFERENCES.defaultDurationMinutes}
             onReturn={() => setGuestTimerOpen(false)}
             returnLabel={t('access.backToAccess')}
+            showTitle={false}
             reducedMotion={DEFAULT_TIMER_PREFERENCES.reducedMotion}
             soundEnabled={DEFAULT_TIMER_PREFERENCES.completionSoundEnabled}
             soundVolume={DEFAULT_TIMER_PREFERENCES.soundVolume}
@@ -735,7 +845,7 @@ export default function App() {
         </nav>
       </header>
       <div className={styles.authenticatedContent}>
-        {messageKey && <p role="alert">{t(messageKey)}</p>}
+        {messageKey && !accountOpen && <p role="alert">{t(messageKey)}</p>}
         {practiceEntryError && (
           <div className={styles.practiceRecovery} role="alert">
             <p>{t('practice.contextUnavailable')}</p>
@@ -745,7 +855,20 @@ export default function App() {
           </div>
         )}
         {practiceLoading && <p role="status">{t('practice.contextLoading')}</p>}
-        {aboutOpen ? (
+        {accountOpen ? (
+          <AccountView
+            busy={busy}
+            deletionPending={false}
+            unconfirmed={messageKey === 'auth.deletionRetryError'}
+            onBack={() => {
+              setAccountOpen(false);
+              setPreferencesOpen(true);
+            }}
+            onDelete={handleAccountDeletion}
+            onSignOut={() => void signOut()}
+            user={session!.user}
+          />
+        ) : aboutOpen ? (
           <AboutView onBack={() => requestDestination('lists')} detailed />
         ) : practiceSession ? practiceCompletion && closureOpen ? (
           <PracticeClosureView
@@ -927,6 +1050,16 @@ export default function App() {
             </p>
           )}
           <div className={styles.preferencesLinks}>
+            <Button
+              disabled={busy}
+              onClick={() => {
+                requestDestination('account');
+              }}
+              styles={{ root: { backgroundColor: 'var(--chucao-orange)', border: '2px solid var(--chucao-brown)', boxShadow: '3px 4px 0 var(--chucao-brown)', color: 'var(--chucao-brown)' } }}
+              variant="default"
+            >
+              {t('account.title')}
+            </Button>
             <Button
               disabled={busy}
               onClick={() => {

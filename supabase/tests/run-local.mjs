@@ -31,7 +31,8 @@ if (args.some((arg) => arg !== '--prove-failure') || args.length > 1) {
   }
 
   try {
-    await withLocalFixtures(async ({ admin, owner, other, anonymous, ids, trackList, addActiveCapacityFixtures }) => {
+    await withLocalFixtures(async ({ admin, owner, other, anonymous, ids, trackList, trackRound,
+      trackAppearance, addActiveCapacityFixtures }) => {
       await check('owner reads its existing list', async () => {
         const rows = requireResult(await owner.from('lists').select('id').eq('id', ids.list), 'Owner read')
         requireCondition(rows.length === 1 && rows[0].id === ids.list, 'Owner list read mismatch')
@@ -840,31 +841,284 @@ if (args.some((arg) => arg !== '--prove-failure') || args.length > 1) {
           && requireResult(duplicateCopy, 'Unrelated duplicate retention check').length === 1,
         'Deletion failed to retain only field-limited round totals or changed unrelated copy data')
       })
-      await check('account deletion cascades its private resources', async () => {
-        requireResult(await admin.auth.admin.deleteUser(ids.other), 'Second account deletion')
-        const [profile, list, practice, note, receipt, detachedRound, appearances, visibleRound] = await Promise.all([
-          admin.from('profiles').select('id').eq('id', ids.other),
-          admin.from('lists').select('id').eq('id', ids.otherList),
-          admin.from('practices').select('id').eq('id', ids.otherPractice),
-          admin.from('practice_notes').select('practice_id').eq('practice_id', ids.otherPractice),
-          admin.from('practice_note_operations').select('practice_id').eq('practice_id', ids.otherPractice),
-          admin.from('rounds').select('id,list_id,status,created_at,opened_at,closed_at,anonymous_appearance_total').eq('id', ids.otherRound).single(),
-          admin.from('round_appearances').select('id').eq('round_id', ids.otherRound),
-          other.from('rounds').select('id').eq('id', ids.otherRound),
+      await check('account deletion marker is caller-bound, idempotent and removes linked rounds only', async () => {
+        const linkedRoundId = randomUUID()
+        const linkedAppearanceId = randomUUID()
+        trackRound(linkedRoundId)
+        trackAppearance(linkedAppearanceId)
+        requireResult(await admin.from('rounds').insert({
+          id: linkedRoundId, list_id: ids.collectionLists.biologyOne, status: 'open',
+          opened_at: '2026-01-06T12:00:00Z', created_at: '2026-01-06T12:00:00Z',
+        }), 'Linked round lifecycle fixture')
+        requireResult(await admin.from('round_appearances').insert({
+          id: linkedAppearanceId, round_id: linkedRoundId, concept_id: null,
+          appearance_order: 1, origin: 'manual', title_snapshot: 'Lifecycle fixture', concept_deleted: false,
+        }), 'Linked appearance lifecycle fixture')
+        const linkedBefore = requireResult(await admin.from('rounds').select('id,list_id')
+          .eq('id', linkedRoundId).single(), 'Linked round before deletion request')
+        requireCondition(linkedBefore.list_id === ids.collectionLists.biologyOne,
+          'Synthetic account round was not linked to the caller-owned list')
+        const detachedBefore = requireResult(await admin.from('rounds').select('id,list_id,anonymous_appearance_total')
+          .eq('id', ids.round).single(), 'Previously anonymized round before deletion request')
+        requireCondition(detachedBefore.list_id === null && detachedBefore.anonymous_appearance_total === 2,
+          'Expected an already-detached anonymous total from the earlier list-deletion check')
+
+        const [initialOwner, initialOther] = await Promise.all([
+          owner.rpc('get_account_deletion_status'), other.rpc('get_account_deletion_status'),
         ])
-        requireCondition(requireResult(profile, 'Deleted profile check').length === 0
-          && requireResult(list, 'Deleted list check').length === 0
-          && requireResult(practice, 'Deleted practice check').length === 0
-          && requireResult(note, 'Deleted note check').length === 0
-          && requireResult(receipt, 'Deleted receipt check').length === 0,
-        'Account deletion retained private resources')
-        const total = requireResult(detachedRound, 'Account deletion anonymous total check')
-        requireCondition(total.list_id === null && total.status === 'closed'
-          && total.created_at === null && total.opened_at === null && total.closed_at === null
-          && total.anonymous_appearance_total === 1
-          && requireResult(appearances, 'Account deletion appearance cleanup').length === 0
-          && requireResult(visibleRound, 'Account deletion history isolation').length === 0,
-        'Account deletion did not preserve only an inaccessible anonymous total')
+        requireCondition(requireResult(initialOwner, 'Owner initial deletion status') === 'active'
+          && requireResult(initialOther, 'Other initial deletion status') === 'active',
+        'A new account did not begin in active lifecycle state')
+        requireCondition(requireResult(await owner.rpc('ensure_profile'), 'Active profile initialization').id === ids.owner,
+          'Active account could not initialize its profile')
+        ids.readBoundaryConcept = randomUUID()
+        requireResult(await admin.from('concepts').insert({
+          id: ids.readBoundaryConcept, list_id: ids.collectionLists.biologyOne,
+          title: 'Pending boundary fixture', description: 'Synthetic private read fixture', position: 9001,
+        }), 'Private read boundary concept fixture')
+        ids.readBoundaryRound = randomUUID()
+        ids.readBoundaryAppearance = randomUUID()
+        ids.readBoundaryPractice = randomUUID()
+        ids.readBoundaryNoteOperation = randomUUID()
+        trackRound(ids.readBoundaryRound)
+        trackAppearance(ids.readBoundaryAppearance)
+        requireResult(await admin.from('rounds').insert({ id: ids.readBoundaryRound,
+          list_id: ids.workloadLists[1], status: 'open',
+          opened_at: '2026-01-07T12:00:00Z', created_at: '2026-01-07T12:00:00Z' }), 'Private read boundary round fixture')
+        requireResult(await admin.from('round_appearances').insert({ id: ids.readBoundaryAppearance,
+          round_id: ids.readBoundaryRound, concept_id: ids.readBoundaryConcept,
+          appearance_order: 1, origin: 'draw', title_snapshot: 'Pending boundary fixture', concept_deleted: false }),
+        'Private read boundary appearance fixture')
+        requireResult(await owner.rpc('save_completed_practice', {
+          p_id: ids.readBoundaryPractice, p_kind: 'independent', p_list_id: null,
+          p_concept_id: null, p_round_id: null, p_appearance_id: null, p_duration_minutes: 12,
+          p_completed_at: '2026-01-07T12:10:00Z', p_label: 'Synthetic private history',
+          p_note: 'Synthetic private note', p_rating: null,
+        }), 'Private read boundary practice fixture')
+        requireResult(await admin.from('practice_note_operations').insert({ owner_id: ids.owner,
+          practice_id: ids.readBoundaryPractice, operation_id: ids.readBoundaryNoteOperation,
+          operation_kind: 'update', expected_revision: 1, resulting_revision: 2, outcome: 'updated' }),
+        'Private read boundary note receipt fixture')
+        const activeReads = await Promise.all([
+          owner.from('profiles').select('id').eq('id', ids.owner),
+          owner.from('lists').select('id').eq('id', ids.collectionLists.biologyOne),
+          owner.from('concepts').select('id').eq('id', ids.readBoundaryConcept),
+          owner.from('rounds').select('id').eq('id', ids.readBoundaryRound),
+          owner.from('round_appearances').select('id').eq('id', ids.readBoundaryAppearance),
+          owner.from('practices').select('id').eq('id', ids.readBoundaryPractice),
+          owner.from('practice_notes').select('practice_id').eq('practice_id', ids.readBoundaryPractice),
+          owner.from('practice_note_operations').select('practice_id').eq('practice_id', ids.readBoundaryPractice),
+          owner.rpc('list_owned_lists', { p_collection: 'active' }),
+          owner.rpc('get_current_round_readonly', { p_list_id: ids.workloadLists[1] }),
+          owner.rpc('get_saved_practice', { p_id: ids.readBoundaryPractice }),
+          owner.rpc('list_practice_history'),
+          owner.rpc('list_round_history'),
+          owner.rpc('list_round_appearances', { p_round_ids: [ids.readBoundaryRound] }),
+        ])
+        requireCondition(requireResult(activeReads[0], 'Active profile read').length === 1,
+          'Active profile RLS read did not return the owner row')
+        requireCondition(requireResult(activeReads[1], 'Active list read').length === 1,
+          'Active list RLS read did not return the owner row')
+        requireCondition(requireResult(activeReads[2], 'Active concept read').length === 1,
+          'Active concept RLS read did not return concepts')
+        requireCondition(requireResult(activeReads[3], 'Active round read').length === 1
+          && requireResult(activeReads[4], 'Active appearance read').length === 1
+          && requireResult(activeReads[5], 'Active practice read').length === 1
+          && requireResult(activeReads[6], 'Active note read').length === 1
+          && requireResult(activeReads[7], 'Active note receipt read').length === 1,
+        'Active owner lost an existing round, practice, or note read')
+        requireCondition(requireResult(activeReads[8], 'Active list query').length > 0,
+          'Active list query returned no lists')
+        requireCondition(requireResult(activeReads[9], 'Active current round query').length === 1
+          && requireResult(activeReads[10], 'Active saved practice query').practice.id === ids.readBoundaryPractice
+          && requireResult(activeReads[11], 'Active practice history query').items.some((item) => item.id === ids.readBoundaryPractice)
+          && requireResult(activeReads[12], 'Active round history query').items.some((item) => item.id === ids.readBoundaryRound)
+          && requireResult(activeReads[13], 'Active round appearance query').length === 1,
+        'Active owner lost an existing definer-backed read contract')
+        const activeGetOrCreateRound = requireResult(await owner.rpc('get_or_create_current_round', {
+          p_list_id: ids.collectionLists.biologyOne,
+        }), 'Active get-or-create round read')
+        requireCondition(activeGetOrCreateRound.id === linkedRoundId,
+          'Active get-or-create round no longer returns the existing round')
+        const [anonymousStatus, spoofedBegin] = await Promise.all([
+          anonymous.rpc('get_account_deletion_status'),
+          other.rpc('begin_account_deletion', { p_user_id: ids.owner }),
+        ])
+        requireCondition(Boolean(anonymousStatus.error) && Boolean(spoofedBegin.error),
+          'Anonymous status or caller-supplied target identity was accepted')
+        requireResult(await owner.rpc('begin_account_deletion'), 'Begin deletion for synthetic owner')
+        const firstMarker = requireResult(await admin.from('account_deletion_requests')
+          .select('user_id,state,requested_at,completed_at').eq('user_id', ids.owner), 'Initial restricted deletion marker')
+        requireCondition(requireResult(await owner.rpc('get_account_deletion_status'), 'Pending deletion status') === 'deletion_pending'
+          && requireResult(await owner.rpc('begin_account_deletion'), 'Idempotent deletion retry') === 'deletion_pending'
+          && requireResult(await owner.rpc('get_account_deletion_status'), 'Repeated pending deletion status') === 'deletion_pending',
+        'Deletion begin was not durable and idempotent')
+        const pendingListCreation = await owner.rpc('create_private_list', { p_name: 'Must remain blocked' })
+        requireCondition(Boolean(pendingListCreation.error),
+          'Pending account created a private list')
+        const retriedMarker = requireResult(await admin.from('account_deletion_requests')
+          .select('user_id,state,requested_at,completed_at').eq('user_id', ids.owner), 'Retried restricted deletion marker')
+        requireCondition(firstMarker.length === 1 && retriedMarker.length === 1
+          && firstMarker[0].state === 'pending' && firstMarker[0].completed_at === null
+          && firstMarker[0].requested_at === retriedMarker[0].requested_at
+          && Object.keys(firstMarker[0]).sort().join(',') === 'completed_at,requested_at,state,user_id',
+        'Deletion retries changed the marker or the marker retained unexpected fields')
+
+        const ownerDataBeforeWrites = {
+          lists: requireResult(await admin.from('lists').select('id').eq('owner_id', ids.owner).order('id'), 'Pending write list baseline'),
+          concepts: requireResult(await admin.from('concepts').select('id,title,description,updated_at')
+            .eq('list_id', ids.collectionLists.biologyOne).order('id'), 'Pending write concept baseline'),
+          practices: requireResult(await admin.from('practices').select('id').eq('owner_id', ids.owner).order('id'), 'Pending write practice baseline'),
+          note: requireResult(await admin.from('practice_notes').select('body,revision')
+            .eq('practice_id', ids.readBoundaryPractice).single(), 'Pending write note baseline'),
+        }
+        const pendingRoundId = randomUUID()
+        trackRound(pendingRoundId)
+        requireResult(await admin.from('rounds').insert({ id: pendingRoundId,
+          list_id: ids.collectionLists.biologyOne, status: 'open',
+          opened_at: '2026-01-08T12:00:00Z', created_at: '2026-01-08T12:00:00Z' }),
+        'Pending mutation round fixture')
+        const conceptVersion = ownerDataBeforeWrites.concepts.find((concept) => concept.id === ids.readBoundaryConcept)
+        requireCondition(Boolean(conceptVersion), 'Pending mutation concept fixture was missing')
+        const requirePendingMutationRejected = async (name, result) => {
+          requireCondition(Boolean(result.error), `Pending account mutation was accepted: ${name}`)
+        }
+        await requirePendingMutationRejected('create list', await owner.rpc('create_private_list', { p_name: 'Must remain blocked' }))
+        await requirePendingMutationRejected('rename list', await owner.rpc('rename_private_list', {
+          p_list_id: ids.collectionLists.biologyOne, p_name: 'Must remain blocked',
+        }))
+        await requirePendingMutationRejected('archive list', await owner.rpc('archive_private_list', {
+          p_list_id: ids.collectionLists.biologyOne,
+        }))
+        await requirePendingMutationRejected('restore list', await owner.rpc('restore_private_list', {
+          p_list_id: ids.collectionLists.biologyOne,
+        }))
+        await requirePendingMutationRejected('duplicate list', await owner.rpc('duplicate_private_list', {
+          p_source_list_id: ids.collectionLists.biologyOne, p_operation_id: randomUUID(), p_name: 'Must remain blocked',
+        }))
+        await requirePendingMutationRejected('delete list', await owner.rpc('delete_private_list', {
+          p_list_id: ids.collectionLists.biologyOne,
+        }))
+        await requirePendingMutationRejected('create concept', await owner.rpc('create_concept', {
+          p_list_id: ids.collectionLists.biologyOne, p_title: 'Must remain blocked', p_description: '',
+        }))
+        await requirePendingMutationRejected('batch create concepts', await owner.rpc('create_concepts_batch', {
+          p_list_id: ids.collectionLists.biologyOne,
+          p_items: [{ title: 'Must remain blocked', description: '' }],
+        }))
+        await requirePendingMutationRejected('update concept', await owner.rpc('update_concept', {
+          p_concept_id: ids.readBoundaryConcept, p_title: 'Must remain blocked', p_description: '',
+          p_expected_updated_at: conceptVersion.updated_at,
+        }))
+        await requirePendingMutationRejected('delete concept', await owner.rpc('delete_concept', {
+          p_concept_id: ids.readBoundaryConcept, p_expected_updated_at: conceptVersion.updated_at,
+        }))
+        await requirePendingMutationRejected('round operation', await owner.rpc('perform_round_operation', {
+          p_list_id: ids.collectionLists.biologyOne, p_operation_id: randomUUID(),
+          p_action: 'mark_seen', p_concept_id: ids.readBoundaryConcept,
+        }))
+        await requirePendingMutationRejected('save independent practice', await owner.rpc('save_completed_practice', {
+          p_id: randomUUID(), p_kind: 'independent', p_list_id: null, p_concept_id: null,
+          p_round_id: null, p_appearance_id: null, p_duration_minutes: 5,
+          p_completed_at: '2026-01-08T12:05:00Z', p_label: 'Must remain blocked', p_note: null, p_rating: null,
+        }))
+        await requirePendingMutationRejected('update note', await owner.rpc('update_practice_note', {
+          p_practice_id: ids.readBoundaryPractice, p_operation_id: randomUUID(),
+          p_expected_revision: 1, p_body: 'Must remain blocked',
+        }))
+        await requirePendingMutationRejected('delete note', await owner.rpc('delete_practice_note', {
+          p_practice_id: ids.readBoundaryPractice, p_operation_id: randomUUID(), p_expected_revision: 1,
+        }))
+        const directPreferenceWrite = await owner.from('profiles').update({ locale: 'es' })
+          .eq('id', ids.owner).select('id')
+        requireCondition(!directPreferenceWrite.error && directPreferenceWrite.data.length === 0,
+          'Pending account changed profile preferences directly')
+        await requirePendingMutationRejected('ensure_profile', await owner.rpc('ensure_profile'))
+        const ownerDataAfterWrites = {
+          lists: requireResult(await admin.from('lists').select('id').eq('owner_id', ids.owner).order('id'), 'Pending write list readback'),
+          concepts: requireResult(await admin.from('concepts').select('id,title,description,updated_at')
+            .eq('list_id', ids.collectionLists.biologyOne).order('id'), 'Pending write concept readback'),
+          practices: requireResult(await admin.from('practices').select('id').eq('owner_id', ids.owner).order('id'), 'Pending write practice readback'),
+          note: requireResult(await admin.from('practice_notes').select('body,revision')
+            .eq('practice_id', ids.readBoundaryPractice).single(), 'Pending write note readback'),
+        }
+        requireCondition(JSON.stringify(ownerDataAfterWrites) === JSON.stringify(ownerDataBeforeWrites),
+          'Rejected pending mutations caused partial writes')
+        requireResult(await admin.from('profiles').delete().eq('id', ids.owner), 'Remove profile for pending recreation fixture')
+        await requirePendingMutationRejected('ensure_profile after profile removal', await owner.rpc('ensure_profile'))
+        requireCondition(requireResult(await admin.from('profiles').select('id').eq('id', ids.owner),
+          'Pending profile recreation readback').length === 0,
+        'ensure_profile recreated the pending account profile')
+
+        const [removedRound, remainingAppearances, otherRound, otherAppearance, otherList, otherStatus,
+          callerMarkerRead, otherMarkerRead, anonymousMarkerRead] = await Promise.all([
+          admin.from('rounds').select('id').eq('id', linkedRoundId),
+          admin.from('round_appearances').select('id').eq('round_id', linkedRoundId),
+          admin.from('rounds').select('id,list_id').eq('id', ids.otherRound),
+          admin.from('round_appearances').select('id').eq('round_id', ids.otherRound),
+          other.from('lists').select('id').eq('id', ids.otherList),
+          other.rpc('get_account_deletion_status'),
+          owner.from('account_deletion_requests').select('user_id'),
+          other.from('account_deletion_requests').select('user_id'),
+          anonymous.from('account_deletion_requests').select('user_id'),
+        ])
+        const retainedAnonymous = requireResult(await admin.from('rounds').select('id,list_id,anonymous_appearance_total')
+          .eq('id', ids.round).single(), 'Previously anonymized round after deletion request')
+        requireCondition(requireResult(removedRound, 'Deleted linked round check').length === 0
+          && requireResult(remainingAppearances, 'Deleted linked appearances check').length === 0
+          && requireResult(otherRound, 'Other owner linked round check').length === 1
+          && requireResult(otherRound, 'Other owner linked round readback')[0].list_id === ids.otherList
+          && requireResult(otherAppearance, 'Other owner round appearance check').length === 1
+          && requireResult(otherList, 'Other owner list check').length === 1
+          && requireResult(otherStatus, 'Other owner lifecycle status') === 'active'
+          && retainedAnonymous.list_id === null && retainedAnonymous.anonymous_appearance_total === 2,
+        'Caller deletion request affected another owner or changed an already-anonymous total')
+        requireCondition(Boolean(anonymousMarkerRead.error) && Boolean(callerMarkerRead.error)
+          && Boolean(otherMarkerRead.error),
+          'Deletion marker table was directly readable by browser roles')
+        const exposedPredicate = await owner.rpc('is_active_account')
+        requireCondition(Boolean(exposedPredicate.error),
+          'Internal active-account predicate was exposed as a browser RPC')
+        const pendingGetOrCreateRound = await owner.rpc('get_or_create_current_round', {
+          p_list_id: ids.collectionLists.biologyOne,
+        })
+        requireCondition(pendingGetOrCreateRound.error?.message?.includes('account_deletion_pending'),
+          'Pending account used the mixed read/mutation RPC')
+
+        const [pendingProfile, pendingLists, pendingConcepts, pendingRounds, pendingAppearances,
+          pendingPractices, pendingNotes, pendingReceipts, pendingListQuery, pendingCurrentRound,
+          pendingSavedPractice, pendingPracticeHistory, pendingRoundHistory, pendingRoundAppearances,
+          unaffectedOtherProfile, unaffectedOtherConcepts, anonymousPrivateRead] = await Promise.all([
+          owner.from('profiles').select('id').eq('id', ids.owner),
+          owner.from('lists').select('id').eq('id', ids.collectionLists.biologyOne),
+          owner.from('concepts').select('id').eq('id', ids.readBoundaryConcept),
+          owner.from('rounds').select('id').eq('list_id', ids.workloadLists[1]),
+          owner.from('round_appearances').select('id').eq('round_id', ids.readBoundaryRound),
+          owner.from('practices').select('id').eq('id', ids.readBoundaryPractice),
+          owner.from('practice_notes').select('practice_id').eq('practice_id', ids.readBoundaryPractice),
+          owner.from('practice_note_operations').select('practice_id').eq('practice_id', ids.readBoundaryPractice),
+          owner.rpc('list_owned_lists', { p_collection: 'active' }),
+          owner.rpc('get_current_round_readonly', { p_list_id: ids.workloadLists[1] }),
+          owner.rpc('get_saved_practice', { p_id: ids.readBoundaryPractice }),
+          owner.rpc('list_practice_history'),
+          owner.rpc('list_round_history'),
+          owner.rpc('list_round_appearances', { p_round_ids: [ids.readBoundaryRound] }),
+          other.from('profiles').select('id').eq('id', ids.other),
+          other.from('lists').select('id').eq('id', ids.otherList),
+          anonymous.from('lists').select('id'),
+        ])
+        const privateRows = [pendingProfile, pendingLists, pendingConcepts, pendingRounds,
+          pendingAppearances, pendingPractices, pendingNotes, pendingReceipts,
+          pendingListQuery, pendingCurrentRound]
+        requireCondition(privateRows.every((result) => requireResult(result, 'Pending direct read boundary').length === 0)
+          && requireResult(pendingSavedPractice, 'Pending saved practice boundary') === null
+          && requireResult(pendingPracticeHistory, 'Pending practice history boundary').items.length === 0
+          && requireResult(pendingRoundHistory, 'Pending round history boundary').items.length === 0
+          && requireResult(pendingRoundAppearances, 'Pending round appearance boundary').length === 0
+          && requireResult(unaffectedOtherProfile, 'Unrelated owner profile read').length === 1
+          && requireResult(unaffectedOtherConcepts, 'Unrelated owner list read').length === 1
+          && Boolean(anonymousPrivateRead.error),
+        'Pending account retained private read access, exposed data through a definer query, or affected another principal')
       })
       if (args.includes('--prove-failure')) {
         requireCondition(false, 'Intentional assertion failure (failure-propagation probe)')

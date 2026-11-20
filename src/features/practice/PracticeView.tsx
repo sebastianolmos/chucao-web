@@ -29,6 +29,7 @@ export type PracticeViewProps = {
   onCompleted?: (completion: { id: string; durationMinutes: number; completedAt: string }) => void;
   onContinueToClosure?: () => void;
   returnLabel?: string;
+  showTitle?: boolean;
 };
 
 function readSystemReducedMotion() {
@@ -53,6 +54,7 @@ export function PracticeView({
   onCompleted,
   onContinueToClosure,
   returnLabel,
+  showTitle = true,
 }: PracticeViewProps) {
   const { t } = useTranslation();
   const [snapshotPreferences] = useState(() => ({
@@ -183,7 +185,7 @@ export function PracticeView({
   }[syncedSnapshot.status];
 
   return (
-    <section className={styles.practice} aria-labelledby="practice-title">
+    <section className={styles.practice} aria-labelledby={showTitle ? 'practice-title' : undefined}>
       <header className={styles.practiceHeader}>
         <Button
           className={styles.backButton}
@@ -193,7 +195,7 @@ export function PracticeView({
         >
           {returnLabel ?? (concept ? t('rounds.returnToList') : t('practice.returnToLists'))}
         </Button>
-        <h1 id="practice-title">{concept?.title ?? t('practice.title')}</h1>
+        {showTitle && <h1 id="practice-title">{concept?.title ?? t('practice.title')}</h1>}
       </header>
       <ForestTimerScene
         completed={syncedSnapshot.status === 'completed'}

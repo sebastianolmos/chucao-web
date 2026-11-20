@@ -5,9 +5,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider, ToastViewport } from './app/toasts/ToastProvider';
 import App from './App';
 import i18n from './i18n/i18n';
+import { queryClient } from './lib/queryClient';
 
 const mocks = vi.hoisted(() => ({
   ensureProfile: vi.fn(),
+  getAccountDeletionStatus: vi.fn(),
+  retryAccountDeletion: vi.fn(),
+  authChangeCallback: null as ((event: string, session: { user: { id: string; email?: string } } | null) => void) | null,
+  signOut: vi.fn(),
   getTimerPreferences: vi.fn(),
   setTimerPreference: vi.fn(),
   locale: {
@@ -32,15 +37,22 @@ vi.mock('./features/preferences/preferencesService', () => ({
     reducedMotion: null,
   },
 }));
+vi.mock('./features/account/accountService', () => ({
+  getAccountDeletionStatus: mocks.getAccountDeletionStatus,
+  retryAccountDeletion: mocks.retryAccountDeletion,
+}));
 vi.mock('./lib/supabase', () => ({
   supabase: {
     auth: {
-      onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
+      onAuthStateChange: vi.fn((callback: (event: string, session: { user: { id: string; email?: string } } | null) => void) => {
+        mocks.authChangeCallback = callback;
+        return { data: { subscription: { unsubscribe: vi.fn() } } };
+      }),
       getSession: vi.fn(async () => ({
         data: { session: { user: { id: 'user-1', email: 'person@example.com' } } },
         error: null,
       })),
-      signOut: vi.fn(async () => ({ error: null })),
+      signOut: mocks.signOut,
     },
   },
 }));
@@ -69,6 +81,9 @@ describe('Preferences credits navigation', () => {
     vi.clearAllMocks();
     mocks.locale.locale = 'es';
     mocks.ensureProfile.mockResolvedValue({});
+    mocks.getAccountDeletionStatus.mockResolvedValue('active');
+    mocks.retryAccountDeletion.mockResolvedValue({ status: 'pending' });
+    mocks.signOut.mockResolvedValue({ error: null });
     mocks.getTimerPreferences.mockResolvedValue({
       defaultDurationMinutes: 1,
       completionSoundEnabled: true,
@@ -77,6 +92,77 @@ describe('Preferences credits navigation', () => {
     });
     mocks.setTimerPreference.mockResolvedValue({});
     void i18n.changeLanguage('es');
+  });
+
+  it('checks lifecycle status before initializing an active profile', async () => {
+    const sequence: string[] = [];
+    mocks.getAccountDeletionStatus.mockImplementation(async () => {
+      sequence.push('status');
+      return 'active';
+    });
+    mocks.ensureProfile.mockImplementation(async () => {
+      sequence.push('profile');
+      return {};
+    });
+
+    renderApp();
+
+    expect(await screen.findByText('My Lists test fixture')).toBeInTheDocument();
+    expect(sequence).toEqual(['status', 'profile']);
+    expect(mocks.locale.syncAccountLocale).toHaveBeenCalledWith('user-1');
+  });
+
+  it('blocks private initialization for a pending account and keeps retry and sign-out available', async () => {
+    mocks.getAccountDeletionStatus.mockResolvedValue('deletion_pending');
+
+    renderApp();
+
+    expect(await screen.findByRole('heading', { name: 'Eliminación de cuenta pendiente' })).toBeInTheDocument();
+    expect(mocks.ensureProfile).not.toHaveBeenCalled();
+    expect(mocks.locale.syncAccountLocale).not.toHaveBeenCalled();
+    expect(screen.queryByText('My Lists test fixture')).not.toBeInTheDocument();
+
+    mocks.retryAccountDeletion.mockResolvedValue({ status: 'pending' });
+    fireEvent.click(screen.getByRole('button', { name: 'Reintentar eliminación' }));
+    await waitFor(() => expect(mocks.retryAccountDeletion).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole('heading', { name: 'Eliminación de cuenta pendiente' })).toBeInTheDocument();
+  });
+
+  it('clears private views when an auth event reports a pending account', async () => {
+    renderApp();
+    expect(await screen.findByText('My Lists test fixture')).toBeInTheDocument();
+    queryClient.setQueryData(['lists', 'user-1'], [{ id: 'private-list' }]);
+
+    mocks.getAccountDeletionStatus.mockResolvedValue('deletion_pending');
+    mocks.authChangeCallback?.('TOKEN_REFRESHED', { user: { id: 'user-1', email: 'person@example.com' } });
+
+    expect(await screen.findByRole('heading', { name: 'Eliminación de cuenta pendiente' })).toBeInTheDocument();
+    expect(screen.queryByText('My Lists test fixture')).not.toBeInTheDocument();
+    expect(mocks.ensureProfile).toHaveBeenCalledTimes(1);
+    expect(queryClient.getQueryData(['lists', 'user-1'])).toBeUndefined();
+  });
+
+  it('returns to Access and signs out locally after confirmed deletion retry', async () => {
+    mocks.getAccountDeletionStatus.mockResolvedValue('deletion_pending');
+    mocks.retryAccountDeletion.mockResolvedValue({ status: 'completed' });
+
+    renderApp();
+    fireEvent.click(await screen.findByRole('button', { name: 'Reintentar eliminación' }));
+
+    expect(await screen.findByRole('button', { name: 'Continuar con Google' })).toBeInTheDocument();
+    expect(mocks.signOut).toHaveBeenCalledWith({ scope: 'local' });
+    expect(screen.queryByRole('heading', { name: 'Eliminación de cuenta pendiente' })).not.toBeInTheDocument();
+  });
+
+  it('fails closed when deletion status cannot be checked', async () => {
+    mocks.getAccountDeletionStatus.mockRejectedValue(new Error('unavailable'));
+
+    renderApp();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/No se pudo comprobar el estado de eliminación/i);
+    expect(mocks.ensureProfile).not.toHaveBeenCalled();
+    expect(mocks.locale.syncAccountLocale).not.toHaveBeenCalled();
+    expect(screen.queryByText('My Lists test fixture')).not.toBeInTheDocument();
   });
 
   it('opens a themed credits view beside Privacy and returns to Preferences', async () => {
@@ -103,8 +189,36 @@ describe('Preferences credits navigation', () => {
 
     fireEvent.click(within(returnedDialog).getByRole('button', { name: 'Privacidad' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Privacidad' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'sebastolmos@gmail.com' })).toHaveAttribute('href', 'mailto:sebastolmos@gmail.com');
     fireEvent.click(screen.getByRole('button', { name: 'Volver' }));
     expect(await screen.findByRole('dialog', { name: /preferencias/i })).toBeInTheDocument();
+  });
+
+  it('opens Account from Preferences and returns to the same dialog', async () => {
+    renderApp();
+    fireEvent.click(await screen.findByRole('button', { name: /abrir preferencias/i }));
+    const dialog = await screen.findByRole('dialog', { name: /preferencias/i });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cuenta' }));
+
+    expect(await screen.findByRole('heading', { name: 'Cuenta' })).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Identidad de Google' })).getByText('person@example.com')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Volver a preferencias' }));
+    expect(await screen.findByRole('dialog', { name: /preferencias/i })).toBeInTheDocument();
+  });
+
+  it('confirms Chucao account deletion from Account and returns to Access', async () => {
+    mocks.retryAccountDeletion.mockResolvedValue({ status: 'completed' });
+    renderApp();
+    fireEvent.click(await screen.findByRole('button', { name: /abrir preferencias/i }));
+    fireEvent.click(within(await screen.findByRole('dialog', { name: /preferencias/i }))
+      .getByRole('button', { name: 'Cuenta' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Eliminar cuenta de Chucao' }));
+    const confirmDialog = await screen.findByRole('dialog', { name: 'Eliminar cuenta de Chucao' });
+    fireEvent.click(within(confirmDialog).getByRole('button', { name: 'Confirmar eliminación' }));
+
+    expect(await screen.findByRole('button', { name: 'Continuar con Google' })).toBeInTheDocument();
+    expect(mocks.retryAccountDeletion).toHaveBeenCalledOnce();
+    expect(mocks.signOut).toHaveBeenCalledWith({ scope: 'local' });
   });
 
   it('keeps sign out inside a scrollable preferences dialog', async () => {

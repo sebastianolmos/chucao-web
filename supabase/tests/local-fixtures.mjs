@@ -81,7 +81,7 @@ function client(url, key, token) {
 }
 
 // Google remains the application's only login provider. These short-lived local
-// tokens exercise PostgREST signature/role/RLS enforcement, not OAuth login.
+// tokens exercise PostgREST and authenticated Edge Function boundaries, not OAuth.
 function fixtureToken(userId, secret) {
   const encode = (value) => Buffer.from(JSON.stringify(value)).toString('base64url')
   const now = Math.floor(Date.now() / 1000)
@@ -109,14 +109,17 @@ export async function withLocalFixtures(run) {
 
   try {
     const sessions = []
+    const tokens = []
     for (const suffix of ['a', 'b']) {
       const email = `db-check-${runId}-${suffix}@example.invalid`
       const created = requireResult(await admin.auth.admin.createUser({
         email, email_confirm: true, app_metadata: { fixture_run: runId },
       }), 'Synthetic account creation')
       users.push(created.user.id)
-      const session = client(config.url, config.anonKey, fixtureToken(created.user.id, config.jwtSecret))
+      const token = fixtureToken(created.user.id, config.jwtSecret)
+      const session = client(config.url, config.anonKey, token)
       sessions.push(session)
+      tokens.push(token)
     }
 
     requireResult(await admin.from('profiles').upsert(users.map((id) => ({
@@ -303,7 +306,15 @@ export async function withLocalFixtures(run) {
 
     await run({
       admin,
-      trackList: (id) => listIds.push(id), addActiveCapacityFixtures,
+      localUrl: config.url,
+      anonKey: config.anonKey,
+      tokens: { owner: tokens[0] },
+      secretsAbsentFrom: (values) => values.every((value) => {
+        const text = String(value)
+        return !text.includes(config.serviceKey) && !text.includes(config.jwtSecret)
+      }),
+      trackList: (id) => listIds.push(id), trackRound: (id) => roundIds.push(id),
+      trackAppearance: (id) => appearanceIds.push(id), addActiveCapacityFixtures,
       owner: sessions[0], other: sessions[1], anonymous: client(config.url, config.anonKey),
       ids: { owner: users[0], other: users[1], run: runId, list: listIds[0], otherList: listIds[1],
         round: roundId, otherRound: otherRoundId, activeConcept: activeConceptId, deletedConcept: deletedConceptId,
@@ -332,8 +343,12 @@ export async function withLocalFixtures(run) {
         }
       } catch { cleanupFailed = true; cleanupFailures.push('tracked account deletion failed') }
     }
+    try {
+      requireResult(await admin.from('account_deletion_requests').delete().in('user_id', users), 'Deletion marker cleanup')
+    } catch { cleanupFailed = true; cleanupFailures.push('tracked deletion marker cleanup failed') }
     for (const [table, column, ids] of [
-      ['profiles', 'id', users], ['lists', 'id', listIds], ['list_duplicate_operations', 'owner_id', users],
+      ['profiles', 'id', users], ['account_deletion_requests', 'user_id', users],
+      ['lists', 'id', listIds], ['list_duplicate_operations', 'owner_id', users],
       ['concepts', 'id', conceptIds],
       ['practices', 'id', practiceIds], ['practice_notes', 'practice_id', practiceIds],
       ['practice_note_operations', 'practice_id', practiceIds], ['rounds', 'id', roundIds],

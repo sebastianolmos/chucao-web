@@ -10,6 +10,8 @@ import i18n from './i18n/i18n';
 
 const mocks = vi.hoisted(() => ({
   ensureProfile: vi.fn(),
+  getAccountDeletionStatus: vi.fn(),
+  retryAccountDeletion: vi.fn(),
   getTimerPreferences: vi.fn(),
   getOwnedLists: vi.fn(),
   getOwnedConcepts: vi.fn(),
@@ -37,6 +39,10 @@ vi.mock('./features/preferences/preferencesService', () => ({
     soundVolume: 50,
     reducedMotion: null,
   },
+}));
+vi.mock('./features/account/accountService', () => ({
+  getAccountDeletionStatus: mocks.getAccountDeletionStatus,
+  retryAccountDeletion: mocks.retryAccountDeletion,
 }));
 vi.mock('./features/lists/listService', () => ({
   getOwnedLists: mocks.getOwnedLists,
@@ -127,6 +133,8 @@ describe('VIEW-07 application journeys', () => {
     vi.clearAllMocks();
     mocks.locale.locale = 'es';
     mocks.ensureProfile.mockResolvedValue({});
+    mocks.getAccountDeletionStatus.mockResolvedValue('active');
+    mocks.retryAccountDeletion.mockResolvedValue({ status: 'pending' });
     mocks.getSession.mockResolvedValue({
       data: { session: { user: { id: 'user-a', email: 'person@example.com' } } },
       error: null,
@@ -183,7 +191,8 @@ describe('VIEW-07 application journeys', () => {
     mocks.getSession.mockResolvedValue({ data: { session: null }, error: null });
     renderApp();
     fireEvent.click(await screen.findByRole('button', { name: 'Probar temporizador' }));
-    expect(await screen.findByRole('heading', { name: 'Práctica independiente' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Volver a Acceso' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Práctica independiente' })).not.toBeInTheDocument();
     expect(screen.getByText(/no guarda prácticas, notas ni historial/i)).toBeInTheDocument();
     expect(screen.queryByRole('spinbutton', { name: 'Duración (minutos)' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Agregar nota y calificación' })).not.toBeInTheDocument();
@@ -202,9 +211,23 @@ describe('VIEW-07 application journeys', () => {
     expect(screen.getByRole('status', { name: 'Práctica finalizada' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Agregar nota y calificación' })).not.toBeInTheDocument();
     expect(mocks.saveCompletedPractice).not.toHaveBeenCalled();
-    fireEvent.click(within(screen.getByRole('region', { name: 'Práctica independiente' }))
-      .getByRole('button', { name: 'Volver' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Volver a Acceso' }));
     expect(screen.getByRole('button', { name: 'Continuar con Google' })).toBeInTheDocument();
+  });
+
+  it('discards an in-memory practice session when Auth reports pending deletion', async () => {
+    renderApp();
+    fireEvent.click(await screen.findByRole('button', { name: 'Independent Timer fixture' }));
+    expect(await screen.findByRole('heading', { name: 'Práctica independiente' })).toBeInTheDocument();
+
+    mocks.getAccountDeletionStatus.mockResolvedValue('deletion_pending');
+    mocks.authChangeCallback?.('TOKEN_REFRESHED', {
+      user: { id: 'user-a', email: 'person@example.com' },
+    } as Session);
+
+    expect(await screen.findByRole('heading', { name: 'Eliminación de cuenta pendiente' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Práctica independiente' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Guardar práctica' })).not.toBeInTheDocument();
   });
 
   it('starts the independent timer and stays or confirms abandonment from active navigation', async () => {

@@ -47,7 +47,7 @@ Entry conditions:
 | VIEW-08 | Practice Closure | Explicitly save an eligible completed practice with optional note and 0–5 satisfaction rating; after confirmed save, stay and choose return or a fresh practice action | Implemented locally in VS-05; release validation remains separate |
 | VIEW-09 | History | Browse/filter read-only practice and round records; opening an independent practice leads to its separate detail state for note maintenance | Implemented locally in VS-05; T11 evidence and accepted verification gap are recorded in its task log |
 | VIEW-10 | Settings | Change language, default duration, sound, volume, and reduced motion; view credits/licenses | Full Settings view remains planned; VS-02 adds the existing Preferences dialog for identity, sign-out, and Privacy, and VS-04 adds timer controls plus a minimal Credits and Licenses section there |
-| VIEW-11 | Account | View Google identity, sign out, or delete the Chucao account | Planned |
+| VIEW-11 | Account | From Preferences, view Google identity, return to Preferences, sign out, or delete the Chucao account | Implemented locally in VS-07; focused tests cover navigation and lifecycle states, and local DB/Edge Function checks verify the trusted deletion boundary |
 | VIEW-12 | About Chucao | Read what Chucao is for, how to use it, its main features, limits, and private-data model | Implemented locally in VS-06.5; full-page view, bilingual |
 
 Dialogs, confirmations, batch summaries, and expanded notes are interaction states within these views, not separate destinations.
@@ -372,10 +372,12 @@ view.
 
 **Account**
 
+- From the existing Preferences dialog, the person opens Account (VIEW-11); Back returns to that same Preferences dialog. The account view is not added to the navbar and does not introduce a router.
 - Account shows the available Google name/email and indicates Google-based access.
 - Sign out ends the Chucao session and returns to Access; it does not delete the Google account.
 - Delete account requires explicit confirmation, explains affected data, and returns to Access only after confirmed completion.
-- Account deletion failure leaves the account active and reports the failure.
+- Once deletion is confirmed, the account is blocked from Chucao data while deletion is pending or partially failed. The UI states that completion is unconfirmed and offers safe retry or support; it does not claim success. Restored data must remain inaccessible until pending/completed deletion state is reapplied. A successful deletion ends the Chucao session and returns to Access; it never deletes the Google account. Delete rounds still linked to the account before account cascades run, without creating new anonymous totals. Already detached anonymous totals from prior list deletions remain ownerless under the existing list-deletion rule.
+- On session initialization and auth changes, the app checks the account lifecycle status before creating the profile or loading private state. An unavailable status fails closed. Pending deletion exposes only status, retry, and local sign-out; confirmed completion clears private state, signs out locally, and returns to Access. These behaviors have focused React tests and local Postgres/Edge Function evidence; hosted behavior remains unverified.
 - No Chucao password-change or password-recovery view exists.
 
 If a practice closure or unsaved form is active, sign out or account deletion first explains the consequence and offers the applicable save, discard, or cancel choice. The current global decision says an abandoned active timer itself is not persisted.
@@ -429,7 +431,7 @@ Spanish and English cover visible labels, validation, errors, confirmations, and
 The following are later-scope journeys and should not be treated as MVP commitments until selected:
 
 - Advanced list organization: duplication, archive/restore, search/order refinements, return-to-pending, and bulk concept actions.
-- Publication readiness: deployment, recovery, accessibility review, and supported-device validation.
+- Hosted release: deployment/publication, production configuration, external provider evidence, and real-user operations after local VS-07 readiness.
 - Any public landing, sharing, social, analytics, or organization flow remains outside the current product scope.
 
 ### Significant changes
@@ -438,6 +440,7 @@ The following are later-scope journeys and should not be treated as MVP commitme
 |---|---|---|
 | 2026-11-19 | Recorded VS-06.5 Access/About and guest timer preview, plus authenticated About navigation before History. | Documents the user-authorized extra as local behavior while keeping guest timer state transient and release-wide browser review in VS-07. |
 | 2026-11-19 | Recorded VS-06 Active/Archived collection actions, read-only restoration flow, concept-state filters, and recoverable bulk outcomes as implemented locally; linked task evidence. | Aligns the flow with T01–T10 local implementation while keeping separate spec validation and release checks visible. |
+| 2026-11-19 | Clarified FLOW-08 account deletion for VS-07: pending/partial failure blocks Chucao data, offers safe retry/support, and restoration reapplies deletion state; existing detached anonymous round totals remain ownerless. | Aligns the flow with the clarified account lifecycle while preserving the established permanent-list deletion rule and separating future provider-backup evidence. |
 | 2026-11-18 | Closed the local VS-03 flow after validation. | Records the implemented list/round/result states while retaining filters for VS-06, Practice for VS-04, and release-wide browser checks for VS-07. |
 | 2026-11-18 | Clarified VS-03 flow: concepts added during an open round join as pending, list mutations are ordered, and Draw Result offers Practice only after VS-04. | Aligns FLOW-04 and VIEW-06 with the selected slice boundary and accepted product decisions. |
 | 2026-11-19 | Recorded VS-05 practice closure, associated/deleted-concept note panels, independent-note detail, and Practices/Rounds history as implemented locally; documented the legacy-null title fallback and anonymous-total exclusion. | Aligns current flow status with implementation while recording the user-accepted omission of browser runtime privacy inspection separately from release validation. |

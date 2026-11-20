@@ -4,6 +4,7 @@ export const resources = {
       app: {
         title: 'Chucao',
         authenticatedTitle: 'Chucao - Mis listas',
+        accountTitle: 'Chucao - Cuenta',
         listTitle: 'Chucao - Lista',
         practiceTitle: 'Chucao - Práctica',
         aboutTitle: 'Chucao - Acerca de',
@@ -52,8 +53,33 @@ export const resources = {
         signOutError: 'No se pudo cerrar la sesión. Intenta de nuevo.',
         sessionError: 'No se pudo comprobar la sesión. Intenta de nuevo.',
         profileError: 'No se pudo preparar tu espacio privado. Intenta de nuevo.',
+        deletionStatusError: 'No se pudo comprobar el estado de eliminación. El espacio privado sigue bloqueado.',
+        deletionPendingTitle: 'Eliminación de cuenta pendiente',
+        deletionPending: 'La eliminación de tu cuenta de Chucao sigue pendiente. Tus datos privados permanecerán bloqueados mientras se confirma.',
+        deletionRetryError: 'No se pudo confirmar la eliminación. Puedes volver a intentarlo.',
+        deletionRetry: 'Reintentar eliminación',
         retry: 'Reintentar',
         signOut: 'Cerrar sesión',
+      },
+      account: {
+        title: 'Cuenta',
+        identity: 'Identidad de Google',
+        intro: 'Esta identidad de Google se utiliza para acceder a tu cuenta de Chucao.',
+        googleIdentity: 'Acceso con Google',
+        dataEffects: 'Al eliminar tu cuenta de Chucao se eliminan su identidad y sus datos personales activos: listas, conceptos, prácticas, notas y preferencias. Las rondas que aún estén vinculadas también se eliminan; los totales anónimos que ya se habían separado permanecen anónimos.',
+        googleBoundary: 'Esta acción solo elimina la cuenta y los datos de Chucao. No elimina ni modifica tu cuenta de Google.',
+        delete: 'Eliminar cuenta de Chucao',
+        confirmTitle: 'Eliminar cuenta de Chucao',
+        confirmDescription: 'La eliminación de tu cuenta de Chucao y de sus datos personales activos no se puede deshacer. Si la operación queda pendiente, tus datos seguirán bloqueados y podrás reintentar.',
+        cancel: 'Cancelar',
+        confirmDelete: 'Confirmar eliminación',
+        pendingTitle: 'Eliminación de cuenta pendiente',
+        pending: 'Tu eliminación de cuenta sigue pendiente. Tus datos privados de Chucao permanecen bloqueados mientras se confirma el resultado.',
+        unconfirmed: 'No se confirmó el resultado. Puedes reintentar; la app no mostrará éxito hasta confirmarlo.',
+        retry: 'Reintentar eliminación',
+        working: 'Comprobando eliminación…',
+        completed: 'Se eliminó tu cuenta de Chucao.',
+        backToPreferences: 'Volver a preferencias',
       },
       navigation: {
         label: 'Navegación principal',
@@ -264,29 +290,32 @@ export const resources = {
       },
       privacy: {
         title: 'Privacidad',
-        version: 'Versión local VS-02 · 17 de noviembre de 2026',
+        version: 'Versión 1 · 20 de noviembre de 2026',
         intro:
-          'Este aviso describe el procesamiento activado por el slice local VS-02 de Chucao Web, incluida la gestión de conceptos. Es contenido de revisión local y no reemplaza la publicación legal definitiva antes de habilitar usuarios reales.',
+          'Esta primera versión describe Chucao Web y los servicios previstos para operarlo. La audiencia inicial está en Chile. La configuración productiva concreta y las condiciones de conservación de cada proveedor se confirmarán antes de abrir el registro público y esta información se actualizará si cambian.',
         dataTitle: 'Datos que se utilizan',
         data:
-          'Google y Supabase Auth gestionan la identidad y la sesión. Chucao utiliza el identificador estable de la cuenta, el correo mostrado por Auth para el contexto de sesión, la preferencia de idioma, los nombres de tus listas privadas y los títulos y descripciones de los conceptos que escribes en ellas.',
+          'Google y Supabase Auth gestionan el inicio de sesión. Supabase Auth conserva la sesión de acceso en este navegador para mantenerla activa; cerrar sesión elimina esa sesión localmente. Chucao utiliza el identificador estable de la cuenta, el correo que Auth entrega para el contexto de sesión, la preferencia de idioma y las preferencias del temporizador. También conserva los nombres de tus listas privadas, los títulos y descripciones de los conceptos que escribes en ellas, datos de rondas, prácticas, valoraciones y notas que guardas. Al usar el sitio, los proveedores técnicos pueden tratar datos de conexión, como la dirección IP y metadatos de solicitudes, para entregar y proteger sus servicios.',
         purposesTitle: 'Para qué se utilizan',
         purposes:
-          'Estos datos permiten iniciar sesión, preparar tu perfil, recordar el idioma elegido y organizar tus conceptos en listas privadas para practicar explicaciones orales. La base de datos aplica la separación de datos entre cuentas. No se activan analítica, publicidad ni contenido público en este slice.',
+          'Estos datos permiten iniciar sesión, preparar tu perfil, recordar el idioma y las preferencias del temporizador, organizar tus conceptos en listas privadas y guardar prácticas e historial para revisar tu estudio. La base de datos aplica la separación de datos entre cuentas. Chucao no activa analítica ni publicidad y no ofrece listas públicas o compartidas.',
         providersTitle: 'Proveedores y transferencias',
         providers:
-          'Google participa en la autenticación delegada. Supabase proporciona Auth, la base de datos y las políticas de acceso. La revisión de roles, ubicaciones, transferencias y condiciones de proveedores para publicación queda pendiente.',
+          'Google proporciona el inicio de sesión. Cloudflare Pages está previsto para servir la aplicación web. Supabase proporciona Auth, la base de datos y las funciones del servidor que protegen operaciones de cuenta. La región de Supabase se elige al crear el proyecto; Cloudflare y Google también pueden procesar datos técnicos conforme a sus servicios. La ubicación exacta, el plan, el dominio y las condiciones aplicables se confirmarán en la configuración de producción antes de abrir el registro público.',
         retentionTitle: 'Conservación y eliminación',
         retention:
-          'Las listas, sus conceptos y las preferencias se asocian a tu cuenta. Al eliminar un concepto, se quitan su título y la descripción del contenido activo y se conserva un marcador mínimo para futuras referencias históricas. La eliminación automatizada de cuenta y la política completa de conservación, copias de seguridad y borrado deben revisarse y publicarse antes de activar usuarios reales.',
+          'Las listas, sus conceptos, rondas, prácticas guardadas, notas y preferencias se asocian a tu cuenta. El temporizador de visita no guarda prácticas ni historial. Al eliminar un concepto, se quitan el título y la descripción del contenido activo y se conserva un marcador mínimo para futuras referencias históricas. Puedes solicitar la eliminación de tu cuenta de Chucao desde Cuenta en Preferencias; se eliminan su identidad de Chucao y sus datos personales activos. Las rondas aún vinculadas se eliminan sin crear totales anónimos nuevos; los totales que ya estaban separados permanecen anónimos. Chucao no crea copias de seguridad propias. El proveedor de base de datos podría conservar copias técnicas según el plan contratado y sus condiciones; no afirmamos que la eliminación de una cuenta las borre de inmediato. La retención efectiva se confirmará al configurar producción.',
         rightsTitle: 'Derechos y contacto',
-        rights:
-          'La información sobre acceso, rectificación, eliminación, oposición y otros derechos dependerá de la ley aplicable. La identificación final del responsable y el canal de contacto deben confirmarse y publicarse antes del lanzamiento.',
+        rightsIntro:
+          'Para consultas o solicitudes sobre tus datos —por ejemplo, acceso, corrección o eliminación— escribe a',
+        contactEmail: 'sebastolmos@gmail.com',
+        rightsOutro:
+          '. Podemos pedirte que demuestres que controlas la cuenta antes de entregar o cambiar información. También puedes solicitar la eliminación de la cuenta desde Cuenta en Preferencias. Las solicitudes se atenderán conforme a las reglas aplicables.',
         securityTitle: 'Seguridad',
         security:
           'La autenticación usa Google/Supabase con PKCE. La base de datos aplica RLS y deriva la propiedad desde el UUID autenticado; no se almacenan contraseñas de Google ni claves privilegiadas en el navegador.',
         pending:
-          'Pendiente: revisión del responsable, contacto, proveedores, transferencias, conservación, derechos y publicación legal definitiva.',
+          'Antes de abrir el registro público se confirmarán la región y el plan de Supabase, el dominio y la configuración de Cloudflare, la conservación técnica de cada proveedor y el proceso operativo de solicitudes de datos.',
         back: 'Volver',
       },
     },
@@ -296,6 +325,7 @@ export const resources = {
       app: {
         title: 'Chucao',
         authenticatedTitle: 'Chucao - My Lists',
+        accountTitle: 'Chucao - Account',
         listTitle: 'Chucao - List',
         practiceTitle: 'Chucao - Practice',
         aboutTitle: 'Chucao - About',
@@ -344,8 +374,33 @@ export const resources = {
         signOutError: 'Sign-out could not be completed. Try again.',
         sessionError: 'The session could not be checked. Try again.',
         profileError: 'Your private space could not be prepared. Try again.',
+        deletionStatusError: 'The deletion status could not be checked. Your private space remains blocked.',
+        deletionPendingTitle: 'Account deletion pending',
+        deletionPending: 'Your Chucao account deletion is still pending. Your private data will remain blocked while completion is confirmed.',
+        deletionRetryError: 'Deletion could not be confirmed. You can try again.',
+        deletionRetry: 'Retry account deletion',
         retry: 'Retry',
         signOut: 'Sign out',
+      },
+      account: {
+        title: 'Account',
+        identity: 'Google identity',
+        intro: 'This Google identity is used to access your Chucao account.',
+        googleIdentity: 'Signed in with Google',
+        dataEffects: 'Deleting your Chucao account removes its identity and active personal data: lists, concepts, practices, notes, and preferences. Rounds that are still linked are also removed; anonymous totals detached earlier remain anonymous.',
+        googleBoundary: 'This action deletes only the Chucao account and its data. It does not delete or change your Google account.',
+        delete: 'Delete Chucao account',
+        confirmTitle: 'Delete Chucao account',
+        confirmDescription: 'Deleting your Chucao account and its active personal data cannot be undone. If the operation remains pending, your data will stay blocked and you can retry.',
+        cancel: 'Cancel',
+        confirmDelete: 'Confirm deletion',
+        pendingTitle: 'Account deletion pending',
+        pending: 'Your account deletion is still pending. Your private Chucao data remains blocked while the result is confirmed.',
+        unconfirmed: 'The result was not confirmed. You can retry; the app will not report success until it is confirmed.',
+        retry: 'Retry account deletion',
+        working: 'Checking deletion…',
+        completed: 'Your Chucao account was deleted.',
+        backToPreferences: 'Back to Preferences',
       },
       navigation: {
         label: 'Main navigation',
@@ -556,29 +611,32 @@ export const resources = {
       },
       privacy: {
         title: 'Privacy',
-        version: 'Local VS-02 version · 17 November 2026',
+        version: 'Version 1 · 20 November 2026',
         intro:
-          'This notice describes the processing activated by the local Chucao Web VS-02 slice, including concept management. It is local review content and does not replace the final legal publication required before real users are enabled.',
+          'This first version describes Chucao Web and the services planned to operate it. The initial intended audience is in Chile. The production configuration and each provider’s retention terms will be confirmed before public registration opens, and this information will be updated if they change.',
         dataTitle: 'Data used',
         data:
-          'Google and Supabase Auth manage identity and session data. Chucao uses the stable account identifier, the email displayed by Auth for session context, the language preference, the names of your private lists, and the titles and descriptions of concepts you write in those lists.',
+          'Google and Supabase Auth manage sign-in. Supabase Auth keeps the sign-in session in this browser to maintain access; local sign-out removes that browser session. Chucao uses the stable account identifier, the email Auth provides for session context, the language preference, and timer preferences. It also stores the names of your private lists, the titles and descriptions of concepts you write in them, round data, practices, ratings, and notes you save. When you use the site, technical providers may process connection data such as your IP address and request metadata to deliver and protect their services.',
         purposesTitle: 'Purposes',
         purposes:
-          'These data support sign-in, profile initialization, language preference, and organizing concepts in your private lists for oral explanation practice. The database applies account-level data isolation. Analytics, advertising, and public content are not activated in this slice.',
+          'These data support sign-in, profile initialization, language and timer preferences, organizing concepts in your private lists, and saving practices and practice history for review. The database applies account-level data isolation. Chucao does not activate analytics or advertising and does not offer public or shared lists.',
         providersTitle: 'Providers and transfers',
         providers:
-          'Google participates in delegated authentication. Supabase provides Auth, the database, and access policies. Review of provider roles, locations, transfers, and terms for publication remains pending.',
+          'Google provides sign-in. Cloudflare Pages is planned to serve the web application. Supabase provides Auth, the database, and server functions that protect account operations. The Supabase region is selected when the project is created; Cloudflare and Google may also process technical data through their services. The exact location, plan, domain, and applicable terms will be confirmed in the production configuration before public registration opens.',
         retentionTitle: 'Retention and deletion',
         retention:
-          'Lists, their concepts, and preferences are associated with your account. When you delete a concept, its title and description are removed from active content while a minimal deletion marker is retained for future history references. Automated account deletion and the full retention, backup, and erasure policy require review and publication before real users are enabled.',
+          'Lists, concepts, rounds, saved practices, notes, and preferences are associated with your account. The guest visit timer does not save practices or history. When you delete a concept, its title and description are removed from active content while a minimal deletion marker is retained for future history references. You can request deletion of your Chucao account from Account in Preferences; its Chucao identity and active personal data are removed. Rounds still linked to the account are deleted without creating new anonymous totals; totals detached earlier remain anonymous. Chucao does not create its own backups. The database provider may retain technical backups under the selected plan and its terms; we do not claim that account deletion immediately removes data from those backups. Actual retention will be confirmed when production is configured.',
         rightsTitle: 'Rights and contact',
-        rights:
-          'Information about access, correction, deletion, objection, and other rights depends on applicable law. The final controller identification and contact channel must be confirmed and published before launch.',
+        rightsIntro:
+          'For questions or requests about your data —such as access, correction, or deletion— email',
+        contactEmail: 'sebastolmos@gmail.com',
+        rightsOutro:
+          '. We may ask you to prove that you control the account before providing or changing information. You can also request account deletion from Account in Preferences. Requests will be handled under applicable rules.',
         securityTitle: 'Security',
         security:
           'Authentication uses Google/Supabase with PKCE. The database applies RLS and derives ownership from the authenticated UUID; Google passwords and privileged keys are not stored in the browser.',
         pending:
-          'Pending: controller, contact, provider, transfer, retention, rights, and final legal publication review.',
+          'Before public registration opens, we will confirm the Supabase region and plan, the Cloudflare domain and configuration, each provider’s technical retention, and the operational process for data requests.',
         back: 'Back',
       },
     },
