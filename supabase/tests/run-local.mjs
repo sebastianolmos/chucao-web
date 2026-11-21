@@ -162,6 +162,15 @@ if (args.some((arg) => arg !== '--prove-failure') || args.length > 1) {
         const activeAfterRace = requireResult(await admin.from('lists').select('id')
           .eq('owner_id', ids.owner).is('archived_at', null), 'Concurrent restore active count')
         requireCondition(activeAfterRace.length === 100, 'Concurrent restore exceeded or underfilled the active-list limit')
+
+        const archivedCollection = requireResult(await owner.rpc('archive_private_list', {
+          p_list_id: ids.collectionLists.biologyArchived,
+        }), 'Rearchive collection search fixture')
+        const restoredMain = requireResult(await owner.rpc('restore_private_list', {
+          p_list_id: ids.list,
+        }), 'Restore main fixture after concurrent restore')
+        requireCondition(archivedCollection.archived_at !== null && restoredMain.archived_at === null,
+          'Concurrent restore fixtures did not return to their expected collections')
       })
       await check('duplicate copies only active content with fresh progress and reconciles retries', async () => {
         const source = requireResult(await owner.rpc('archive_private_list', { p_list_id: ids.list }), 'Archive duplicate source')
