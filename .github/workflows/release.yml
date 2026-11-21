@@ -78,10 +78,11 @@ jobs:
         run: |
           : "${SUPABASE_PROJECT_REF:?Missing production project ref}"
           npx --no-install supabase link --project-ref "$SUPABASE_PROJECT_REF"
-          npx --no-install supabase db push --remote="$SUPABASE_PROJECT_REF" --yes
-          npx --no-install supabase migration list --remote="$SUPABASE_PROJECT_REF"
+          # Use the linked project's pooler for PostgreSQL on IPv4 runners.
+          npx --no-install supabase db push --remote --yes
+          npx --no-install supabase migration list --remote
           npx --no-install supabase functions deploy delete-account \
-            --remote="$SUPABASE_PROJECT_REF" --use-api --no-verify-jwt
+            --remote="$SUPABASE_PROJECT_REF" --use-api --no-verify-jwt --yes
 
       - name: Publish dist to Cloudflare Pages
         env:
