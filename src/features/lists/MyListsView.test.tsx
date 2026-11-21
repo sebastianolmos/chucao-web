@@ -9,6 +9,8 @@ import { MyListsView } from './MyListsView';
 import { getListCollectionPage, getOwnedConceptCounts, getOwnedLists, archivePrivateList, deletePrivateList, duplicatePrivateList, renamePrivateList, restorePrivateList } from './listService';
 import { DomainServiceError } from '../shared/supabaseErrors';
 
+vi.mock('../../lib/supabase', () => ({ supabase: {} }));
+
 vi.mock('./listService', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./listService')>();
   return {

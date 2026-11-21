@@ -25,6 +25,8 @@ import {
   startNewRound,
 } from '../rounds/roundService';
 
+vi.mock('../../lib/supabase', () => ({ supabase: {} }));
+
 vi.mock('./conceptService', () => ({
   conceptQueryKey: (userId: string, listId: string) => ['concepts', userId, listId],
   getOwnedConcepts: vi.fn(),
