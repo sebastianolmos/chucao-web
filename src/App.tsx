@@ -58,7 +58,7 @@ type PracticeSession = {
   concept?: Pick<ActiveConceptRow, 'title' | 'description'>;
 };
 
-type AppDestination = 'lists' | 'detail' | 'history' | 'about' | 'privacy' | 'credits' | 'account' | 'signOut';
+type AppDestination = 'lists' | 'detail' | 'history' | 'about' | 'credits' | 'account' | 'signOut';
 
 function readOAuthError() {
   const url = new URL(window.location.href);
@@ -75,36 +75,6 @@ function clearPrivateState() {
   queryClient.removeQueries({ queryKey: ['practice'] });
   queryClient.removeQueries({ queryKey: ['practice-history'] });
   queryClient.removeQueries({ queryKey: ['round-history'] });
-}
-
-function PrivacyContent({ onBack }: { onBack: () => void }) {
-  const { t } = useTranslation();
-
-  return (
-    <article aria-labelledby="privacy-title">
-      <h1 id="privacy-title">{t('privacy.title')}</h1>
-      <p>{t('privacy.version')}</p>
-      <p>{t('privacy.intro')}</p>
-      <h2>{t('privacy.dataTitle')}</h2>
-      <p>{t('privacy.data')}</p>
-      <h2>{t('privacy.purposesTitle')}</h2>
-      <p>{t('privacy.purposes')}</p>
-      <h2>{t('privacy.providersTitle')}</h2>
-      <p>{t('privacy.providers')}</p>
-      <h2>{t('privacy.retentionTitle')}</h2>
-      <p>{t('privacy.retention')}</p>
-      <h2>{t('privacy.rightsTitle')}</h2>
-      <p>
-        {t('privacy.rightsIntro')}{' '}
-        <a href={`mailto:${t('privacy.contactEmail')}`}>{t('privacy.contactEmail')}</a>
-        {t('privacy.rightsOutro')}
-      </p>
-      <h2>{t('privacy.securityTitle')}</h2>
-      <p>{t('privacy.security')}</p>
-      <p role="note">{t('privacy.pending')}</p>
-      <button type="button" onClick={onBack}>{t('privacy.back')}</button>
-    </article>
-  );
 }
 
 function CreditsContent({ onBack }: { onBack: () => void }) {
@@ -151,7 +121,6 @@ export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [authStatus, setAuthStatus] = useState<AuthStatus>('checking_session');
   const [busy, setBusy] = useState(false);
-  const [privacyOpen, setPrivacyOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [guestTimerOpen, setGuestTimerOpen] = useState(false);
   const [accessAboutOpen, setAccessAboutOpen] = useState(false);
@@ -409,7 +378,6 @@ export default function App() {
     setAbandonOpen(false);
     setPendingDestination(null);
     setPreferencesOpen(false);
-    setPrivacyOpen(destination === 'privacy');
     setAboutOpen(destination === 'about');
     setAccountOpen(destination === 'account');
     setCreditsOpen(destination === 'credits');
@@ -590,7 +558,6 @@ export default function App() {
       currentUserIdRef.current = null;
       setCreditsOpen(false);
       setPreferencesOpen(false);
-      setPrivacyOpen(false);
       setSession(null);
       setAuthStatus('access');
     } catch {
@@ -621,7 +588,6 @@ export default function App() {
       clearAccountLocale();
       setCreditsOpen(false);
       setPreferencesOpen(false);
-      setPrivacyOpen(false);
       setSession(null);
       setAuthStatus('access');
       return 'completed';
@@ -709,15 +675,6 @@ export default function App() {
     );
   }
 
-  if (privacyOpen && authStatus === 'access') {
-    return (
-      <main className={`${styles.shell} ${styles.privacy}`}>
-        <PrivacyContent onBack={() => setPrivacyOpen(false)} />
-        <AppFooter />
-      </main>
-    );
-  }
-
   if (accessAboutOpen && authStatus === 'access') {
     return (
       <main className={`${styles.shell} ${styles.privacy}`}>
@@ -782,6 +739,10 @@ export default function App() {
               {t('access.english')}
             </button>
           </div>
+          <nav aria-label={t('access.legalLinks')} className={styles.accessLegalLinks}>
+            <a href={locale === 'en' ? '/privacy/en' : '/privacy'}>{t('access.privacy')}</a>
+            <a href={locale === 'en' ? '/terms/en' : '/terms'}>{t('access.terms')}</a>
+          </nav>
           <button className={styles.accessGoogleButton} disabled={busy} onClick={signIn}>
             {busy ? t('access.connecting') : t('access.continueWithGoogle')}
           </button>
@@ -789,17 +750,6 @@ export default function App() {
             <button onClick={() => setAccessAboutOpen(true)} type="button">{t('access.aboutButton')}</button>
             <button onClick={() => setGuestTimerOpen(true)} type="button">{t('access.timerPreview')}</button>
           </div>
-          <p>
-            <a
-              href="#privacy"
-              onClick={(event) => {
-                event.preventDefault();
-                setPrivacyOpen(true);
-              }}
-            >
-              {t('access.privacy')}
-            </a>
-          </p>
         </section>
         <AppFooter />
       </main>
@@ -913,13 +863,6 @@ export default function App() {
           />
         ) : historyOpen ? (
           <HistoryView userId={session!.user.id} />
-        ) : privacyOpen ? (
-          <div className={styles.privacy}>
-            <PrivacyContent onBack={() => {
-              setPrivacyOpen(false);
-              setPreferencesOpen(true);
-            }} />
-          </div>
         ) : creditsOpen ? (
           <div className={styles.privacy}>
             <CreditsContent onBack={() => {
@@ -1060,16 +1003,24 @@ export default function App() {
             >
               {t('account.title')}
             </Button>
-            <Button
-              disabled={busy}
-              onClick={() => {
-                requestDestination('privacy');
-              }}
-              styles={{ root: { backgroundColor: 'var(--chucao-yellow)', border: '2px solid var(--chucao-brown)', boxShadow: '3px 4px 0 var(--chucao-brown)', color: 'var(--chucao-brown)' } }}
-              variant="default"
-            >
-              {t('preferences.privacy')}
-            </Button>
+            <nav aria-label={t('access.legalLinks')} className={styles.preferencesLinks}>
+              {[
+                { path: '/privacy', label: t('preferences.privacy') },
+                { path: '/terms', label: t('access.terms') },
+              ].map(({ path, label }) => (
+                <Button
+                  key={path}
+                  component="a"
+                  href={locale === 'en' ? `${path}/en` : path}
+                  target="_blank"
+                  rel="noopener"
+                  styles={{ root: { backgroundColor: 'var(--chucao-yellow)', border: '2px solid var(--chucao-brown)', boxShadow: '3px 4px 0 var(--chucao-brown)', color: 'var(--chucao-brown)' } }}
+                  variant="default"
+                >
+                  {label}
+                </Button>
+              ))}
+            </nav>
             <Button
               disabled={busy}
               onClick={() => {

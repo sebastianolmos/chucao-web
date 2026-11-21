@@ -1,0 +1,45 @@
+@import '@fontsource/comfortaa/400.css';
+@import '@fontsource/comfortaa/700.css';
+@import '../../index.css';
+
+.privacy-page {
+  width: min(100%, 52rem);
+  margin: 0 auto;
+  padding: clamp(1rem, 4vw, 2.5rem);
+}
+
+.privacy-panel {
+  display: grid;
+  gap: 0.75rem;
+  padding: clamp(1.25rem, 4vw, 2.5rem);
+  border: 2px solid var(--chucao-brown);
+  border-radius: 1rem;
+  background: var(--chucao-panel);
+  box-shadow: 5px 6px 0 var(--chucao-brown);
+}
+
+.privacy-panel :is(h1, h2, p) {
+  margin: 0;
+}
+
+.privacy-panel h2 {
+  margin-top: 0.5rem;
+  font-size: 1.2rem;
+}
+
+.privacy-panel p {
+  max-width: 70ch;
+  line-height: 1.6;
+}
+
+.privacy-panel a {
+  color: inherit;
+  overflow-wrap: anywhere;
+}
+
+.privacy-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+}

@@ -11,6 +11,8 @@ import {
   setTimerPreference,
 } from './preferencesService';
 
+vi.mock('../../lib/supabase', () => ({ supabase: {} }));
+
 vi.mock('./preferencesService', async (importOriginal) => {
   const original = await importOriginal<typeof import('./preferencesService')>();
   return {
