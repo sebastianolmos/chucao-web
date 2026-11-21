@@ -19,30 +19,42 @@ export function requireCondition(condition, message) {
 
 export function inspectPracticeHistoryPagePlan(ownerId) {
   requireCondition(/^[0-9a-f-]{36}$/i.test(ownerId), 'Invalid synthetic history owner identifier')
-  const cli = fileURLToPath(new URL('../../node_modules/supabase/dist/supabase.js', import.meta.url))
+  const docker = process.env.DOCKER_EXECUTABLE ?? 'docker'
   const sql = `explain (analyze, buffers, format json) select p.id, p.completed_at from public.practices p where p.owner_id = '${ownerId}'::uuid order by p.completed_at desc, p.id desc limit 101`
+  let output
   try {
-    const output = execFileSync(process.execPath, [cli, 'db', 'query', '--output-format', 'json', sql], {
+    output = execFileSync(docker, [
+      'exec', 'supabase_db_chucao-web', 'psql', '-X', '-At', '-v', 'ON_ERROR_STOP=1',
+      '-U', 'supabase_admin', '-d', 'postgres', '-c', sql,
+    ], {
       cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 30_000,
     })
-    const parsed = JSON.parse(output)
-    const planRows = parsed.rows?.[0]?.['QUERY PLAN']
-    const nodeTypes = []
-    const visit = (node) => {
-      if (!node || typeof node !== 'object') return
-      if (typeof node['Node Type'] === 'string') nodeTypes.push(node['Node Type'])
-      for (const child of Object.values(node)) {
-        if (Array.isArray(child)) child.forEach(visit)
-        else if (child && typeof child === 'object') visit(child)
-      }
-    }
-    visit(planRows)
-    return {
-      bounded: nodeTypes.includes('Limit'),
-      usesHistoryIndex: JSON.stringify(planRows).includes('practices_owner_completed_idx'),
-    }
+  } catch (error) {
+    const status = error.status ?? error.code ?? 'unknown'
+    throw new VerificationError(`History workload EXPLAIN failed in the local PostgreSQL container (${status})`)
+  }
+
+  let planRows
+  try {
+    planRows = JSON.parse(output)
   } catch {
-    throw new VerificationError('History workload query plan could not be inspected')
+    throw new VerificationError('Local PostgreSQL did not return a JSON history query plan')
+  }
+  requireCondition(planRows?.[0]?.Plan, 'Local PostgreSQL omitted the history query plan')
+
+  const nodeTypes = []
+  const visit = (node) => {
+    if (!node || typeof node !== 'object') return
+    if (typeof node['Node Type'] === 'string') nodeTypes.push(node['Node Type'])
+    for (const child of Object.values(node)) {
+      if (Array.isArray(child)) child.forEach(visit)
+      else if (child && typeof child === 'object') visit(child)
+    }
+  }
+  visit(planRows)
+  return {
+    bounded: nodeTypes.includes('Limit'),
+    usesHistoryIndex: JSON.stringify(planRows).includes('practices_owner_completed_idx'),
   }
 }
 
