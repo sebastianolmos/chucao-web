@@ -64,12 +64,15 @@
   box-shadow: 5px 6px 0 var(--chucao-brown);
 }
 
-.accessPanel > p {
-  text-align: center;
-}
-
 .accessGoogleButton {
   background: var(--chucao-cyan);
+}
+
+.accessLegalLinks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.25rem 1rem;
 }
 
 .accessSecondaryActions {

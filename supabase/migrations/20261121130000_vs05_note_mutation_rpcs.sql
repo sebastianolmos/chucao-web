@@ -1,6 +1,6 @@
 alter table public.practice_note_operations
   add column request_fingerprint text not null
-  default encode(digest(convert_to('legacy-note-operation', 'UTF8'), 'sha256'), 'hex');
+  default encode(extensions.digest(convert_to('legacy-note-operation', 'UTF8'), 'sha256'), 'hex');
 
 create or replace function public.update_practice_note(
   p_practice_id uuid,

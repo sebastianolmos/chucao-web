@@ -150,6 +150,11 @@ describe('Preferences credits navigation', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Reintentar eliminación' }));
 
     expect(await screen.findByRole('button', { name: 'Continuar con Google' })).toBeInTheDocument();
+    const privacyLink = screen.getByRole('link', { name: 'Privacidad' });
+    const termsLink = screen.getByRole('link', { name: 'Términos de uso' });
+    expect(privacyLink).toHaveAttribute('href', '/privacy');
+    expect(termsLink).toHaveAttribute('href', '/terms');
+    expect(privacyLink.nextElementSibling).toBe(termsLink);
     expect(mocks.signOut).toHaveBeenCalledWith({ scope: 'local' });
     expect(screen.queryByRole('heading', { name: 'Eliminación de cuenta pendiente' })).not.toBeInTheDocument();
   });
@@ -175,6 +180,13 @@ describe('Preferences credits navigation', () => {
     expect(dialog.outerHTML).toContain('var(--chucao-cream)');
 
     const actions = within(dialog);
+    const privacyLink = actions.getByRole('link', { name: 'Privacidad' });
+    const termsLink = actions.getByRole('link', { name: 'Términos de uso' });
+    expect(privacyLink).toHaveAttribute('href', '/privacy');
+    expect(privacyLink).toHaveAttribute('target', '_blank');
+    expect(termsLink).toHaveAttribute('href', '/terms');
+    expect(termsLink).toHaveAttribute('target', '_blank');
+    expect(privacyLink.nextElementSibling).toBe(termsLink);
     fireEvent.click(actions.getByRole('button', { name: 'Créditos y licencias' }));
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Créditos y licencias' })).toBeInTheDocument();
@@ -184,14 +196,8 @@ describe('Preferences credits navigation', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Volver' }));
     const returnedDialog = await screen.findByRole('dialog', { name: /preferencias/i });
-    await waitFor(() => expect(within(returnedDialog).getByRole('button', { name: 'Privacidad' })).toBeInTheDocument());
+    expect(await within(returnedDialog).findByRole('link', { name: 'Privacidad' })).toHaveAttribute('href', '/privacy');
     expect(within(returnedDialog).getByRole('button', { name: 'Créditos y licencias' })).toBeInTheDocument();
-
-    fireEvent.click(within(returnedDialog).getByRole('button', { name: 'Privacidad' }));
-    expect(await screen.findByRole('heading', { level: 1, name: 'Privacidad' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'sebastolmos@gmail.com' })).toHaveAttribute('href', 'mailto:sebastolmos@gmail.com');
-    fireEvent.click(screen.getByRole('button', { name: 'Volver' }));
-    expect(await screen.findByRole('dialog', { name: /preferencias/i })).toBeInTheDocument();
   });
 
   it('opens Account from Preferences and returns to the same dialog', async () => {
