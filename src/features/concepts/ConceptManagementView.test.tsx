@@ -907,7 +907,7 @@ describe('ConceptManagementView', () => {
     expect(onBack).toHaveBeenCalledOnce();
   });
 
-  it('describes account data, deletion and planned Free plan limits in both privacy locales', () => {
+  it('describes production privacy and account deletion in both locales', () => {
     const spanish = resources.es.translation.privacy;
     const english = resources.en.translation.privacy;
 
@@ -919,8 +919,12 @@ describe('ConceptManagementView', () => {
     expect(english.retention).toContain('Preferences → Account');
     expect(spanish.deletionDetails).toContain('referencia al concepto eliminado');
     expect(english.deletionDetails).toContain('reference to the deleted concept');
-    expect(spanish.backups).toContain('no incluye backups programados');
-    expect(english.backups).toContain('neither scheduled backups nor point-in-time recovery');
+    expect(spanish.providers).toContain('La base de producción está en São Paulo');
+    expect(english.providers).toContain('The production database is in São Paulo');
+    expect(spanish.analytics).toContain('Cloudflare Web Analytics mide visitas');
+    expect(english.analytics).toContain('Cloudflare Web Analytics measures visits');
+    expect(spanish.backups).toContain('no cuenta con copias de seguridad restaurables');
+    expect(english.backups).toContain('no restorable backups or point-in-time recovery');
   });
 
   it('renders concept controls in English while preserving the user-authored list name', async () => {
